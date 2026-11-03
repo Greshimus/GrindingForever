@@ -20560,7 +20560,7 @@ function G.Initialize()
 
  if type(db)~='table'or(db.version~=nil and db.version~=1)then return false end
 
- if db.gathering==nil then db.gathering={version=1,enabled=true,nextID=1,nextEvent=1,nextNode=1,events={},nodes={}}end
+ if db.gathering==nil then db.gathering={version=1,enabled=false,nextID=1,nextEvent=1,nextNode=1,events={},nodes={}}end
 
  local data=db.gathering;if type(data)~='table'or data.version~=1 or type(data.events)~='table'or type(data.nodes)~='table'or not number(data.nextID)or not number(data.nextEvent)or data.nextEvent<1 or data.nextEvent>MAX_EVENTS or not number(data.nextNode)or data.nextNode<1 or data.nextNode>MAX_NODES then return false end
 
@@ -39181,3 +39181,24 @@ ns.WindowWorkflow.Layout=function(...)local v=layout(...);if N.farmButton then N
 N.WorkflowLayout=ns.WindowWorkflow.Layout
 end)(...)
 -- GF_FARM_SELECTOR96_END
+
+
+-- GF_MATERIAL_CLICK97_BEGIN
+;(function(...)
+local _,ns=...;local R=ns.MaterialRoutes;if not R then return end
+local fill=R.Fill
+R.Fill=function(...)
+ local result=fill(...)
+ for _,button in ipairs(R.buttons or{})do
+  button:SetScript('OnClick',function(self,key)
+   if key and key~='LeftButton'then return end
+   if not self.material then ns.Print('Choose a material first.');return end
+   local ok,why=R.Start(self.material)
+   if ok then R.menu:Hide()else ns.Print(why or'No eligible route is available for this material.')end
+  end)
+ end
+ return result
+end
+end)(...)
+-- GF_MATERIAL_CLICK97_END
+

@@ -1,3 +1,7 @@
+Current TBC97: corrected material button click handlers; public diagnostics opt-in, private auto-start excluded; foreground farming selector; standalone historical gathering data including fishing pools; searchable material route picker;57 approximate user-traced route segments; steps-only and map/recipe compact views; expanded dungeon source rows. Compass concept is not included. Native route and visual testing ongoing.
+
+Stable tester ZIP: https://github.com/Greshimus/GrindingForever/releases/download/tbc94/GrindingForever-TBC-Tester.zip . This URL always serves the current published TBC tester package; its historical tag name remains fixed. No local tester ZIP is retained after upload. Forever launch target: November4; TBC testing expected to wind down after November3.
+
 Current TBC96: corrected foreground farming selector; standalone historical gathering data including fishing pools; searchable material route picker;57 approximate user-traced route segments; steps-only and map/recipe compact views; expanded dungeon source rows. Compass concept is not included. Native route and visual testing ongoing.
 
 Stable tester ZIP: https://github.com/Greshimus/GrindingForever/releases/download/tbc94/GrindingForever-TBC-Tester.zip . This URL always serves the current published TBC tester package; its historical tag name remains fixed. No local tester ZIP is retained after upload. Forever launch target: November4; TBC testing expected to wind down after November3.
