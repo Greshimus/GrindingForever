@@ -1,4 +1,6 @@
-# Grinding Forever — TBC93
+Current TBC94: GF bundles historical NPC source locations; Questie is not required for recipe locations. 10841 located NPC records,104636 positions,5798 quest contacts. Standalone test binds10347 recipe-zone records;434 recipes lack mapped sources. Both factions and all nine crafting professions verified. All crafting professions share known-book validation, guaranteed batch capacity (5 primary/10 secondary), full materials, common-material preference and observed buy-price comparison. Unknown prices stay unknown; vendor/AH pages provide observed quotes, not a global cheapest-price guarantee. Forever parity remains a required follow-up using beta and verified unchanged Classic data. New compact-arrow design mockups remain pending; no design change in this patch.
+
+# Grinding Forever — TBC94
 
 Current standalone tester build for **TBC Classic Anniversary**. This checkout replaces the old documentation-only repository contents; the previous commits remain in Git history.
 
@@ -18,7 +20,7 @@ Alternatively, copy this repository's `GrindingForever` directory into `Interfac
 - Fishing instructions show the location and skill goal. Cooking skill determines which fish remain useful for skill-ups and which to sell.
 - Performance retains one bounded summary when stopped or when `/reload` saves the character. Activity retains its bounded rolling event catalog. No uploads or telemetry occur in game.
 
-1012 offline assertions passed. Native testing is ongoing; offline checks do not guarantee every live UI or quest case.
+15006 offline assertions passed. Native testing is ongoing; offline checks do not guarantee every live UI or quest case.
 
 ## Development handoff
 
