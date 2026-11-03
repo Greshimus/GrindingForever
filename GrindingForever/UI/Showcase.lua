@@ -17979,9 +17979,9 @@ end
 
 function N.SetArrowSize(value)
 
- local v=safeNumber(value,50,120);if not v then return false end
+ local v=safeNumber(value,55,84);if not v then return false end
 
- v=math.floor(v/5+.5)*5;N.arrowSize=v
+ v=math.floor(v+.5);N.arrowSize=v
 
  if ns.db then ns.db.normalArrowSize=v end
 
@@ -19700,13 +19700,13 @@ local function ensure()
 
  N.arrowToggle:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-48);N.arrowToggle:SetWidth(settings:GetWidth()-32)
 
- local sl=text(settings,15,"Arrow size");sl:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-92)
+ local sl=text(settings,15,"GPS Size");N.gpsSizeLabel=sl;sl:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-92)
 
  sizeValue=text(settings,15,"");sizeValue:SetPoint("TOPRIGHT",settings,"TOPRIGHT",-16,-92)
 
  sizeSlider=CreateFrame("Slider",nil,settings);sizeSlider:SetSize(308,22);sizeSlider:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-116)
 
- sizeSlider:EnableMouse(true);sizeSlider:SetOrientation("HORIZONTAL");sizeSlider:SetMinMaxValues(50,120);sizeSlider:SetValueStep(5);sizeSlider:SetObeyStepOnDrag(true)
+ sizeSlider:EnableMouse(true);sizeSlider:SetOrientation("HORIZONTAL");sizeSlider:SetMinMaxValues(55,84);sizeSlider:SetValueStep(1);sizeSlider:SetObeyStepOnDrag(true)
 
  local track=tex(sizeSlider,THEME.."EnamelButton","BACKGROUND");track:SetPoint("LEFT",sizeSlider,"LEFT",0,0);track:SetPoint("RIGHT",sizeSlider,"RIGHT",0,0);track:SetHeight(10)
 
@@ -19716,7 +19716,7 @@ local function ensure()
 
  sizeSlider:SetThumbTexture(thumb)
 
- sizeSlider:SetValue(100)
+ sizeSlider:SetValue(84)
 
  sizeSlider:SetScript("OnValueChanged",function(_,value) if not syncingSlider then N.SetArrowSize(value) end end)
 
@@ -20220,7 +20220,7 @@ function S.Login()
 
  if ns.db then ns.db.normalArrowType=nil end -- Retired choice; size and enabled preference remain.
 
- N.SetArrowSize(math.min(120,safeNumber(ns.db and ns.db.normalArrowSize,50,200) or 100))
+ N.SetArrowSize(math.max(55,math.min(84,safeNumber(ns.db and ns.db.normalArrowSize,50,200) or 84)))
 
  if ns.db and type(ns.db.normalRecipeSources)=="table" then for _,name in ipairs(sourceNames) do if type(ns.db.normalRecipeSources[name])=="boolean" then N.SetSource(name,ns.db.normalRecipeSources[name]) end end end
 
@@ -39202,3 +39202,245 @@ end
 end)(...)
 -- GF_MATERIAL_CLICK97_END
 
+
+-- GF_NAVIGATION98_BEGIN: approved native navigation and multi-resource controls.
+;(function(...)
+local _,ns=...;local N,P,F,R,W=ns.NormalUI,ns.ProfessionGuide,ns.FarmingPlanner,ns.MaterialRoutes,ns.WindowWorkflow
+if not(N and P and F and R and W)then return end
+local C=ns.Retail.Client
+local AS='Interface\\AddOns\\GrindingForever\\Assets\\'
+local K={pins={},targets={},markers={},ticks={},world={},worldCount=0,age=1,selected={}}
+ns.NavigationCompass=K
+local function read(fn,...)if type(fn)=='function'then local ok,a,b,c=pcall(fn,...);if ok then return a,b,c end end end
+local function wrap(a)return(a+math.pi)%(math.pi*2)-math.pi end
+local function text(parent,size,value)
+ local t=parent:CreateFontString(nil,'OVERLAY');t:SetFont('Fonts\\ARIALN.TTF',size);t:SetTextColor(.13,.08,.025);t:SetText(value or'');return t
+end
+local function texture(parent,path,layer)local t=parent:CreateTexture(nil,layer or'ARTWORK');t:SetTexture(AS..path);return t end
+local function icon(id)return read(C_Item and C_Item.GetItemIconByID or GetItemIcon,id)or'Interface\\Icons\\INV_Misc_Book_09'end
+local function position()local p=read(C.PlayerPosition);if p and p.status=='available'then return p end end
+local function world(loc)
+ if not loc or type(loc.mapID)~='number'or type(loc.x)~='number'or type(loc.y)~='number'then return end
+ local key=loc.mapID..':'..loc.x..':'..loc.y;local v=K.world[key]
+ if not v then local i,x,y=read(C.WorldPosition,loc.mapID,loc.x,loc.y);if i and x and y then
+  if K.worldCount>=256 then K.world={};K.worldCount=0 end
+  v={i,x,y};K.world[key]=v;K.worldCount=K.worldCount+1
+ end end;return v
+end
+local function distance(loc,p)
+ local a=world(loc);local b=p and world({mapID=p.mapID,x=p.x*100,y=p.y*100})
+ if a and b and a[1]==b[1]then local dx,dy=a[2]-b[2],a[3]-b[3];return math.sqrt(dx*dx+dy*dy),math.atan2(dy,dx)end
+end
+function K.Mode()return ns.db and ns.db.navigationStyle or'Arrow'end
+function K.Enabled()return not ns.db or ns.db.normalArrow~=false end
+function K.SetMode(mode)
+ if mode~='Arrow'and mode~='Compass'then return false end
+ if ns.db then ns.db.navigationStyle=mode end;K.age=1;K.Sync();return true
+end
+function K.Sync()
+ if K.gpsButton then K.gpsButton.label:SetText(K.Enabled()and'GPS: On'or'GPS: Off')end
+ if K.thumb then K.thumb:ClearAllPoints();K.thumb:SetPoint(K.Mode()=='Compass'and'RIGHT'or'LEFT',K.switch,K.Mode()=='Compass'and'RIGHT'or'LEFT',K.Mode()=='Compass'and-2 or 2,0)end
+ if K.frame then K.frame:SetScale((N.arrowSize or 84)/84);K.frame:SetShown(K.Enabled()and K.Mode()=='Compass')end
+ if K.Mode()=='Compass'and N.arrowFrame then N.arrowFrame:Hide()end
+end
+function K.FlagKey(record,loc)return tostring(record.spellID or record.learnableItemID or record.itemID or record.id or record.name)..':'..tostring(loc.mapID)..':'..tostring(loc.x)..':'..tostring(loc.y)end
+function K.Flag(record,loc)
+ if not world(loc)then return false end;local key=K.FlagKey(record,loc)
+ if K.pins[key]then K.pins[key]=nil;K.age=1;return true end
+ local n=0;for _ in pairs(K.pins)do n=n+1 end;if n>=6 then ns.Print('Unpin a recipe source before adding another.');return false end
+ K.pins[key]={key=key,name=loc.name or record.name,zone=loc.zone,location=loc,icon=AS..'RecipeExplorer_20261025_R1\\RecipePin',pin=true};K.age=1;return true
+end
+function K.Collect()
+ local rows={};local d=read(P.Destination);local row=P.selected
+ if d and not N.gpsSuppressed and not N.areaNavigation then
+  local id=d.materialID or F.route and F.route.item or row and(row.materialID or row.itemID)
+  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\Icons\\INV_Sword_04',active=true}
+ end
+ local route=F.route;local p=position()
+ if route and route.multiMaterials then
+  local current=route.steps[route.cursor or 1]
+  if N.model and N.model.Current then current=N.model:Current()or current end
+  local currentID=current and current.destination and current.destination.materialID
+  for _,m in ipairs(route.multiMaterials)do if m.id~=currentID then
+   local best,yards
+   for _,node in ipairs(route.nodes)do if node.materialID==m.id then local dist=distance(node,p);if dist and(not yards or dist<yards)then best=node;yards=dist end end end
+   if best then rows[#rows+1]={key='material:'..m.id,name=m.name,zone=best.zone,location=best,icon=icon(m.id)}end
+  end end
+ end
+ for _,pin in pairs(K.pins)do rows[#rows+1]=pin end
+ for _,r in ipairs(rows)do r.distance,r.bearing=distance(r.location,p)end;K.targets=rows;K.revision=(K.revision or 0)+1
+end
+function K.Ensure()
+ if K.frame then return end
+ local f=CreateFrame('Frame',nil,UIParent);K.frame=f;f:SetSize(744,66);f:SetPoint('TOP',UIParent,'TOP',0,-55);f:SetFrameStrata('HIGH');f:SetClampedToScreen(true);f:EnableMouse(true);f:SetMovable(true);f:RegisterForDrag('LeftButton');f:SetScript('OnDragStart',f.StartMoving);f:SetScript('OnDragStop',f.StopMovingOrSizing)
+ local bg=texture(f,'WinglessCrest_20261025_R1\\PatinaRail','BACKGROUND');bg:SetAllPoints();bg:SetTexCoord(0,1,.72,1)
+ for _,edge in ipairs({'TOP','BOTTOM'})do local t=texture(f,'RidgedControls_20261025_R1\\RidgeRail','BORDER');t:SetPoint(edge,f,edge);t:SetSize(744,5)end
+ K.caption=text(f,19);K.caption:SetTextColor(.94,.82,.55);K.caption:SetPoint('TOP',f,'BOTTOM',0,-20);K.caption:SetWidth(650);K.caption:SetJustifyH('CENTER')
+ for i=0,47 do local line=f:CreateTexture(nil,'ARTWORK');line:SetColorTexture(.7,.52,.27,1);line:SetSize(1,i%6==0 and 8 or 4);local t=text(f,15,({[0]='N',[6]='NE',[12]='E',[18]='SE',[24]='S',[30]='SW',[36]='W',[42]='NW'})[i]);t:SetTextColor(.94,.81,.54);K.ticks[i]={line=line,label=t,bearing=-i*math.pi/24}end
+ for i=1,15 do local b=CreateFrame('Button',nil,f);b:SetSize(28,28);b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetAllPoints()
+  b.arrow=texture(b,'NormalRevision_20261026_R1\\TriangleRight','OVERLAY');b.arrow:SetSize(10,10);b.arrow:SetRotation(math.pi/2);b.arrow:SetPoint('TOP',b,'BOTTOM',0,-1);b.arrow:Hide()
+  b:SetScript('OnEnter',function(self)if self.target then N.ShowInfoTooltip(self,self.target.name..(self.target.zone and'\n'..self.target.zone or'')..(self.target.distance and'\n'..math.floor(self.target.distance+.5)..' yd'or''))end end);b:SetScript('OnLeave',N.HideInfoTooltip);K.markers[i]=b
+ end
+ f:SetScript('OnUpdate',function(_,elapsed)K.Update(elapsed)end);K.Sync()
+end
+function K.Update(elapsed)
+ if K.Mode()~='Compass'or not K.Enabled()then K.frame:Hide();return end
+ if N.arrowFrame then N.arrowFrame:Hide()end
+ K.age=K.age+(elapsed or 0);if K.age>=.25 then K.age=0;K.Collect()end
+ local facing=read(C.Facing);if type(facing)~='number'then for _,b in ipairs(K.markers)do b:Hide()end;K.caption:SetText('');return end
+ if K.lastFacing==facing and K.lastRevision==K.revision then return end;K.lastFacing=facing;K.lastRevision=K.revision
+ local width=708;local span=math.pi
+ for _,t in pairs(K.ticks)do local a=wrap(t.bearing-facing);local show=math.abs(a)<=span/2;local x=-a/span*width;t.line:SetShown(show);t.label:SetShown(show);if show then t.line:ClearAllPoints();t.line:SetPoint('BOTTOM',K.frame,'BOTTOM',x,6);t.label:ClearAllPoints();t.label:SetPoint('TOP',K.frame,'TOP',x,-5)end end
+ local focus
+ for i,b in ipairs(K.markers)do local r=K.targets[i]
+  if r and r.bearing then local a=wrap(r.bearing-facing);local clipped=math.max(-span/2,math.min(span/2,a));local x=-clipped/span*width
+   b.target=r;b.icon:SetTexture(r.icon);b.icon:SetTexCoord(0,1,0,r.pin and .75 or 1);b:SetSize(r.pin and 24 or r.active and 32 or 28,r.pin and 36 or r.active and 32 or 28);b:ClearAllPoints();b:SetPoint('CENTER',K.frame,'CENTER',x,0);b.arrow:SetShown(r.active==true);b:Show();if r.active then focus=r end
+  else b:Hide()end
+ end
+ local caption=focus and(focus.name..'\n'..(focus.zone and focus.zone..' - 'or'')..math.floor(focus.distance+.5)..' yd')or''
+ if K.captionText~=caption then K.captionText=caption;K.caption:SetText(caption)end
+end
+local heading=N.UpdateHeading
+N.UpdateHeading=function(...)local result=heading(...);if K.Mode()=='Compass'and N.arrowFrame then N.arrowFrame:Hide()end;return result end
+local setArrow=N.SetArrow
+N.SetArrow=function(...)local result=setArrow(...);K.Sync();return result end
+local size=N.SetArrowSize
+N.SetArrowSize=function(...)local result=size(...);K.Sync();return result end
+function K.Settings()
+ local f=N.settingsFrame;if not f then return end
+ if N.arrowToggle then N.arrowToggle:Hide()end
+ if not K.gpsButton then
+  K.gpsButton=N.MakeButton(f,'GPS: On',294,function()N.SetArrow(not K.Enabled())end);K.gpsButton:SetPoint('TOPLEFT',f,'TOPLEFT',18,-48);K.gpsButton:SetSize(294,39)
+  K.switch=CreateFrame('Button',nil,f);K.switch:SetSize(52,24);K.switch:SetPoint('TOP',K.gpsButton,'BOTTOM',0,-16)
+  local function mask(t)local v=K.switch.CreateMaskTexture and K.switch:CreateMaskTexture(nil,'ARTWORK');if v and t.AddMaskTexture then v:SetTexture('Interface\\CharacterFrame\\TempPortraitAlphaMask');v:SetAllPoints(t);t:AddMaskTexture(v)end end
+  local outer=K.switch:CreateTexture(nil,'BACKGROUND');outer:SetPoint('CENTER');outer:SetSize(28,24);outer:SetColorTexture(.57,.36,.13,1)
+  local recess=texture(K.switch,'WinglessCrest_20261025_R1\\PatinaRail','BORDER');recess:SetPoint('CENTER');recess:SetSize(28,20);recess:SetVertexColor(.22,.18,.12)
+  for _,side in ipairs({'LEFT','RIGHT'})do
+   local cap=K.switch:CreateTexture(nil,'BACKGROUND');cap:SetSize(24,24);cap:SetPoint(side,K.switch,side);cap:SetColorTexture(.57,.36,.13,1);mask(cap)
+   local inner=texture(K.switch,'WinglessCrest_20261025_R1\\PatinaRail','BORDER');inner:SetSize(20,20);inner:SetPoint(side,K.switch,side,side=='LEFT'and 2 or-2,0);inner:SetTexCoord(.45,.55,0,1);inner:SetVertexColor(.22,.18,.12);mask(inner)
+  end
+  K.thumb=texture(K.switch,'WinglessCrest_20261025_R1\\PatinaRail','OVERLAY');K.thumb:SetSize(20,20);K.thumb:SetTexCoord(.45,.55,0,1)
+  mask(K.thumb)
+  local l=text(f,19,'Arrow');l:SetTextColor(.94,.82,.55);l:SetPoint('RIGHT',K.switch,'LEFT',-18,0)
+  local r=text(f,19,'Compass');r:SetTextColor(.94,.82,.55);r:SetPoint('LEFT',K.switch,'RIGHT',18,0)
+  K.switch:SetScript('OnClick',function()K.SetMode(K.Mode()=='Arrow'and'Compass'or'Arrow')end)
+ end
+ f:SetWidth(332);f:SetHeight(592)
+ K.gpsButton:SetWidth(294)
+ if N.gpsSizeLabel then N.gpsSizeLabel:SetText('GPS Size');N.gpsSizeLabel:ClearAllPoints();N.gpsSizeLabel:SetPoint('TOPLEFT',f,'TOPLEFT',18,-162)end
+ if N.sizeSlider then N.sizeSlider:ClearAllPoints();N.sizeSlider:SetPoint('TOPLEFT',f,'TOPLEFT',18,-191);N.sizeSlider:SetWidth(294)end
+ for i,b in ipairs({N.autoFlightToggle,N.autoAcceptToggle,N.autoTurninToggle})do b:ClearAllPoints();b:SetPoint('TOPLEFT',f,'TOPLEFT',18,-268-(i-1)*40);b:SetWidth(294)end
+ if N.draftButton then N.draftButton:SetSize(294,38);N.draftButton:ClearAllPoints();N.draftButton:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',18,74)end
+ if N.exportButton then N.exportButton:SetSize(294,38);N.exportButton:ClearAllPoints();N.exportButton:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',18,26)end
+ if ns.Forever then
+  if N.recordToggle then N.recordToggle:Hide()end;if N.gatherToggle then N.gatherToggle:Hide()end;if N.recordStatus then N.recordStatus:Hide()end
+  if N.draftButton then N.draftButton.label:SetText(ns.Forever.db and ns.Forever.db.collect==false and'Track Activity: Off'or'Track Activity: On');N.draftButton:SetScript('OnClick',function()local db=ns.Forever.db;if db then db.collect=not(db.collect~=false);K.Settings()end end)end
+  if N.exportButton then N.exportButton.label:SetText(ns.Forever.profile and'Track Performance: On'or'Track Performance: Off');N.exportButton:SetScript('OnClick',function()if ns.Forever.profile then ns.Performance.Stop()else ns.Performance.Start()end;K.Settings()end)end
+ end
+ if not K.rule then K.rule=f:CreateTexture(nil,'ARTWORK');K.rule:SetColorTexture(.45,.31,.12,1);K.rule:SetSize(294,1);K.rule:SetPoint('TOPLEFT',f,'TOPLEFT',18,-248)end
+ K.Sync()
+end
+local function materialName(m)return m.id==21071 and'Sagefish Pool'or m.name end
+function R.ToggleMaterial(m)
+ if not m then return end
+ if K.selected[m.id]then K.selected[m.id]=nil else local n=0;for _ in pairs(K.selected)do n=n+1 end;if n>=8 then ns.Print('Select up to eight resources.');return end;K.selected[m.id]=true end
+ R.Fill()
+end
+function R.Fill()
+ if not R.body then return end
+ local query=(R.search:GetText()or''):lower();local list={};for _,m in ipairs(R.materials)do if materialName(m):lower():find(query,1,true)or m.name:lower():find(query,1,true)then list[#list+1]=m end end
+ table.sort(list,function(a,b)if not not K.selected[a.id]~=not not K.selected[b.id]then return K.selected[a.id]==true end;return materialName(a)<materialName(b)end)
+ local y=0
+ for i,m in ipairs(list)do local b=R.buttons[i]
+  if not b then b=CreateFrame('Button',nil,R.body);R.buttons[i]=b;b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetSize(28,28);b.icon:SetPoint('LEFT',b,'LEFT',8,0);b.label=text(b,19);b.label:SetPoint('LEFT',b,'LEFT',44,0);b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.23);b.mark=texture(b,'RidgedControls_20261025_R1\\FacetedHex');b.mark:SetSize(14,14);b.mark:SetPoint('RIGHT',b,'RIGHT',-9,0);b.rule=b:CreateTexture(nil,'ARTWORK');b.rule:SetColorTexture(.46,.28,.1,.25);b.rule:SetHeight(1);b.rule:SetPoint('BOTTOMLEFT');b.rule:SetPoint('BOTTOMRIGHT');b:SetScript('OnClick',function(self)R.ToggleMaterial(self.material)end)end
+  b.material=m;b:SetSize(340,50);b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',0,-y);b.label:SetText(materialName(m));b.label:SetWidth(267);b.icon:SetTexture(icon(m.id));b.wash:SetShown(K.selected[m.id]==true);b.mark:SetShown(K.selected[m.id]==true);b:Show();y=y+51
+ end
+ for i=#list+1,#R.buttons do R.buttons[i]:Hide()end;R.body:SetHeight(math.max(1,y));local n=0;for _ in pairs(K.selected)do n=n+1 end
+ if K.count then K.count:SetText(n..' Resources Selected')end
+ if K.resourceScroll then K.resourceScroll:SetVerticalScroll(0)end
+ if K.resourceBar then K.resourceBar:SetShown(y>316)end
+end
+function R.StartSelection()
+ local materials={};for _,m in ipairs(R.materials)do if K.selected[m.id]then materials[#materials+1]=m end end
+ table.sort(materials,function(a,b)return a.id<b.id end)
+ if #materials==0 then return false,'Select at least one resource.'end
+ if read(IsInInstance)then return false,'Use an outdoor farming route.'end
+ local nodes={};local first;local p=position()
+ for _,m in ipairs(materials)do
+  local rank=m.kind=='Cloth'and 1 or F.Skill(m.kind)
+  if not rank or rank<(m.skill or 0)then return false,'Requires '..m.kind..' '..tostring(m.skill or 1)..' for '..m.name..'.'end
+  if m.kind=='Mining'and(read(GetItemCount,2901)or 0)<1 then return false,'Carry a Mining Pick.'end
+  if m.kind=='Skinning'and(read(GetItemCount,7005)or 0)<1 then return false,'Carry a Skinning Knife.'end
+  local choice=R.Recommend(m);R.request=choice;local ok,planned,why=pcall(F.Plan,m.kind,m.id,12);R.request=nil
+  if not ok or not planned or #planned==0 then return false,m.name..': '..tostring(why or'No eligible located route available.')end
+  local added=0
+  for _,v in ipairs(planned)do local dist=distance(v,p);if dist then
+   nodes[#nodes+1]={mapID=v.mapID,x=v.x,y=v.y,name=m.name,zone=choice and choice.reference.zone or v.zone,materialID=m.id,profession=m.kind};added=added+1
+  end end
+  if added==0 then return false,m.name..': No route on this continent.'end
+  if not first then first=m end
+ end
+ -- Nearest-first visiting order across eligible historical points, never terrain pathfinding.
+ local ordered={};local at=p
+ while #nodes>0 do local best,score=1,math.huge;for i,v in ipairs(nodes)do local dist=distance(v,at);if dist and dist<score then score=dist;best=i end end;local v=table.remove(nodes,best);ordered[#ordered+1]=v;at={mapID=v.mapID,x=v.x/100,y=v.y/100}end
+ local ok,why=R.Start(first,math.huge);if not ok then return false,why end
+ local route=F.route;route.nodes=ordered;route.steps={};route.multiMaterials=materials;route.item=nil;route.target=nil;route.traced=true;route.cursor=1
+ for i,v in ipairs(ordered)do route.steps[i]={id='farm:multi:'..i,title='Gather '..v.name,kind='farm',category='Gathering',priority=10000,destination=v,body=(v.profession=='Skinning'and'Kill, loot and skin suitable beasts.'or v.profession=='Fishing'and'Fish matching pools along the route.'or'Gather '..v.name..' along the route.')..' Skip bypasses this stop.'}end
+ if N.model then N.model.index=route.steps[1].id;N.model.browsing=false end;R.lastAdvance=read(GetTime)or 0;N.rowStart=1;K.age=1;N.Refresh();if F.DrawPins then F.DrawPins()end;if R.menu then R.menu:Hide()end;K.SyncFooter();return true
+end
+function K.SyncFooter()if N.farmButton then local label=F.route and'Stop Farming Route'or'Plan Farming Route';if N.farmButton.label:GetText()~=label then N.farmButton.label:SetText(label)end end end
+function R.Open()
+ if F.route then F.Stop('Quest guide resumed.');K.SyncFooter();return end
+ if not N.root then return end
+ if not K.resourceMenu then
+  local f=CreateFrame('Frame',nil,N.root,'BackdropTemplate');K.resourceMenu=f;R.menu=f;f:SetSize(396,592);f:SetPoint('CENTER',N.root,'CENTER');f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+120);f:EnableMouse(true);f:SetClampedToScreen(true)
+  f:SetBackdrop({bgFile=AS..'MatteLeather_20261025_R1\\MatteLeather',edgeFile=AS..'RidgedControls_20261025_R1\\RidgeRail',edgeSize=4});f:SetBackdropColor(.45,.30,.20,1)
+  local paper=texture(f,'NormalNW50_20261024_R1\\Parchment','BACKGROUND');paper:SetPoint('TOPLEFT',10,-10);paper:SetPoint('BOTTOMRIGHT',-10,10);paper:SetTexCoord(0,1254/2048,0,1254/2048)
+  local title=text(f,23,'Plan Farming Route');title:SetPoint('TOPLEFT',24,-30)
+  local search=CreateFrame('EditBox',nil,f,'InputBoxTemplate');R.search=search;search:SetSize(340,28);search:SetPoint('TOPLEFT',28,-80);search:SetAutoFocus(false);search:SetTextColor(.14,.09,.03);search:SetScript('OnTextChanged',R.Fill)
+  local sf=CreateFrame('ScrollFrame',nil,f);K.resourceScroll=sf;sf:SetPoint('TOPLEFT',26,-124);sf:SetSize(340,316);sf:EnableMouseWheel(true)
+  local body=CreateFrame('Frame',nil,sf);body:SetSize(340,1);sf:SetScrollChild(body);R.body=body;R.buttons={}
+  local bar=CreateFrame('Frame',nil,f);K.resourceBar=bar;bar:SetSize(7,316);bar:SetPoint('TOPRIGHT',f,'TOPRIGHT',-16,-124);local line=texture(bar,'RidgedControls_20261025_R1\\RidgeRail');line:SetAllPoints()
+  local function scroll(by)local max=math.max(0,R.body:GetHeight()-316);sf:SetVerticalScroll(math.max(0,math.min(max,(sf:GetVerticalScroll()or 0)+by)))end
+  sf:SetScript('OnMouseWheel',function(_,delta)scroll(-delta*51)end)
+  for _,up in ipairs({true,false})do local b=CreateFrame('Button',nil,bar);b:SetSize(14,14);b:SetPoint(up and'TOP'or'BOTTOM',bar,up and'TOP'or'BOTTOM');local arrow=texture(b,'NormalRevision_20261026_R1\\TriangleRight');arrow:SetAllPoints();arrow:SetRotation(up and-math.pi/2 or math.pi/2);b:SetScript('OnClick',function()scroll(up and-51 or 51)end)end
+  K.count=text(f,15);K.count:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',24,130)
+  local help=text(f,15,'Choose the resources you want to gather.');help:SetPoint('BOTTOM',f,'BOTTOM',0,84)
+  K.start=N.MakeButton(f,'Start Route',166,function()local ok,why=R.StartSelection();if ok then f:Hide()else ns.Print(why or'Route unavailable.')end end);K.start:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',24,28)
+  local cancel=N.MakeButton(f,'Cancel',166,function()f:Hide()end);cancel:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-24,28)
+ else R.menu=K.resourceMenu end
+ R.menu:Show();R.Fill()
+end
+local goal=F.CheckGoal;if goal then F.CheckGoal=function(...)if F.route and F.route.multiMaterials then return end;return goal(...)end end
+local destination=P.Destination
+P.Destination=function(...)
+ if F.route then
+  local route=F.route;local current=N.model and N.model.Current and N.model:Current()
+  for _,step in ipairs(route.steps)do if current and step.id==current.id then return step.destination end end
+  local step=route.steps[route.cursor or 1];return step and step.destination
+ end
+ return destination(...)
+end
+for _,name in ipairs({'Stop','Start'})do local fn=F[name];F[name]=function(...)local a,b=fn(...);K.age=1;K.SyncFooter();return a,b end end
+local refresh=N.Refresh
+N.Refresh=function(...)local result=refresh(...);K.SyncFooter();return result end
+local recipes=N.RefreshRecipes
+N.RefreshRecipes=function(...)
+ local result=recipes(...)
+ for _,b in ipairs(N.root and N.root.recipeRows or{})do local record=b.record;local loc=record and(record.location or record.locations and record.locations[1])
+  local allowed=b:IsShown()and loc and loc.mapID and loc.x and loc.y and record.kind~='boss'and record.kind~='loot'
+  if allowed then
+   if not b.compassFlag then local flag=N.MakeButton(b,'',25,function()local r=b.record;K.Flag(r,r.location or r.locations[1]);N.RefreshRecipes()end);b.compassFlag=flag;flag.symbol=texture(flag,'RecipeExplorer_20261025_R1\\RecipePin','OVERLAY');flag.symbol:SetSize(12,18);flag.symbol:SetTexCoord(0,1,0,.75);flag.symbol:SetPoint('CENTER');flag:SetScript('OnEnter',function(self)N.ShowInfoTooltip(self,'Pin / Unpin Recipe Source')end);flag:SetScript('OnLeave',N.HideInfoTooltip)end
+   b.compassFlag:SetSize(25,25);b.compassFlag:ClearAllPoints();b.compassFlag:SetPoint('TOPRIGHT',b,'TOPRIGHT',-2,-3);b.compassFlag:Show();b.compassFlag:SetAlpha(K.pins[K.FlagKey(record,loc)]and 1 or .75);b.label:SetWidth(math.max(60,b:GetWidth()-70))
+  elseif b.compassFlag then b.compassFlag:Hide()end
+ end;return result
+end
+local layout=W.Layout
+W.Layout=function(...)local result=layout(...);K.Ensure();K.Settings();K.SyncFooter();if N.farmButton then N.farmButton:SetScript('OnClick',R.Open)end;return result end
+N.WorkflowLayout=W.Layout
+local tick=N.Tick
+N.Tick=function(...)local result=tick(...);if K.Mode()=='Compass'and N.arrowFrame then N.arrowFrame:Hide()end;K.SyncFooter();return result end
+if N.settingsFrame then N.settingsFrame:HookScript('OnShow',K.Settings)end
+K.Ensure();K.Settings()
+end)(...)
+-- GF_NAVIGATION98_END
