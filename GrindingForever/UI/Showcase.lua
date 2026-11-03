@@ -17979,7 +17979,7 @@ end
 
 function N.SetArrowSize(value)
 
- local v=safeNumber(value,55,84);if not v then return false end
+ local v=safeNumber(value,11,66);if not v then return false end
 
  v=math.floor(v+.5);N.arrowSize=v
 
@@ -19706,7 +19706,7 @@ local function ensure()
 
  sizeSlider=CreateFrame("Slider",nil,settings);sizeSlider:SetSize(308,22);sizeSlider:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-116)
 
- sizeSlider:EnableMouse(true);sizeSlider:SetOrientation("HORIZONTAL");sizeSlider:SetMinMaxValues(55,84);sizeSlider:SetValueStep(1);sizeSlider:SetObeyStepOnDrag(true)
+ sizeSlider:EnableMouse(true);sizeSlider:SetOrientation("HORIZONTAL");sizeSlider:SetMinMaxValues(11,66);sizeSlider:SetValueStep(1);sizeSlider:SetObeyStepOnDrag(true)
 
  local track=tex(sizeSlider,THEME.."EnamelButton","BACKGROUND");track:SetPoint("LEFT",sizeSlider,"LEFT",0,0);track:SetPoint("RIGHT",sizeSlider,"RIGHT",0,0);track:SetHeight(10)
 
@@ -20220,7 +20220,7 @@ function S.Login()
 
  if ns.db then ns.db.normalArrowType=nil end -- Retired choice; size and enabled preference remain.
 
- N.SetArrowSize(math.max(55,math.min(84,safeNumber(ns.db and ns.db.normalArrowSize,50,200) or 84)))
+ N.SetArrowSize(math.max(11,math.min(66,safeNumber(ns.db and ns.db.normalArrowSize,11,200) or 55)))
 
  if ns.db and type(ns.db.normalRecipeSources)=="table" then for _,name in ipairs(sourceNames) do if type(ns.db.normalRecipeSources[name])=="boolean" then N.SetSource(name,ns.db.normalRecipeSources[name]) end end end
 
@@ -38709,7 +38709,7 @@ function S.Capture()
  local d=GrindingForeverAnniversaryCharacterDB
  if type(d)~='table'or not P or(P.frames or 0)<1 then return false end
  local report=P.Report();local text=report:sub(1,S.limit)
- d.performanceReport={version=1,build=93,time=type(GetServerTime)=='function'and GetServerTime()or nil,text=text,truncated=#report>S.limit,frames=P.frames,slowFrames=P.slowFrames,correlated=P.correlated}
+ d.performanceReport={version=1,build=99,time=type(GetServerTime)=='function'and GetServerTime()or nil,text=text,truncated=#report>S.limit,frames=P.frames,slowFrames=P.slowFrames,correlated=P.correlated}
  return true
 end
 local stop=P.Stop
@@ -39444,3 +39444,208 @@ if N.settingsFrame then N.settingsFrame:HookScript('OnShow',K.Settings)end
 K.Ensure();K.Settings()
 end)(...)
 -- GF_NAVIGATION98_END
+
+-- GF_REFINEMENT99_BEGIN
+;(function(...)
+local _,ns=...;local N,P,W,K,R,F=ns.NormalUI,ns.ProfessionGuide,ns.WindowWorkflow,ns.NavigationCompass,ns.MaterialRoutes,ns.FarmingPlanner
+local AS='Interface\\AddOns\\GrindingForever\\Assets\\'
+local function text(p,size,value)local t=p:CreateFontString(nil,'OVERLAY');t:SetFont('Fonts\\ARIALN.TTF',size);t:SetTextColor(.15,.09,.035);t:SetText(value or'');return t end
+local function tex(p,path,layer)local t=p:CreateTexture(nil,layer or'ARTWORK');t:SetTexture(AS..path);return t end
+local function icon(id)local fn=C_Item and C_Item.GetItemIconByID or GetItemIcon;return fn and fn(id)or'Interface\\Icons\\INV_Misc_Book_09'end
+local function now()return type(GetTime)=='function'and GetTime()or 0 end
+local function invalidate()if ns.StepWork99 then ns.StepWork99.value=nil end end
+-- Cache only within a short stable display interval; actual game events and all guide mutations invalidate immediately.
+if not ns.Forever then
+ local Q={hits=0,misses=0};ns.StepWork99=Q
+ local visible=N.model.Visible
+ function N.model:Visible(...)
+  if select('#',...)>0 then return visible(self,...)end
+  local db=ns.SharedExplorer.db;local route=F.route;local steps=route and route.steps or P.steps
+  local goals='';for _,s in ipairs({'Questing','Dungeons','Gathering','Crafting'})do goals=goals..tostring(self.goals[s])end
+  local v=Q.value;local clock=now()
+  if v and clock>=v.time and clock-v.time<.5 and v.steps==steps and v.index==self.index and v.browsing==self.browsing and v.view==self.view and v.goals==goals and v.pace==db.pace and v.journey==db.journey then Q.hits=Q.hits+1;return v.rows end
+  local rows=visible(self);Q.value={time=clock,steps=steps,index=self.index,browsing=self.browsing,view=self.view,goals=goals,pace=db.pace,journey=db.journey,rows=rows};Q.misses=Q.misses+1;return rows
+ end
+ for _,pair in ipairs({{N,'Refresh'},{N,'Resync'},{P,'Refresh'},{P,'Done'},{P,'Skip'},{F,'Advance'},{F,'Stop'}})do local owner,key=pair[1],pair[2];local fn=owner[key];if fn then owner[key]=function(...)invalidate();return fn(...)end end end
+ local events=CreateFrame('Frame');Q.events=events
+ for _,event in ipairs({'QUEST_LOG_UPDATE','QUEST_WATCH_UPDATE','QUEST_ACCEPTED','QUEST_TURNED_IN','BAG_UPDATE_DELAYED','SKILL_LINES_CHANGED','PLAYER_LEVEL_UP','ZONE_CHANGED','ZONE_CHANGED_NEW_AREA','PLAYER_ENTERING_WORLD'})do events:RegisterEvent(event)end
+ events:SetScript('OnEvent',invalidate)
+ -- Never leave unmeasured navigation/planning work outside the diagnostic summary.
+ if ns.Performance and ns.Performance.Measure then
+  for _,pair in ipairs({{K,'Update','Compass drawing'},{K,'Collect','Compass destinations'},{R,'StartSelection','Farm route planning'}})do local owner,key,label=unpack(pair);local fn=owner[key];owner[key]=function(...)return ns.Performance.Measure(label,fn,...)end end
+ end
+end
+function K.PinAvailable()return K.Enabled()and K.Mode()=='Compass'end
+local flag=K.Flag;K.Flag=function(...)if not K.PinAvailable()then return false end;return flag(...)end
+local recipes=N.RefreshRecipes
+N.RefreshRecipes=function(...)
+ local value=recipes(...)
+ for _,b in ipairs(N.root and N.root.recipeRows or{})do if b.compassFlag then b.compassFlag:SetAlpha(K.PinAvailable()and 1 or .45);b.compassFlag:SetScript('OnEnter',function(self)N.ShowInfoTooltip(self,K.PinAvailable()and'Pin / Unpin Recipe Source'or'Only usable with Compass')end)end end
+ return value
+end
+local settings=K.Settings
+K.Settings=function(...)local v=settings(...);if N.recordStatus then N.recordStatus:Hide();N.recordStatus:SetText('')end;local d=ns.db;if d and not d.gpsSize99 then d.gpsSize99=true;N.SetArrowSize(55)end;local d=ns.db;if d and not d.gpsSize99 then d.gpsSize99=true;N.SetArrowSize(55)end;return v end
+local sync=K.Sync
+K.Sync=function(...)local v=sync(...);for _,b in ipairs(N.root and N.root.recipeRows or{})do if b.compassFlag then b.compassFlag:SetAlpha(K.PinAvailable()and 1 or .45)end end;return v end
+-- Explicit solid paper base prevents transparent source gutters/backdrop layers obscuring labels.
+local function paper(f)
+ local base=f:CreateTexture(nil,'BACKGROUND',nil,-8);base:SetAllPoints();base:SetColorTexture(.12,.065,.025,1)
+ local t=tex(f,'NormalNW50_20261024_R1\\Parchment','BACKGROUND');t:SetPoint('TOPLEFT',8,-8);t:SetPoint('BOTTOMRIGHT',-8,8);t:SetTexCoord(0,1254/2048,0,1254/2048)
+ for _,edge in ipairs({'TOP','BOTTOM'})do local rail=tex(f,'RidgedControls_20261025_R1\\RidgeRail','BORDER');rail:SetPoint('LEFT',f,'LEFT',0,0);rail:ClearAllPoints();rail:SetPoint(edge..'LEFT',f,edge..'LEFT');rail:SetPoint(edge..'RIGHT',f,edge..'RIGHT');rail:SetHeight(4)end
+ for _,edge in ipairs({'LEFT','RIGHT'})do local rail=f:CreateTexture(nil,'BORDER');rail:SetColorTexture(.63,.43,.18,1);rail:SetPoint('TOP'..edge,f,'TOP'..edge);rail:SetPoint('BOTTOM'..edge,f,'BOTTOM'..edge);rail:SetWidth(3)end
+end
+function R.Fill()
+ if not R.body then return end
+ local list={};for _,m in ipairs(R.materials)do list[#list+1]=m end;table.sort(list,function(a,b)return a.name<b.name end)
+ local rows=math.ceil(#list/5);R.body:SetHeight(math.max(1,rows*100))
+ for i,m in ipairs(list)do local b=R.buttons[i]
+  if not b then
+   b=CreateFrame('Button',nil,R.body);R.buttons[i]=b;b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetSize(36,36);b.icon:SetPoint('TOP',b,'TOP',-8,-8)
+   b.label=text(b,16);b.label:SetPoint('TOPLEFT',b,'TOPLEFT',3,-50);b.label:SetWidth(112);b.label:SetHeight(42);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true)
+   b.check=CreateFrame('CheckButton',nil,b,'UICheckButtonTemplate');b.check:SetSize(23,23);b.check:SetPoint('TOPRIGHT',b,'TOPRIGHT',-3,-13);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end)
+   b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.17);b:SetScript('OnClick',function(self)R.ToggleMaterial(self.material)end)
+  end
+  b.material=m;b:SetSize(120,98);b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((i-1)%5)*124,-math.floor((i-1)/5)*100);b.icon:SetTexture(icon(m.id));b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:SetChecked(K.selected[m.id]==true);b.wash:SetShown(K.selected[m.id]==true);b:Show()
+ end
+ for i=#list+1,#R.buttons do R.buttons[i]:Hide()end
+ local n=0;for _ in pairs(K.selected)do n=n+1 end;K.count:SetText(n..' Resources Selected')
+ if K.resourceBar then K.resourceBar:SetShown(R.body:GetHeight()>K.gridHeight)end
+end
+function R.Open()
+ if F.route then F.Stop('Quest guide resumed.');K.SyncFooter();return end
+ if not N.root then return end
+ if not K.gridMenu then
+  if K.resourceMenu then K.resourceMenu:Hide()end
+  local f=CreateFrame('Frame',nil,UIParent);K.gridMenu=f;K.resourceMenu=f;R.menu=f;f:SetSize(680,640);f:SetPoint('CENTER',UIParent,'CENTER');f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+260);f:EnableMouse(true);f:SetClampedToScreen(true);paper(f)
+  local title=text(f,24,'Plan Farming Route');title:SetPoint('TOPLEFT',26,-24)
+  local sf=CreateFrame('ScrollFrame',nil,f);K.resourceScroll=sf;K.gridHeight=450;sf:SetPoint('TOPLEFT',26,-68);sf:SetSize(620,K.gridHeight);sf:EnableMouseWheel(true)
+  R.body=CreateFrame('Frame',nil,sf);R.body:SetSize(620,1);sf:SetScrollChild(R.body);R.buttons={};R.search=nil
+  local function scroll(delta)sf:SetVerticalScroll(math.max(0,math.min(R.body:GetHeight()-K.gridHeight,(sf:GetVerticalScroll()or 0)+delta)))end
+  sf:SetScript('OnMouseWheel',function(_,delta)scroll(-delta*100)end)
+  local rail=CreateFrame('Frame',nil,f);K.resourceBar=rail;rail:SetSize(7,K.gridHeight);rail:SetPoint('TOPRIGHT',f,'TOPRIGHT',-17,-68);local t=tex(rail,'RidgedControls_20261025_R1\\RidgeRail');t:SetAllPoints()
+  for _,up in ipairs({true,false})do local b=CreateFrame('Button',nil,rail);b:SetSize(15,15);b:SetPoint(up and'TOP'or'BOTTOM',rail,up and'TOP'or'BOTTOM');local a=tex(b,'NormalRevision_20261026_R1\\TriangleRight');a:SetAllPoints();a:SetRotation(up and-math.pi/2 or math.pi/2);b:SetScript('OnClick',function()scroll(up and-100 or 100)end)end
+  K.count=text(f,16);K.count:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',26,84)
+  K.start=N.MakeButton(f,'Start Route',180,function()local ok,why=R.StartSelection();if not ok then ns.Print(why or'Route unavailable.')end end);K.start:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',26,26)
+  local cancel=N.MakeButton(f,'Cancel',180,function()f:Hide()end);cancel:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-26,26)
+ end
+ R.menu=K.gridMenu;local h=UIParent:GetHeight();if type(h)=='number'and h>0 then R.menu:SetScale(math.min(1,math.max(.5,(h-32)/640)))end;R.menu:Show();R.Fill()
+end
+local function clickThrough()
+ local r=N.root;if not r then return end
+ if N.frame then N.frame:EnableMouse(false)end;r:EnableMouse(false)
+ if r.headerDrag and r.wood then r.headerDrag:ClearAllPoints();r.headerDrag:SetAllPoints(r.wood)end
+ -- Keep panel surfaces and their children interactive while the transparent header gap passes through.
+ for _,p in ipairs(r.panels or{})do p:EnableMouse(true)end
+end
+local layout=W.Layout
+W.Layout=function(...)local v=layout(...);K.Settings();clickThrough();return v end;N.WorkflowLayout=W.Layout
+K.Settings();clickThrough()
+end)(...)
+-- GF_REFINEMENT99_END
+
+-- GF_MAPS99_BEGIN
+;(function(...)
+local _,ns=...;local N,W,E,U,F,M=ns.NormalUI,ns.WindowWorkflow,ns.SharedExplorer,ns.SharedUI,ns.FarmingPlanner,ns.KnownNodePins
+local AS='Interface\\AddOns\\GrindingForever\\Assets\\'
+local function read(fn,...)if type(fn)=='function'then local ok,a,b,c,d,e,f,g,h,i,j,k,l,m=pcall(fn,...);if ok then return a,b,c,d,e,f,g,h,i,j,k,l,m end end end
+local function text(p,size,value)local t=p:CreateFontString(nil,'OVERLAY');t:SetFont('Fonts\\ARIALN.TTF',size);t:SetTextColor(.15,.09,.035);t:SetText(value or'');return t end
+local function db()return ns.Forever and ns.Forever.db or GrindingForeverAnniversaryCharacterDB or ns.db end
+local V={pins={},modeNames={'World Map','Minimap','Both','Off'},boss=nil,class='All Classes'};ns.MapControls99=V
+function V.Mode()local d=db();return d and d.nodeDisplay or(d and d.knownNodePins==false and'Off'or'Both')end
+function V.SetMode(mode)
+ local valid=false;for _,v in ipairs(V.modeNames)do if v==mode then valid=true end end;if not valid then return false end
+ local d=db();if d then d.nodeDisplay=mode;d.knownNodePins=mode=='Both'or mode=='Minimap'end
+ V.map=nil;V.pending=nil;if M then M.age=5;M.Hide();if M.button then M.button.label:SetText('Nodes: '..mode)end end
+ if mode=='Off'or mode=='Minimap'then for _,p in ipairs(V.pins)do p:Hide()end end;return true
+end
+function V.Cycle()for i,v in ipairs(V.modeNames)do if v==V.Mode()then return V.SetMode(V.modeNames[i%4+1])end end;return V.SetMode('Both')end
+if M then
+ M.Enabled=function()return V.Mode()=='Both'or V.Mode()=='Minimap'end
+ M.SetEnabled=function(v)return V.SetMode(v and'Both'or'Off')end
+end
+function V.UpdateWorld(elapsed)
+ V.elapsed=(V.elapsed or 0)+(elapsed or 0);if V.elapsed<.5 then return end;V.elapsed=0
+ local frame=WorldMapFrame;local mode=V.Mode()
+ if(mode~='World Map'and mode~='Both')or not frame or not frame:IsShown()then V.pending=nil;for _,p in ipairs(V.pins)do p:Hide()end;return end
+ local canvas=frame.ScrollContainer and frame.ScrollContainer.Child;local map=read(frame.GetMapID,frame)
+ if not canvas or not map then return end
+ local skills='';for _,kind in ipairs({'Mining','Herbalism','Fishing'})do skills=skills..tostring(F.Skill(kind))end
+ V.age=(V.age or 5)+.5;if V.map==map and V.skills==skills and V.age<5 then return end;V.map,V.skills,V.age=map,skills,0
+ F.LoadKnown();local points,seen={},{}
+ local function add(kind,x,y,name,item)
+  if type(x)~='number'or type(y)~='number'or x<0 or x>100 or y<0 or y>100 then return end
+  local key=kind..':'..math.floor(x*100)..':'..math.floor(y*100);if seen[key]then return end;seen[key]=true;points[#points+1]={x=x,y=y,kind=kind,name=name,item=item,key=key}
+ end
+ for _,kind in ipairs({'Mining','Herbalism','Fishing'})do local skill=F.Skill(kind)
+  if skill then
+   for coord,id in pairs(F.known[kind]and F.known[kind][map]or{})do local meta=F.meta[id];if meta and(meta.skill or 0)<=skill then local x,y=F.Decode(coord);add(kind,x,y,meta.name or F.names[id],meta.item)end end
+   for _,v in pairs(ns.GatheringObserver and ns.GatheringObserver.data and ns.GatheringObserver.data.nodes or{})do if v.profession==kind and v.position and v.position.mapID==map and(v.sourceMatchedHarvests or 0)>0 then local meta=F.meta[v.sourceNodeID];add(kind,v.position.x,v.position.y,v.name,meta and meta.item)end end
+  end
+ end
+ table.sort(points,function(a,b)return a.key<b.key end)
+ V.pending={canvas=canvas,points=points,width=canvas:GetWidth(),height=canvas:GetHeight(),count=math.min(400,#points),cursor=1}
+end
+function V.RenderBatch()
+ local batch=V.pending;if not batch then return end
+ if V.Mode()~='Both'and V.Mode()~='World Map'then V.pending=nil;return end
+ local canvas,points,width,height,count=batch.canvas,batch.points,batch.width,batch.height,batch.count
+ for i=batch.cursor,math.min(count,batch.cursor+19)do local v=points[i];local p=V.pins[i]
+  if not p then p=CreateFrame('Button',nil,canvas);p:SetSize(13,13);p.icon=p:CreateTexture(nil,'ARTWORK');p.icon:SetAllPoints();p:SetAlpha(.8);p:SetScript('OnEnter',function(self)if GameTooltip then GameTooltip:SetOwner(self,'ANCHOR_RIGHT');GameTooltip:AddLine(self.node.name or self.node.kind,1,.82,.3);GameTooltip:AddLine('Known gathering location; possible spawn.',.3,.85,.8);GameTooltip:Show()end end);p:SetScript('OnLeave',function()if GameTooltip then GameTooltip:Hide()end end);V.pins[i]=p end
+  p:SetParent(canvas);p:SetFrameLevel(canvas:GetFrameLevel()+8);p.node=v;p.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,v.item)or'Interface\\Icons\\Trade_Mining');p:ClearAllPoints();p:SetPoint('CENTER',canvas,'TOPLEFT',v.x*width/100,-v.y*height/100);p:Show()
+ end
+ batch.cursor=batch.cursor+20;if batch.cursor>count then for i=count+1,#V.pins do V.pins[i]:Hide()end;V.pending=nil end
+end
+local worker=CreateFrame('Frame');V.worker=worker;worker:SetScript('OnUpdate',function(_,dt)if ns.Performance and ns.Performance.Measure then ns.Performance.Measure('World Map nodes',V.UpdateWorld,dt);ns.Performance.Measure('World Map pin batch',V.RenderBatch)else V.UpdateWorld(dt);V.RenderBatch()end end)
+local classes={'All Classes','Warrior','Paladin','Hunter','Rogue','Priest','Shaman','Mage','Warlock','Druid'}
+local armor={Warrior={[1]=true,[2]=true,[3]=true,[4]=true,[6]=true},Paladin={[1]=true,[2]=true,[3]=true,[4]=true,[6]=true},Hunter={[1]=true,[2]=true,[3]=true},Rogue={[1]=true,[2]=true},Priest={[1]=true},Shaman={[1]=true,[2]=true,[3]=true,[6]=true},Mage={[1]=true},Warlock={[1]=true},Druid={[1]=true,[2]=true}}
+local weapons={Warrior={[0]=true,[1]=true,[2]=true,[3]=true,[4]=true,[5]=true,[6]=true,[7]=true,[8]=true,[10]=true,[13]=true,[15]=true,[16]=true,[18]=true},Paladin={[0]=true,[1]=true,[4]=true,[5]=true,[6]=true,[7]=true,[8]=true},Hunter={[0]=true,[1]=true,[2]=true,[3]=true,[6]=true,[7]=true,[8]=true,[10]=true,[13]=true,[15]=true,[18]=true},Rogue={[2]=true,[3]=true,[4]=true,[7]=true,[13]=true,[15]=true,[16]=true,[18]=true},Priest={[4]=true,[10]=true,[15]=true,[19]=true},Shaman={[0]=true,[1]=true,[4]=true,[5]=true,[10]=true,[13]=true,[15]=true},Mage={[7]=true,[10]=true,[15]=true,[19]=true},Warlock={[7]=true,[10]=true,[15]=true,[19]=true},Druid={[4]=true,[5]=true,[10]=true,[13]=true,[15]=true}}
+function V.ClassAllows(id,class)
+ if not class or class=='All Classes'then return true end
+ local name,_,_,_,_,_,_,_,equip,_,_,itemClass,sub=read(GetItemInfo,id)
+ if not name then return true end -- Cache misses remain visible until real item data arrives.
+ if itemClass==4 and sub and sub>=1 and sub<=6 and equip~='INVTYPE_CLOAK'then return armor[class]and armor[class][sub]==true end
+ if itemClass==2 and sub then return weapons[class]and weapons[class][sub]==true end
+ return true -- Shared accessories, recipes and quest items remain visible.
+end
+local originalSources=N.root and N.root.sourceButton:GetScript('OnClick');local originalProfessions=N.root and N.root.professionButton:GetScript('OnClick')
+local function dropdown(anchor,values,callback)
+ if V.menu then V.menu:Hide()end
+ if not V.menu then V.menu=CreateFrame('Frame',nil,UIParent,'BackdropTemplate');V.menu.buttons={};V.menu:SetBackdrop({bgFile='Interface\\Tooltips\\UI-Tooltip-Background',edgeFile='Interface\\Tooltips\\UI-Tooltip-Border',edgeSize=12});V.menu:SetBackdropColor(.04,.035,.02,1);V.menu:SetClampedToScreen(true);V.menu:SetFrameStrata('TOOLTIP')end
+ local f=V.menu;f:SetFrameLevel(N.root:GetFrameLevel()+280);f:ClearAllPoints();f:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT',0,-3);f:SetSize(330,#values*30+12)
+ for i,v in ipairs(values)do local b=f.buttons[i];if not b then b=N.MakeButton(f,'',314,function()end);f.buttons[i]=b end;b:SetSize(314,28);b:ClearAllPoints();b:SetPoint('TOPLEFT',f,'TOPLEFT',8,-6-(i-1)*30);b.label:SetText(v.name);b:SetScript('OnClick',function()callback(v);f:Hide()end);b:Show()end
+ for i=#values+1,#f.buttons do f.buttons[i]:Hide()end;f:Show()
+end
+function V.Controls()
+ local r=N.root;if not r then return end
+ if not V.originalCaptured then originalSources=r.sourceButton:GetScript('OnClick');originalProfessions=r.professionButton:GetScript('OnClick');V.originalCaptured=true end
+ if M and M.button then M.button.label:SetText('Nodes: '..V.Mode());M.button:SetScript('OnClick',V.Cycle)end
+ if U.pane=='Dungeons'then
+  r.sourceButton:Show();r.professionButton:Show();r.sourceButton.label:SetText(V.boss or'Bosses');r.professionButton.label:SetText(V.class=='All Classes'and'Class'or V.class)
+  r.sourceButton:SetScript('OnClick',function()
+   local d=E.dungeons[N.selectedZone];local values={{name='All Bosses'}};for _,b in ipairs(d and d.bosses or{})do values[#values+1]={name=b.name}end;if d and d.otherLoot and#d.otherLoot>0 then values[#values+1]={name='Trash/Object'}end
+   dropdown(r.sourceButton,values,function(v)V.boss=v.name=='All Bosses'and nil or v.name;N.RefreshRecipes();V.Controls()end)
+  end)
+  r.professionButton:SetScript('OnClick',function()local values={};for _,v in ipairs(classes)do values[#values+1]={name=v}end;dropdown(r.professionButton,values,function(v)V.class=v.name;N.RefreshRecipes();V.Controls()end)end)
+  if N.sourceMenu then N.sourceMenu:Hide()end;if N.professionMenu then N.professionMenu:Hide()end
+ else r.sourceButton.label:SetText('Sources');r.professionButton.label:SetText('Professions');r.sourceButton:SetScript('OnClick',originalSources);r.professionButton:SetScript('OnClick',originalProfessions)end
+end
+local refresh=N.RefreshRecipes
+N.RefreshRecipes=function(...)
+ if U.pane~='Dungeons'then for _,row in ipairs(N.root and N.root.dungeonLootRows or{})do row:Hide()end;local v=refresh(...);V.Controls();return v end
+ local r=N.root;if not r or N.resizing then return end
+ for _,b in ipairs(r.recipeRows or{})do b:Hide()end;for _,h in ipairs(r.workflowHeaders or{})do h:Hide()end
+ local d=E.dungeons[N.selectedZone];if V.zone~=N.selectedZone then V.zone=N.selectedZone;V.boss=nil end
+ local rows={};local function add(boss)if not V.boss or V.boss==boss.name then for _,v in ipairs(E.BossLoot(boss))do if V.ClassAllows(v[1],V.class)then rows[#rows+1]={name=v[2],itemID=v[1],source=v[3]or boss.name}end end end end
+ for _,boss in ipairs(d and d.bosses or{})do add(boss)end;if d and d.otherLoot then add({name='Trash/Object',loot=d.otherLoot})end
+ r.recipesText:SetText('Dungeon Loot');N.visibleRecipes=rows;r.dungeonLootRows=r.dungeonLootRows or{};local width=math.max(100,r.recipeScroll:GetWidth()-24);r.recipeContent:SetWidth(width);local y=0
+ for i,v in ipairs(rows)do local b=r.dungeonLootRows[i]
+  if not b then b=CreateFrame('Button',nil,r.recipeContent);b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetSize(26,26);b.icon:SetPoint('TOPLEFT',2,-5);b.label=text(b,17);b.label:SetPoint('TOPLEFT',36,-4);b.detail=text(b,13);r.dungeonLootRows[i]=b end
+  b.record=v;b:ClearAllPoints();b:SetPoint('TOPLEFT',r.recipeContent,'TOPLEFT',0,-y);b:SetWidth(width);b.label:SetWidth(width-40);b.label:SetHeight(0);b.label:SetWordWrap(true);b.label:SetText(v.name);b.detail:ClearAllPoints();b.detail:SetPoint('TOPLEFT',b.label,'BOTTOMLEFT',0,-3);b.detail:SetWidth(width-40);b.detail:SetText(v.source);b.icon:SetTexture(read(GetItemIcon,v.itemID));local h=math.max(52,b.label:GetStringHeight()+b.detail:GetStringHeight()+14);b:SetHeight(h);b:SetScript('OnEnter',function(self)W.Tooltip(self,self.record.itemID)end);b:SetScript('OnLeave',function()if W.tooltip then W.tooltip:Hide()end end);b:Show();y=y+h
+ end
+ for i=#rows+1,#r.dungeonLootRows do r.dungeonLootRows[i]:Hide()end;r.recipeContent:SetHeight(math.max(1,y));r.recipeScroll:SetVerticalScroll(0);N.UpdateMapView();W.ScrollState();V.Controls()
+end
+local layout=W.Layout
+W.Layout=function(...)local v=layout(...);if U.pane~='Dungeons'then for _,b in ipairs(N.root and N.root.dungeonLootRows or{})do b:Hide()end end;V.Controls();return v end;N.WorkflowLayout=W.Layout
+V.Controls()
+end)(...)
+-- GF_MAPS99_END
