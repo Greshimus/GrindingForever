@@ -1,0 +1,1 @@
+Private local Forever CNC-style arrow, Oct27 2026. Reuses canonical R2 textures without copies.65-degree camera; elongated plate, undeformed logo; logo top equals rim top.256 Y-axis views, single silhouette. Native test pending.

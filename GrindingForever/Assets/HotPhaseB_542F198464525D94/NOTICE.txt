@@ -1,0 +1,6 @@
+Local Phase B reconstruction candidates, not visually accepted or cleared for redistribution.
+JoinedFrame, Leather and CloseStates: built-in imagegen reference-conditioned generation.
+Lossless PNG->BGRA TGA export with verified transparent padding; original pixels/alpha retained.
+Reference authority/provenance: Collaboration/ISSUE3_PHASE_B_REPORT.md and local ArtManifest.csv.
+Independent existing gryphon/endcap assets and original notices are unchanged.
+No claim of exclusive ownership, originality or third-party permission. Keep local pending review.

@@ -1,0 +1,23 @@
+## Interface: 20506
+## Title: Grinding Forever
+## Notes: TBC Anniversary - blended questing, professions and Completionist testing
+## Author: Grinding Forever
+## Version: anniversary-72
+## SavedVariables: GrindingForeverAnniversaryDB
+## SavedVariablesPerCharacter: GrindingForeverAnniversaryCharacterDB
+## OptionalDeps: Questie, QuestieDB
+
+Retail/Compatibility.lua
+Retail/Target.lua
+Retail/Storage.lua
+Retail/Bootstrap.lua
+Retail/Catalog.lua
+MapArrow.lua
+UI/GuideWindow.lua
+UI/PresentationAdapter.lua
+Route.lua
+Recipes.lua
+TBC.lua
+Data/EveryQuestCatalog.lua
+Data/TBCQuestEligibility.lua
+UI/Showcase.lua

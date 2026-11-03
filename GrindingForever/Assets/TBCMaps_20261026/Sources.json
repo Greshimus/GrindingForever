@@ -1,0 +1,422 @@
+{
+  "Elwynn Forest": {
+    "id": 12,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/12.jpg",
+    "sha256": "D4E2F13854895D01956F1347C9B7E5E25DCE73765BB468CAFE53B3526ED733ED"
+  },
+  "Stormwind City": {
+    "id": 1519,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/1519.jpg",
+    "sha256": "729C43B23BFB55E8CCFF6B63B8811D03B8D3ABE2502BCE1F6EF913CA9A5E9EED"
+  },
+  "Dun Morogh": {
+    "id": 1,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/1.jpg",
+    "sha256": "6E6F8677EF81203D15935E98EB9DF2A5E7FF604A4421BA3940B98FDFDFE17035"
+  },
+  "Loch Modan": {
+    "id": 38,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/38.jpg",
+    "sha256": "F70DB269FD72814F571210F1BEA0B47023BEBF4A169B08D2EB018687C7D6AAA7"
+  },
+  "Ironforge": {
+    "id": 1537,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/1537.jpg",
+    "sha256": "8E3E9038FB7C5FDFBB074CFA46DD193EA60B622934E4CDC3F4B416D14992E466"
+  },
+  "Westfall": {
+    "id": 40,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/40.jpg",
+    "sha256": "85F9F9E78134FE52E59469BA78BC0522F27527B6BD4D5429CAEA8F333C524D21"
+  },
+  "Wetlands": {
+    "id": 11,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/11.jpg",
+    "sha256": "56B9E1E24B760DE4D1313AC662C03F5525DE9C2AB61BA24CD890B2A35CF2118C"
+  },
+  "Darkshore": {
+    "id": 148,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/148.jpg",
+    "sha256": "0C80E4D334E8379F80348DA21AC01CA57FD625DC074625A58FA57D0C419DD87A"
+  },
+  "The Exodar": {
+    "id": 3557,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3557.jpg",
+    "sha256": "79E283F5C7478CB94D6640B625E710230EACD2E8234D470F4A6D489816EEEB77"
+  },
+  "Azuremyst Isle": {
+    "id": 3524,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3524.jpg",
+    "sha256": "7B5A2CB0ECCB32A0ECFA69BC50861DE08DC169FCD28BDC0740FFF4DBD0F3E66A"
+  },
+  "Darnassus": {
+    "id": 1657,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/1657.jpg",
+    "sha256": "0EA7D3D31B6C8C8014328CAE239539D18050A486B3C5402C1BF1C5981CCF310B"
+  },
+  "Redridge Mountains": {
+    "id": 44,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/44.jpg",
+    "sha256": "BB12302E29A64AD27C8B5095ACE3B28D3946BBDB261969FBF81E503857069AEE"
+  },
+  "Duskwood": {
+    "id": 10,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/10.jpg",
+    "sha256": "6B783A24BBB2C13BFA410F6399812C659FCDA4FD880A8E82FB42FEFD51371173"
+  },
+  "Stranglethorn Vale": {
+    "id": 33,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/33.jpg",
+    "sha256": "8F5C951742C95E59CA05875353A0557F6B13527988978B688A36D8E71B58E8C3"
+  },
+  "Arathi Highlands": {
+    "id": 45,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/45.jpg",
+    "sha256": "D0A53695C5DF4206368B4CD54545C406D65E9B86701FF505BCFFCB50880881C2"
+  },
+  "Hillsbrad Foothills": {
+    "id": 267,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/267.jpg",
+    "sha256": "76193C166451B705A6A88F69AA2428581DB41F02FABC82F03F4ABC44350D290B"
+  },
+  "Alterac Mountains": {
+    "id": 36,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/36.jpg",
+    "sha256": "5A590C9813FC6A19677EF18E91FEA054C69E4C7B8B25CD99D51020D4F715594E"
+  },
+  "Dustwallow Marsh": {
+    "id": 15,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/15.jpg",
+    "sha256": "2120B77375DA48E6E9361EF40312A27C43C9BB0855DCBD6C72EB28320F8DE53A"
+  },
+  "Thousand Needles": {
+    "id": 400,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/400.jpg",
+    "sha256": "A80DBE2D57073C19B3B6A0EB73ED2B439F238D8B325FFEACEBE422E2C43945FB"
+  },
+  "The Barrens": {
+    "id": 17,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/17.jpg",
+    "sha256": "8552C9CDAFCFA52D0B467B4A066991B0823768306AF340E740FE255A242EF86D"
+  },
+  "Swamp of Sorrows": {
+    "id": 8,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/8.jpg",
+    "sha256": "8E373CE5FD21B9D267F9232B5732F8FAC974465DB39EC47AEE45D4946D0A99A9"
+  },
+  "Badlands": {
+    "id": 3,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3.jpg",
+    "sha256": "6A6014B2291CF33A294F0136A570FD542D616AC47B536D60D155C109A04083C3"
+  },
+  "Tanaris": {
+    "id": 440,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/440.jpg",
+    "sha256": "E9EC74AFE5836C74C8591117E19C84EF3283949BCD88A9A8B4611176C0C4D7F7"
+  },
+  "Blasted Lands": {
+    "id": 4,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/4.jpg",
+    "sha256": "9CD9E8C9C93CD8C8972B777B5CEE7846CF166992056B190DE1D2412C73BBCBE1"
+  },
+  "The Hinterlands": {
+    "id": 47,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/47.jpg",
+    "sha256": "C17F2EB5E7557F7174F59BA5CC1776B5EE753C9130E196D597A1B8A43C35E89F"
+  },
+  "Feralas": {
+    "id": 357,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/357.jpg",
+    "sha256": "5758F8AA9107C57892C755BA337A61840488C5855129CBF4B9AB24CBA91F4D94"
+  },
+  "Un'Goro Crater": {
+    "id": 490,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/490.jpg",
+    "sha256": "448EFBA38DC5EDDA611DC88D20A15931B685F98D634EDF9C43A5193C6391A25B"
+  },
+  "Teldrassil": {
+    "id": 141,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/141.jpg",
+    "sha256": "77557AACDAAF22FB094FF8295A54E6040641A5A1D2D8C1D8DBF70A5E00DAB823"
+  },
+  "Western Plaguelands": {
+    "id": 28,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/28.jpg",
+    "sha256": "EC9444C659076ED9F29471AAAC6428615AEFD5F71F4D7971A5A50ED6249CEB03"
+  },
+  "Eastern Plaguelands": {
+    "id": 139,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/139.jpg",
+    "sha256": "E9CD2C9802F018B7DEA8CE27DCD215EDAF6D4621CA4F2F7CB1801C16BA43A898"
+  },
+  "Felwood": {
+    "id": 361,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/361.jpg",
+    "sha256": "8D8B0C3FD46739B01637051914E51E5239BD19C6A68087E321C6C8066C85139E"
+  },
+  "Winterspring": {
+    "id": 618,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/618.jpg",
+    "sha256": "66B6B1882160F1CAAA54A769254DBC1F281086DF76178DBDD738419F3138E21B"
+  },
+  "Azshara": {
+    "id": 16,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/16.jpg",
+    "sha256": "80681A6CB7833622243A530AC7AFF0FA55DD5FCA4A53849BB1277B2A89EA60D6"
+  },
+  "Burning Steppes": {
+    "id": 46,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/46.jpg",
+    "sha256": "48482FF03B4C552C05A622AAC26CB11D3783DB534AFC75E79F2B93AE3AB79F69"
+  },
+  "Searing Gorge": {
+    "id": 51,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/51.jpg",
+    "sha256": "0C0EBCD4E5C7D8F554FC63C09574E82A10D07A9B3FA9AF29E9C29CB96F625D25"
+  },
+  "Moonglade": {
+    "id": 493,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/493.jpg",
+    "sha256": "9DD43F8840E1816926010DF7E0989F1AF3BF663552CE5C6F4067F9C08DF2FC09"
+  },
+  "Ashenvale": {
+    "id": 331,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/331.jpg",
+    "sha256": "043EE79FC7C473ED2DC6443E60B800790F32EFDA88E38B9138E1D457F50FD499"
+  },
+  "Silithus": {
+    "id": 1377,
+    "u": 1.0,
+    "v": 0.66796875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/1377.jpg",
+    "sha256": "17F955E2322BEFAE1E8026BCA51D543B2CF7A0584D82C00017D5F6B7D4410569"
+  },
+  "Hellfire Peninsula": {
+    "id": 3483,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3483.jpg",
+    "sha256": "ADFAFEACF379FA2EBD8159A3938F8215B337548183955C46ECAFCC4EECBF0CB0"
+  },
+  "Zangarmarsh": {
+    "id": 3521,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3521.jpg",
+    "sha256": "3A4DCD0747D7B3D6B802AD4345EB4CDBF1E2C51A0FFA39BCBF91759EBDC717D1"
+  },
+  "Shattrath City": {
+    "id": 3703,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3703.jpg",
+    "sha256": "AE1D2B22E6CDDBE69DC5CAF5F32E825663405C8B743C1759461946AF19423DDF"
+  },
+  "Terokkar Forest": {
+    "id": 3519,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3519.jpg",
+    "sha256": "8F3F57FA5138F2A1A8C811D17B086853E60644898B398864E4FB39616AF4C806"
+  },
+  "Nagrand": {
+    "id": 3518,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3518.jpg",
+    "sha256": "FB55AE9700405A1F556CACC3092C5F6B5DD46FAC018066E9BBCBC7BFC148DB1E"
+  },
+  "Blade's Edge Mountains": {
+    "id": 3522,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3522.jpg",
+    "sha256": "AB402500C520BAF29A8B5F91E598892A11B24E91085746115297F0DFCCA0D85A"
+  },
+  "Netherstorm": {
+    "id": 3523,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3523.jpg",
+    "sha256": "A5912FE4E14CD2A658D08A56D2D155D18C273F73762F4AC87A4EAE3F67BCCC8D"
+  },
+  "Deadwind Pass": {
+    "id": 41,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/41.jpg",
+    "sha256": "D5C172BF65EB1B54F17B8FC6E00F677828723A3747E8376694DB3899E0DCD86E"
+  },
+  "Desolace": {
+    "id": 405,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/405.jpg",
+    "sha256": "6988A25C6D0AC90DAB712FE97606107C2E18EB73B2C69C24668B349674D183D0"
+  },
+  "Durotar": {
+    "id": 14,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/14.jpg",
+    "sha256": "D0BE394138D07665D9632B6870EE883A66B9667B9EBA553A094A4CD97429D6F2"
+  },
+  "Mount Hyjal": {
+    "error": "HTTP Error 404: Not Found"
+  },
+  "Mulgore": {
+    "id": 215,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/215.jpg",
+    "sha256": "6A76AC797D7C8345833219FBCD1039A938D6C5857580FDB51606034905F1377A"
+  },
+  "Orgrimmar": {
+    "id": 1637,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/1637.jpg",
+    "sha256": "172DC3817F01513A37A22CAFF6EA4C621B2A313BF7B7ED00C6F5233A287A6F6A"
+  },
+  "Silverpine Forest": {
+    "id": 130,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/130.jpg",
+    "sha256": "6A34AC0F6B4F99B9BCB3BEDF7A80DD919E5AA3350455FA2DD6A5A918929CBEF5"
+  },
+  "Stonetalon Mountains": {
+    "id": 406,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/406.jpg",
+    "sha256": "10B57D3FFFFCFF78261283DE793F7BBA15DBD2E4832C4EED22943097D538CFDB"
+  },
+  "Thunder Bluff": {
+    "id": 1638,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/1638.jpg",
+    "sha256": "620C67B04BC34593D4CA3DDBEE23F259ACC188DFA9B31C97ECE5D7ADAF43FCF3"
+  },
+  "Tirisfal Glades": {
+    "id": 85,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/85.jpg",
+    "sha256": "97CE00D0379896221620D9F75C1A4F86C599C02DD8EF65DEB7304FB87F6B0875"
+  },
+  "Undercity": {
+    "id": 1497,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/1497.jpg",
+    "sha256": "99D3A0530D92AFFD566841FFAB7A7C8D3A97FAEFBDE69005723F9559BC5A1862"
+  },
+  "Bloodmyst Isle": {
+    "id": 3525,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3525.jpg",
+    "sha256": "E3083F3EA50FBBA389A20997DB107957CB84FAF5B559517AFA9D1F1928184159",
+    "sourceSHA256": "20632D2A008FAA2E76733E8F2F758B570AF521BF6D2D2E16CDA0183D18796725"
+  },
+  "Eversong Woods": {
+    "id": 3430,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3430.jpg",
+    "sha256": "6A6C47790031183F660180266DB3B6BE9F693AB924626F1904880858CBCFCADE",
+    "sourceSHA256": "86175A3395149E75CB4C045BF715B9FCCB42B066BBC0166F81146E55FE7767BB"
+  },
+  "Ghostlands": {
+    "id": 3433,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3433.jpg",
+    "sha256": "E35191311359357CD8A4AE3ED8F4BD08C7004E19C66D88C45B508FC446AD321C",
+    "sourceSHA256": "FE24BB3A9254686BCD73B3DD7700A7FCD5E061BD4CE92A1521B45CECF0BF8BC0"
+  },
+  "Shadowmoon Valley": {
+    "id": 3520,
+    "u": 1.0,
+    "v": 0.6669921875,
+    "url": "https://wow.zamimg.com/images/wow/tbc/maps/enus/original/3520.jpg",
+    "sha256": "AED87A79D204E4892D4D20899ADA7DB03F641874A8E8E94FB91FA80C201749EA",
+    "sourceSHA256": "996B0A8F4224675426ADF00673C6B2C6AC119ADF34FA2C3A1BA50314584A3072"
+  }
+}

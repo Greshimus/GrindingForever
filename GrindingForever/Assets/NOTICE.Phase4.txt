@@ -1,0 +1,20 @@
+Grinding Forever Phase 4 artwork
+
+The GrindingForeverPhase4*.tga family was generated for this private project
+using the built-in image-generation tool from original written prompts, then
+converted and sliced locally using Windows System.Drawing. No third-party game
+guide, source code, observations, account data or quest content was used.
+
+The approved project reference informed artistic direction; it was not cropped
+into runtime textures. The cleanup edit used only the newly generated dragon.
+Source PNGs, prompts and export provenance are retained in
+DesignReferences/Phase4Artwork; the offline converter is
+Scripts/Build-Phase4Artwork.ps1. Those development files are not runtime assets.
+
+These are AI-generated project assets, not externally licensed stock artwork.
+No exclusive copyright, trademark clearance or third-party licensing guarantee
+is asserted. Retain this provenance notice. Existing non-Phase4 assets retain
+their prior provenance; this notice does not relicense them.
+
+Runtime format: uncompressed true-color TGA, 24-bit opaque vellum and 32-bit
+straight BGRA with 8-bit alpha for ornaments. New filenames preserve originals.

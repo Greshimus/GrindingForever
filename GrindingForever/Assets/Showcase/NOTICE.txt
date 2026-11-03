@@ -1,0 +1,15 @@
+Grinding Forever Phase6A PREVIEW-ONLY artwork
+
+WyvernLeft_PREVIEW_ONLY.tga and WyvernRight_PREVIEW_ONLY.tga were converted
+locally, without any RGBA pixel changes, from the user-approved Phase5D
+padded PNGs. Those preserve the approved Phase5C visual candidates.
+Source paths and SHA256 hashes: DesignReferences/06_PHASE6A_PREVIEW/
+PreviewTextureManifest.json in the private development workspace.
+
+Existing incomplete alpha and edge matte are intentionally retained.
+These files are temporary visual-test assets, NOT finished production art.
+No new illustration, hidden pixels, alpha reconstruction or recoloring.
+User approval establishes the project's visual authority; this notice does
+not assert exclusive copyright or guarantee third-party rights clearance.
+Existing main-addon materials keep their own provenance and are not copied
+or relicensed by this companion addon.

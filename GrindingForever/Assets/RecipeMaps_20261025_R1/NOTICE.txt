@@ -1,0 +1,1 @@
+50 Wowhead Forever outdoor map images, native aspect and original1024px content retained in power-of-two texture canvases. Ruins of Gilneas map unavailable. Sources checkbox dropdown next to zone menu; persistent independent multi-source filtering below map. Header infinity tinted toward bronze. No changes to guide/GPS/navigation.
