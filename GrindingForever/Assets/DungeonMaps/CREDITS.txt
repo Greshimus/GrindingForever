@@ -1,0 +1,7 @@
+Grinding Forever map credits
+
+Thank you to Santiago Reyes for kindly allowing his Atlas de Azeroth: Forever maps to be used in Grinding Forever. Original embedded watermarks are preserved; separate presentation banners are excluded from the viewport.
+https://asguevara433.wixsite.com/srmaps/post/proyecto-atlas-de-azeroth-forever
+https://www.artstation.com/artwork/lEG15k
+
+Other numbered reference maps depict Blizzard World of Warcraft dungeon artwork. MapUtils is not a runtime dependency and no MapUtils code is included. Some reference layouts depict later client revisions; boss placement is intentionally not inferred from the art.

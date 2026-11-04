@@ -2,7 +2,7 @@
 ## Title: Grinding Forever
 ## Notes: TBC Anniversary - blended questing, professions and Completionist testing
 ## Author: Grinding Forever
-## Version: anniversary-72
+## Version: anniversary-102
 ## SavedVariables: GrindingForeverAnniversaryDB
 ## SavedVariablesPerCharacter: GrindingForeverAnniversaryCharacterDB
 ## OptionalDeps: Questie, QuestieDB
