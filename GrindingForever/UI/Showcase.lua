@@ -38489,7 +38489,7 @@ function M.Build(map,px,py,w,h)
   local skill=F.Skill(kind)
   if type(skill)=='number'and skill>0 then
    for _,n in pairs(G and G.data and G.data.nodes or{})do
-    if n.profession==kind and not n.instanced and(n.sourceMatchedHarvests or 0)>0 and n.position and n.position.mapID==map then
+    if n.profession==kind and not n.instanced and((n.sourceMatchedHarvests or 0)>0 or(n.observedClicks or 0)>0) and n.position and n.position.mapID==map then
      local meta=F.meta[n.sourceNodeID];add(kind,n.position.x,n.position.y,n.name,meta and meta.item,'Your observed gathering position')
     end
    end
@@ -38709,7 +38709,7 @@ function S.Capture()
  local d=GrindingForeverAnniversaryCharacterDB
  if type(d)~='table'or not P or(P.frames or 0)<1 then return false end
  local report=P.Report();local text=report:sub(1,S.limit)
- d.performanceReport={version=1,build=99,time=type(GetServerTime)=='function'and GetServerTime()or nil,text=text,truncated=#report>S.limit,frames=P.frames,slowFrames=P.slowFrames,correlated=P.correlated}
+ d.performanceReport={version=1,build=100,time=type(GetServerTime)=='function'and GetServerTime()or nil,text=text,truncated=#report>S.limit,frames=P.frames,slowFrames=P.slowFrames,correlated=P.correlated}
  return true
 end
 local stop=P.Stop
@@ -39107,7 +39107,7 @@ local tick=N.Tick
 N.Tick=function(...)
  local result=tick(...);local r=F.route
  if r and r.traced then local p=pos();local s=N.model:Current();local d=s and s.destination;local now=read(GetTime)or 0
-  if p and d and now-(R.lastAdvance or-10)>1.5 then local dist=yards(d.mapID,d.x,d.y,p);if dist and dist<=22 then R.lastAdvance=now;F.Advance()end end
+  if p and d and now-(R.lastAdvance or-10)>1.5 then local dist=yards(d.mapID,d.x,d.y,p);if dist and dist<=12 then R.lastAdvance=now;F.Advance()end end
  end;return result
 end
 end)(...)
@@ -39567,7 +39567,7 @@ function V.UpdateWorld(elapsed)
  V.elapsed=(V.elapsed or 0)+(elapsed or 0);if V.elapsed<.5 then return end;V.elapsed=0
  local frame=WorldMapFrame;local mode=V.Mode()
  if(mode~='World Map'and mode~='Both')or not frame or not frame:IsShown()then V.pending=nil;for _,p in ipairs(V.pins)do p:Hide()end;return end
- local canvas=frame.ScrollContainer and frame.ScrollContainer.Child;local map=read(frame.GetMapID,frame)
+ local canvas=read(frame.GetCanvas,frame)or(frame.ScrollContainer and(read(frame.ScrollContainer.GetScrollChild,frame.ScrollContainer)or frame.ScrollContainer.Child))or WorldMapDetailFrame;local map=read(frame.GetMapID,frame)
  if not canvas or not map then return end
  local skills='';for _,kind in ipairs({'Mining','Herbalism','Fishing'})do skills=skills..tostring(F.Skill(kind))end
  V.age=(V.age or 5)+.5;if V.map==map and V.skills==skills and V.age<5 then return end;V.map,V.skills,V.age=map,skills,0
@@ -39579,7 +39579,7 @@ function V.UpdateWorld(elapsed)
  for _,kind in ipairs({'Mining','Herbalism','Fishing'})do local skill=F.Skill(kind)
   if skill then
    for coord,id in pairs(F.known[kind]and F.known[kind][map]or{})do local meta=F.meta[id];if meta and(meta.skill or 0)<=skill then local x,y=F.Decode(coord);add(kind,x,y,meta.name or F.names[id],meta.item)end end
-   for _,v in pairs(ns.GatheringObserver and ns.GatheringObserver.data and ns.GatheringObserver.data.nodes or{})do if v.profession==kind and v.position and v.position.mapID==map and(v.sourceMatchedHarvests or 0)>0 then local meta=F.meta[v.sourceNodeID];add(kind,v.position.x,v.position.y,v.name,meta and meta.item)end end
+   for _,v in pairs(ns.GatheringObserver and ns.GatheringObserver.data and ns.GatheringObserver.data.nodes or{})do if v.profession==kind and v.position and v.position.mapID==map and((v.sourceMatchedHarvests or 0)>0 or(v.observedClicks or 0)>0) then local meta=F.meta[v.sourceNodeID];add(kind,v.position.x,v.position.y,v.name,meta and meta.item)end end
   end
  end
  table.sort(points,function(a,b)return a.key<b.key end)
@@ -39620,7 +39620,7 @@ function V.Controls()
  if not V.originalCaptured then originalSources=r.sourceButton:GetScript('OnClick');originalProfessions=r.professionButton:GetScript('OnClick');V.originalCaptured=true end
  if M and M.button then M.button.label:SetText('Nodes: '..V.Mode());M.button:SetScript('OnClick',V.Cycle)end
  if U.pane=='Dungeons'then
-  r.sourceButton:Show();r.professionButton:Show();r.sourceButton.label:SetText(V.boss or'Bosses');r.professionButton.label:SetText(V.class=='All Classes'and'Class'or V.class)
+  r.sourceButton:Show();r.professionButton:Show();r.sourceButton.label:SetText((V.boss=='Select A Boss'and'Bosses'or V.boss)or'Bosses');r.professionButton.label:SetText(V.class=='All Classes'and'Class'or V.class)
   r.sourceButton:SetScript('OnClick',function()
    local d=E.dungeons[N.selectedZone];local values={{name='All Bosses'}};for _,b in ipairs(d and d.bosses or{})do values[#values+1]={name=b.name}end;if d and d.otherLoot and#d.otherLoot>0 then values[#values+1]={name='Trash/Object'}end
    dropdown(r.sourceButton,values,function(v)V.boss=v.name=='All Bosses'and nil or v.name;N.RefreshRecipes();V.Controls()end)
@@ -39634,10 +39634,10 @@ N.RefreshRecipes=function(...)
  if U.pane~='Dungeons'then for _,row in ipairs(N.root and N.root.dungeonLootRows or{})do row:Hide()end;local v=refresh(...);V.Controls();return v end
  local r=N.root;if not r or N.resizing then return end
  for _,b in ipairs(r.recipeRows or{})do b:Hide()end;for _,h in ipairs(r.workflowHeaders or{})do h:Hide()end
- local d=E.dungeons[N.selectedZone];if V.zone~=N.selectedZone then V.zone=N.selectedZone;V.boss=nil end
+ local d=E.dungeons[N.selectedZone];if V.zone~=N.selectedZone then V.zone=N.selectedZone;V.boss='Select A Boss' end
  local rows={};local function add(boss)if not V.boss or V.boss==boss.name then for _,v in ipairs(E.BossLoot(boss))do if V.ClassAllows(v[1],V.class)then rows[#rows+1]={name=v[2],itemID=v[1],source=v[3]or boss.name}end end end end
  for _,boss in ipairs(d and d.bosses or{})do add(boss)end;if d and d.otherLoot then add({name='Trash/Object',loot=d.otherLoot})end
- r.recipesText:SetText('Dungeon Loot');N.visibleRecipes=rows;r.dungeonLootRows=r.dungeonLootRows or{};local width=math.max(100,r.recipeScroll:GetWidth()-24);r.recipeContent:SetWidth(width);local y=0
+ r.recipesText:SetText(V.boss=='Select A Boss'and'Select A Boss To View Loot'or'Dungeon Loot');N.visibleRecipes=rows;r.dungeonLootRows=r.dungeonLootRows or{};local width=math.max(100,r.recipeScroll:GetWidth()-24);r.recipeContent:SetWidth(width);local y=0
  for i,v in ipairs(rows)do local b=r.dungeonLootRows[i]
   if not b then b=CreateFrame('Button',nil,r.recipeContent);b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetSize(26,26);b.icon:SetPoint('TOPLEFT',2,-5);b.label=text(b,17);b.label:SetPoint('TOPLEFT',36,-4);b.detail=text(b,13);r.dungeonLootRows[i]=b end
   b.record=v;b:ClearAllPoints();b:SetPoint('TOPLEFT',r.recipeContent,'TOPLEFT',0,-y);b:SetWidth(width);b.label:SetWidth(width-40);b.label:SetHeight(0);b.label:SetWordWrap(true);b.label:SetText(v.name);b.detail:ClearAllPoints();b.detail:SetPoint('TOPLEFT',b.label,'BOTTOMLEFT',0,-3);b.detail:SetWidth(width-40);b.detail:SetText(v.source);b.icon:SetTexture(read(GetItemIcon,v.itemID));local h=math.max(52,b.label:GetStringHeight()+b.detail:GetStringHeight()+14);b:SetHeight(h);b:SetScript('OnEnter',function(self)W.Tooltip(self,self.record.itemID)end);b:SetScript('OnLeave',function()if W.tooltip then W.tooltip:Hide()end end);b:Show();y=y+h
@@ -39649,3 +39649,160 @@ W.Layout=function(...)local v=layout(...);if U.pane~='Dungeons'then for _,b in i
 V.Controls()
 end)(...)
 -- GF_MAPS99_END
+
+-- GF_REFINEMENT100_BEGIN
+;(function(...)
+local _,ns=...;local N,W,E,U,K,R,F,V,M,G=ns.NormalUI,ns.WindowWorkflow,ns.SharedExplorer,ns.SharedUI,ns.NavigationCompass,ns.MaterialRoutes,ns.FarmingPlanner,ns.MapControls99,ns.KnownNodePins,ns.GatheringObserver
+local AS='Interface\\AddOns\\GrindingForever\\Assets\\'
+local function read(f,...)if type(f)=='function'then local ok,a,b,c,d,e=pcall(f,...);if ok then return a,b,c,d,e end end end
+local function clock()return read(GetTime)or 0 end
+local function position()local c=ns.Retail and ns.Retail.Client;local p=c and c.PlayerPosition();if p and p.status=='available'then return p end end
+local function dist(d,p)if not d or not p or d.mapID~=p.mapID then return end;local c=ns.Retail.Client;local a,x,y=c.WorldPosition(d.mapID,d.x,d.y);local b,xx,yy=c.WorldPosition(p.mapID,p.x*100,p.y*100);if a and a==b and x and y and xx and yy then return math.sqrt((x-xx)^2+(y-yy)^2),math.atan2(y-yy,x-xx)end end
+-- Recognized failed interaction is sighting evidence, never a fabricated harvest.
+if G then
+ local blocked=G.RecordBlocked
+ G.RecordBlocked=function(kind,name,reason)
+  if blocked then blocked(kind,name,reason)end
+  if not G.data or G.data.enabled==false then return end
+  local id=F.NodeID and F.NodeID(kind,name);local p=position();if not id or not p then return end
+  local data=G.data;local x,y=p.x*100,p.y*100;local match
+  for _,v in pairs(data.nodes)do if v.sourceNodeID==id and v.position and v.position.mapID==p.mapID and dist(v.position,p)and dist(v.position,p)<=12 then match=v;break end end
+  if not match then local slot=data.nextNode;match={key=kind..':'..p.mapID..':'..math.floor(x*10)..':'..math.floor(y*10)..':'..id,profession=kind,name=name,position={mapID=p.mapID,x=x,y=y,kind='player_at_recognized_failed_interaction'},sourceNodeID=id,instanced=read(IsInInstance)==true,harvests=0,sourceMatchedHarvests=0,items={},firstSeen=read(GetServerTime)};data.nodes[slot]=match;data.nextNode=slot%500+1 end
+  match.observedClicks=(match.observedClicks or 0)+1;match.lastSeen=read(GetServerTime);match.observation='recognized_failed_gather';if G.Initialize then G.Initialize()end
+  V.map=nil;V.age=5;if M then M.age=5 end
+ end
+end
+if G and G.Initialize then local init=G.Initialize;G.Initialize=function(...)local ok=init(...);if ok then F.LoadKnown();for _,n in pairs(G.data.nodes)do if n.observedClicks and n.sourceNodeID and n.position then local p=n.position;local kind=n.profession;F.known[kind]=F.known[kind]or{};F.known[kind][p.mapID]=F.known[kind][p.mapID]or{};F.known[kind][p.mapID][math.floor(p.x*100+.5)*1000000+math.floor(p.y*100+.5)*100]=n.sourceNodeID end end end;return ok end end
+-- Reuse historical pin rendering, fading only GF icons near the player.
+if M then local update=M.Update;M.Update=function(...)local v=update(...);local now=clock();if M.fade100 and now-M.fade100<.25 then return v end;M.fade100=now;local p=position();if p then for _,pin in ipairs(M.pins)do if pin:IsShown()and pin.node then local d=dist({mapID=p.mapID,x=pin.node.x,y=pin.node.y},p);if d then pin:SetAlpha(.12+.60*math.max(0,math.min(1,(d-12)/65)))end end end end;return v end end
+-- Compact grouped grids with GF's own checkbox art and labels directly below icons.
+R.collapsed100=R.collapsed100 or{};local category={{'Mining','Mining'},{'Herbalism','Herbalism'},{'Skinning','Skinning'},{'Fishing','Fishing'},{'Cloth','Cloth'}}
+function R.Fill()
+ if not R.body then return end;if not R.grid100 then for _,b in ipairs(R.buttons or{})do b:Hide()end;R.buttons={};R.grid100=true end;R.headers100=R.headers100 or{};local y,index=0,0
+ for _,cat in ipairs(category)do local title,kind=cat[1],cat[2];local list={};for _,m in ipairs(R.materials)do if(m.kind==kind or kind=='Cloth'and(m.id==2589 or(m.name or''):find('Cloth',1,true)))and not(kind~='Cloth'and(m.name or''):find('Cloth',1,true))then list[#list+1]=m end end;table.sort(list,function(a,b)return a.name<b.name end)
+  local h=R.headers100[title];if not h then h=CreateFrame('Button',nil,R.body);h.label=h:CreateFontString(nil,'OVERLAY');h.label:SetFont('Fonts\\ARIALN.TTF',18);h.label:SetTextColor(.16,.09,.03);h.label:SetPoint('LEFT',24,0);h.arrow=h:CreateTexture(nil,'ARTWORK');h.arrow:SetTexture(AS..'NormalRevision_20261026_R1\\TriangleRight');h.arrow:SetSize(12,12);h.arrow:SetPoint('LEFT',4,0);h:SetScript('OnClick',function()R.collapsed100[title]=not R.collapsed100[title];R.Fill()end);R.headers100[title]=h end
+  h:ClearAllPoints();h:SetPoint('TOPLEFT',R.body,'TOPLEFT',0,-y);h:SetSize(600,30);h.label:SetText(title);h.arrow:SetRotation(R.collapsed100[title]and 0 or-math.pi/2);h:Show();y=y+34
+  if not R.collapsed100[title]then for j,m in ipairs(list)do index=index+1;local b=R.buttons[index]
+   if not b then b=CreateFrame('Button',nil,R.body);b.icon=b:CreateTexture(nil,'ARTWORK');b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Fonts\\ARIALN.TTF',13);b.label:SetTextColor(.16,.09,.03);b.check=CreateFrame('Button',nil,b);b.box=b.check:CreateTexture(nil,'ARTWORK');b.box:SetAllPoints();b.box:SetTexture(AS..'NormalRevision_20261026_R1\\ButtonNormal');b.tick=b.check:CreateTexture(nil,'OVERLAY');b.tick:SetAllPoints();b.tick:SetTexture('Interface\\Buttons\\UI-CheckBox-Check');b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.15);R.buttons[index]=b end
+   b.material=m;b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((j-1)%6)*98,-y-math.floor((j-1)/6)*78);b:SetSize(94,74);b.icon:ClearAllPoints();b.icon:SetSize(36,36);b.icon:SetPoint('TOP',b,'TOP',-5,-3);b.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,m.id));b.label:ClearAllPoints();b.label:SetPoint('TOPLEFT',b,'TOPLEFT',1,-44);b.label:SetWidth(92);b.label:SetHeight(28);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true);b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:ClearAllPoints();b.check:SetSize(19,19);b.check:SetPoint('TOPLEFT',b,'TOPLEFT',56,-26);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);b:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);if b.check.SetChecked then b.check:SetChecked(K.selected[m.id]==true)end;if b.tick then b.tick:SetShown(K.selected[m.id]==true)end;b.wash:SetShown(K.selected[m.id]==true);b:Show()
+  end;y=y+math.ceil(#list/6)*78 end
+ end
+ for i=index+1,#R.buttons do R.buttons[i]:Hide()end;R.body:SetHeight(math.max(1,y));local n=0;for _ in pairs(K.selected)do n=n+1 end;K.count:SetText(n..' Resources Selected');if K.resourceBar then K.resourceBar:SetShown(y>K.gridHeight)end
+end
+-- Automatically track the single selected recipe source; clicking again clears it.
+local refresh=N.RefreshRecipes
+N.RefreshRecipes=function(...)
+ local v=refresh(...);if U.pane~='Dungeons'then for _,b in ipairs(N.root and N.root.recipeRows or{})do
+  if b.compassFlag then b.compassFlag:Hide()end
+  if b:IsShown()and b.record then local old=b:GetScript('OnClick');local record=b.record;local key=record.workflowKey or record.id or record.spellID or record.name
+   b:SetScript('OnClick',function(self,...)
+    if W.recipeSelection100==key then W.recipeSelection100=nil;W.activeSource=nil;W.expandedRecipe=nil;W.selection=nil;W.mapLocation=nil;N.selectedRecipe=nil;K.pins={};N.RefreshRecipes();N.UpdateMapView();return end
+    W.recipeSelection100=key;K.pins={};W.sourceSelection100=true;if old then old(self,...)end;W.sourceSelection100=nil
+    local loc=record.location or record.locations and record.locations[1];if loc and loc.mapID and loc.x and loc.y then local id=K.FlagKey(record,loc);K.pins[id]={key=id,name=loc.name or record.name,zone=loc.zone,location=loc,icon=AS..'RecipeExplorer_20261025_R1\\RecipePin',pin=true};K.age=1 end
+   end)
+  end
+ end end;return v
+end
+-- Verified personal harvest observations: approximate player positions, not exact spawn promises.
+local loadKnown=F.LoadKnown
+F.LoadKnown=function(...)local v=loadKnown(...);if not F.observed100 then F.observed100=true;F.known.Mining=F.known.Mining or{};local map=F.known.Mining[1429]or{};F.known.Mining[1429]=map;for _,p in ipairs({{40.0454,81.0809},{39.8572,79.0486},{38.9609,78.4250},{51.5584,83.7321},{50.3895,73.9230},{30.0037,60.1651},{28.0510,66.0204},{25.3579,69.1687},{25.4806,66.6410}})do map[math.floor(p[1]*100+.5)*1000000+math.floor(p[2]*100+.5)*100]=201 end end;return v end
+-- Native class relic restrictions, with client-specific polearm proficiency.
+local classAllows=V.ClassAllows
+local allowedCache={}
+local function explicitClass(id,class)
+ if allowedCache[id]~=nil then return allowedCache[id]==false or allowedCache[id][class]==true end
+ if not read(GetItemInfo,id)then return true end
+ if not V.classScanner100 then V.classScanner100=CreateFrame('GameTooltip','GFClassRestriction100',UIParent,'GameTooltipTemplate')end
+ local tip=V.classScanner100;if type(tip.SetOwner)~='function'or type(tip.ClearLines)~='function'or type(tip.SetHyperlink)~='function'then return true end;local ok=pcall(function()tip:SetOwner(UIParent,'ANCHOR_NONE');tip:ClearLines();tip:SetHyperlink('item:'..id)end);if not ok then return true end
+ local n=read(tip.NumLines,tip);if type(n)~='number'or n<1 then return true end
+ local template=ITEM_CLASSES_ALLOWED or'Classes: %s';local prefix=template:match('^(.-)%%s')or'Classes: '
+ for i=1,n do local line=_G['GFClassRestriction100TextLeft'..i];local text=line and read(line.GetText,line);if text and text:sub(1,#prefix)==prefix then local set={};for _,name in ipairs({'Warrior','Paladin','Hunter','Rogue','Priest','Shaman','Mage','Warlock','Druid','Death Knight'})do local localized=LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[name:upper():gsub(' ','')]or name;if text:find(localized,1,true)then set[name]=true end end;allowedCache[id]=set;tip:Hide();return set[class]==true end end
+ allowedCache[id]=false;tip:Hide();return true
+end
+V.ClassAllows=function(id,class)
+ if class and class~='All Classes'and not explicitClass(id,class)then return false end
+ local _,_,_,_,_,_,_,_,_,_,_,itemClass,sub=GetItemInfo(id)
+ if class and class~='All Classes'and itemClass==4 and sub and sub>=7 and sub<=10 then return({[7]='Paladin',[8]='Druid',[9]='Shaman',[10]='Death Knight'})[sub]==class end
+ if class=='Druid'and itemClass==2 and sub==6 then return ns.Forever~=nil end
+ return classAllows(id,class)
+end
+-- A separate nearby resource marker never takes ownership of the loop.
+local L=ns.BlendedProfessions
+if L then local make=L.Make;L.Make=function(name,skill,ctx)
+ local node=make(name,skill,ctx)
+ if node and(node.title or''):match('^Review .+ recipes')then local yards=node.destination and E.Distance(ctx.pos,node.destination);if type(yards)~='number'or yards>100 then return nil end end
+ if node and node.craftReady and name=='Blacksmithing'then local trainer=L.Trainer(name,ctx.pos);local yards=trainer and E.Distance(ctx.pos,trainer);if type(yards)~='number'or yards>100 then return nil end end
+ return node
+end end
+-- A generic merchant is not proof of access to a blacksmith workbench.
+local S,H=ns.CraftingSessions,ns.ProfessionTaskFocus
+if S then local at=S.AtService;S.AtService=function(name,ctx)if name=='Blacksmithing'then local t=L.Trainer(name,ctx and ctx.pos);local d=t and ctx and E.Distance(ctx.pos,t);return type(d)=='number'and d<=100 and not ctx.unsafe end;return at(name,ctx)end end
+if H then local valid=H.Valid;H.Valid=function()local n=H.node;if n and(n.title or''):match('^Review .+ recipes')then local ctx=L.Context();local d=n.destination and E.Distance(ctx.pos,n.destination);if type(d)~='number'or d>100 then H.Release('recipe review waits for profession service stop');return false end end;return valid()end end
+-- Count-only progress uses the light path; changed quest stages still rebuild.
+local Q=ns.RefreshScheduler
+if Q then
+ local process=Q.Process
+ local function stages()
+  local api=C_QuestLog or{};local total=read(api.GetNumQuestLogEntries or GetNumQuestLogEntries);if type(total)~='number'then return end;local rows={}
+  for i=1,total do
+   local info=read(api.GetInfo,i)
+   if not info and type(GetQuestLogTitle)=='function'then local _,_,_,header,collapsed,complete,_,id=GetQuestLogTitle(i);info={isHeader=header,isCollapsed=collapsed,isComplete=complete,questID=id}end
+   if not info or info.isHeader and info.isCollapsed then return end
+   if not info.isHeader then
+    if not info.questID then return end;local row={tostring(info.questID),tostring(info.isComplete)};local goals=read(api.GetQuestObjectives,info.questID)
+    if type(goals)=='table'then for _,g in ipairs(goals)do row[#row+1]=tostring(g.finished)..':'..tostring(g.numRequired)end
+    elseif type(GetNumQuestLeaderBoards)=='function'and type(GetQuestLogLeaderBoard)=='function'then for j=1,GetNumQuestLeaderBoards(i)do local text,kind,finished=GetQuestLogLeaderBoard(j,i);row[#row+1]=tostring(kind)..':'..tostring(finished)end
+    else return end
+    rows[#rows+1]=table.concat(row,'|')
+   end
+  end;table.sort(rows);return table.concat(rows,';')
+ end
+ Q.Process=function(...)if Q.pending then local signature=stages();if signature and Q.stage100==signature and Q.questDirty and not Q.full then Q.questDirty=false;Q.progress=true end;Q.stage100=signature end;return process(...)end
+end
+local collect=K.Collect
+K.Collect=function(...)
+ collect(...);local route=F.route;local p=position();if not p then return end
+ local current=N.model and N.model:Current();if not route and current and current.adaptiveVendor then local d=read(ns.ProfessionGuide.Destination);local yards,bearing=dist(d,p);if yards and yards>8 then local seen=false;for _,v in ipairs(K.targets)do if v.active then seen=true end end;if not seen then table.insert(K.targets,1,{key='active',name=d.name or'Vendor',zone=d.zone,location=d,icon='Interface\\Icons\\INV_Misc_Coin_01',active=true,distance=yards,bearing=bearing})end end end
+ if not route then return end
+ if K.nearTime100 and clock()-K.nearTime100<1 and K.nearMap100==p.mapID and K.nearRoute100==route then if K.near100 then local yards,bearing=dist(K.near100.location,p);K.near100.distance=yards;K.near100.bearing=bearing;K.targets[#K.targets+1]=K.near100 end;return end;K.nearTime100=clock();K.nearMap100=p.mapID;K.nearRoute100=route
+ local best,near;for _,kind in ipairs({'Mining','Herbalism','Fishing'})do for coord,id in pairs(F.known[kind]and F.known[kind][p.mapID]or{})do local meta=F.meta[id];if meta and(meta.item==route.item or K.selected[meta.item])then local x,y=F.Decode(coord);local d={mapID=p.mapID,x=x,y=y};local yards,bearing=dist(d,p);if yards and yards>8 and(not best or yards<best)then best=yards;near={key='nearby-resource100',name=meta.name,zone=route.zone,location=d,icon=read(GetItemIcon,meta.item),nearby=true,distance=yards,bearing=bearing}end end end end
+ K.near100=near;if near then K.targets[#K.targets+1]=near end
+end
+local update=K.Update
+K.Update=function(...)local v=update(...);for i,target in ipairs(K.targets or{})do local marker=K.markers and K.markers[i];if marker and target.nearby then if marker.scale100~=.70 then marker:SetScale(.70);marker.scale100=.70 end;if not marker.nearLabel100 then marker.nearLabel100=marker:CreateFontString(nil,'OVERLAY');marker.nearLabel100:SetFont('Fonts\\ARIALN.TTF',16);marker.nearLabel100:SetPoint('TOP',marker,'BOTTOM',0,-4)end;local caption=math.floor(target.distance or 0)..' yd';if marker.caption100~=caption then marker.nearLabel100:SetText(caption);marker.caption100=caption end;marker.nearLabel100:Show()elseif marker then if marker.scale100~=1 then marker:SetScale(1);marker.scale100=1 end;if marker.nearLabel100 then marker.nearLabel100:Hide()end end end;return v end
+local D={};ns.Review100=D
+function D.Menu(anchor,values,callback)
+ if V.menu then V.menu:Hide()end
+ if not D.menu then local f=CreateFrame('Frame',nil,UIParent,'BackdropTemplate');D.menu=f;f:SetBackdrop({bgFile='Interface\\Tooltips\\UI-Tooltip-Background',edgeFile='Interface\\Tooltips\\UI-Tooltip-Border',edgeSize=10});f:SetBackdropColor(.025,.02,.01,1);f:SetFrameStrata('TOOLTIP');f:SetClampedToScreen(true);f.buttons={};local scroll=CreateFrame('ScrollFrame',nil,f);f.scroll=scroll;scroll:SetPoint('TOPLEFT',6,-6);scroll:SetPoint('BOTTOMRIGHT',-6,6);scroll:SetClipsChildren(true);scroll:EnableMouseWheel(true);f.body=CreateFrame('Frame',nil,scroll);scroll:SetScrollChild(f.body);scroll:SetScript('OnMouseWheel',function(_,d)scroll:SetVerticalScroll(math.max(0,math.min(math.max(0,f.body:GetHeight()-scroll:GetHeight()),(scroll:GetVerticalScroll()or 0)-d*27)))end)end
+ local f=D.menu;local scale=read(N.root.GetEffectiveScale,N.root)or read(N.root.GetScale,N.root)or 1;local parent=read(UIParent.GetEffectiveScale,UIParent)or 1;f:SetScale(scale/parent);f:SetFrameLevel(N.root:GetFrameLevel()+350);f:ClearAllPoints();f:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT',0,-2);local width=math.max(180,anchor:GetWidth());f:SetSize(width,math.min(290,#values*27+12));f.body:SetSize(width-12,math.max(1,#values*27));f.scroll:SetVerticalScroll(0)
+ for i,row in ipairs(values)do local b=f.buttons[i];if not b then b=CreateFrame('Button',nil,f.body);b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Fonts\\ARIALN.TTF',17);b.label:SetTextColor(.94,.78,.42);b.label:SetPoint('LEFT',8,0);b.label:SetPoint('RIGHT',-8,0);b.label:SetJustifyH('LEFT');b.highlight=b:CreateTexture(nil,'BACKGROUND');b.highlight:SetAllPoints();b.highlight:SetColorTexture(.45,.36,.16,.4);b:SetScript('OnEnter',function(self)self.highlight:Show()end);b:SetScript('OnLeave',function(self)self.highlight:SetShown(self.selected)end);f.buttons[i]=b end;b:ClearAllPoints();b:SetPoint('TOPLEFT',f.body,'TOPLEFT',0,-(i-1)*27);b:SetSize(width-12,27);b.label:SetText(row.name);b.selected=row.selected;b.highlight:SetShown(row.selected==true);b:SetScript('OnClick',function()f:Hide();callback(row)end);b:Show()end
+ for i=#values+1,#f.buttons do f.buttons[i]:Hide()end;f:Show();V.menu=f
+end
+local raids={'molten','onyxia','blackwing','ahnqiraj','zulaman','zulgurub','karazhan','gruul','magtheridon','serpentshrine','tempestkeeptempestkeep','theeye','hyjal','blacktemple','sunwell','barrowdeeps','naxxramas'}
+local function norm(name)return(name or''):lower():gsub('[%p%s]','')end
+function D.Category(name)
+ local n=norm(name);if n:find('warsong')or n:find('arathibasin')or n:find('alteracvalley')or n:find('eyeofthestorm')or n:find('championshall')or n:find('halloflegends')then return'PvP'end
+ for _,raid in ipairs(raids)do if n:find(raid,1,true)then return'Raids'end end;local instance=E.dungeons[name];if not instance then for key in pairs(E.dungeons)do if norm(key)==n then instance=true;break end end end;if instance or n:find('barrowdeeps')or n:find('hyjalsummit')then for _,s in ipairs(raids)do if n:find(s,1,true)then return'Raids'end end;return'Dungeons'end
+end
+local catalog=W.CatalogRows;local sources=W.SourceRows
+W.CatalogRows=function(query)if W.aggregate100 and not query then local rows={};for _,r in ipairs(N.recipeRecords or{})do if E.Known(r)~=true then rows[#rows+1]=r end end;return rows end;return catalog(query)end
+W.SourceRows=function(records,query)local agg=W.aggregate100;if not agg or query then return sources(records,query)end;local rows={};for _,r in ipairs(sources(records,true))do local loc=r.location or r.locations and r.locations[1];if loc and D.Category(loc.zone)==agg then rows[#rows+1]=r end end;return rows end
+local zone=N.SetZone
+N.SetZone=function(name,...)
+ if name=='Dungeons'or name=='Raids'or name=='PvP'then W.aggregate100=name;N.selectedZone=name;N.root.zoneButton.label:SetText(name);N.RefreshRecipes();N.UpdateMapView();return true end
+ if not W.sourceSelection100 then W.aggregate100=nil end;return zone(name,...)
+end
+local controls=V.Controls
+V.Controls=function(...)
+ controls(...);local r=N.root;if not r then return end;if U.pane~='Dungeons'and W.aggregate100 then r.zoneButton.label:SetText(W.aggregate100)end
+ r.zoneButton:SetScript('OnClick',function()if D.menu and D.menu:IsShown()then D.menu:Hide();return end;local values={};if U.pane=='Dungeons'then for name in pairs(E.dungeons)do values[#values+1]={name=name}end else for name in pairs(N.mapCatalog or{})do if not D.Category(name)then values[#values+1]={name=name}end end;for _,name in ipairs({'Dungeons','Raids','PvP'})do values[#values+1]={name=name}end end;table.sort(values,function(a,b)return a.name<b.name end);D.Menu(r.zoneButton,values,function(v)N.SetZone(v.name)end)end)
+ if U.pane=='Dungeons'then
+  r.sourceButton.label:SetText(V.boss=='Select A Boss'and'Bosses'or V.boss or'Bosses')
+  r.sourceButton:SetScript('OnClick',function()local d=E.dungeons[N.selectedZone];local values={};for _,boss in ipairs(d and d.bosses or{})do values[#values+1]={name=boss.name,selected=V.boss==boss.name}end;if d and d.otherLoot and#d.otherLoot>0 then values[#values+1]={name='Trash/Object'}end;D.Menu(r.sourceButton,values,function(v)V.boss=v.name;N.RefreshRecipes()end)end)
+  r.professionButton:SetScript('OnClick',function()local values={};for _,name in ipairs({'All Classes','Warrior','Paladin','Hunter','Rogue','Priest','Shaman','Mage','Warlock','Druid'})do values[#values+1]={name=name,selected=V.class==name}end;D.Menu(r.professionButton,values,function(v)V.class=v.name;N.RefreshRecipes()end)end)
+ end
+end
+for _,d in pairs(E.dungeons)do for _,boss in ipairs(d.bosses or{})do if boss.name=='Mutanus the Devourer'then local found=false;for _,v in ipairs(boss.loot or{})do if v.itemID==10441 then v.questID=6981;found=true end end;if not found then boss.loot[#boss.loot+1]={itemID=10441,questID=6981,sourceName=boss.name}end end end end
+V.Controls()
+end)(...)
+-- GF_REFINEMENT100_END
