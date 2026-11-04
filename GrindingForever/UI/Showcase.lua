@@ -39806,3 +39806,21 @@ for _,d in pairs(E.dungeons)do for _,boss in ipairs(d.bosses or{})do if boss.nam
 V.Controls()
 end)(...)
 -- GF_REFINEMENT100_END
+
+-- GF_MENU_INPUT101_BEGIN
+;(function(...)
+local _,ns=...;local D,N=ns.Review100,ns.NormalUI
+if not D then return end
+local show=D.Menu
+function D.Menu(anchor,values,callback)
+ show(anchor,values,callback)
+ local f=D.menu;if not f then return end
+ f:EnableMouse(true);f:SetToplevel(true);f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+400)
+ if f.scroll then f.scroll:SetFrameStrata('TOOLTIP');f.scroll:SetFrameLevel(f:GetFrameLevel()+1);f.scroll:EnableMouse(true);f.scroll:EnableMouseWheel(true)end
+ if f.body then f.body:SetFrameStrata('TOOLTIP');f.body:SetFrameLevel(f:GetFrameLevel()+2);f.body:EnableMouse(false)end
+ for _,button in ipairs(f.buttons or{})do button:SetFrameStrata('TOOLTIP');button:SetFrameLevel(f:GetFrameLevel()+3);button:EnableMouse(true);button:RegisterForClicks('LeftButtonUp');if button.Enable then button:Enable()end end
+ if f.Raise then f:Raise()end
+ if C_Timer and C_Timer.After then C_Timer.After(0,function()if f:IsShown()and f.Raise then f:Raise()end end)end
+end
+end)(...)
+-- GF_MENU_INPUT101_END
