@@ -12,6 +12,6 @@ Main.lua embeds the interleaving planner and runtime. QuestData.lua supplies the
 
 Leveling + Grinding favors quest progress with incidental gathering. Relaxed prioritizes supported profession supplies, with quests as fallback. Manual farm routes retain control; Skip defers supply work. Live quest and recipe-book evidence governs progress. Reference acquisition leads do not establish that Forever stock or prerequisites are unchanged. In-game verification remains necessary.
 
-Forever20 reduces redundant quest-status and coordinate conversions within each refresh, requires live log ownership for turn-ins, and gates known holiday recipe leads on visible merchant stock. A fresh in-game performance sample is still needed.
+Forever21 reduces redundant quest-status and coordinate conversions within each refresh, requires live log ownership for turn-ins, and gates known holiday recipe leads on visible merchant stock. A fresh in-game performance sample is still needed.
 
 Development: maintain one Forever implementation. Do not regenerate a separately maintained Together fork. Preserve protected-value guards, menu/compact behavior, Skip, and tracking-free tester packaging. Diagnostics remain personal only. Do not publish SavedVariables, account information, screenshots or private migration payloads. Source changes should retain current tests for quest hierarchy, interleaving, live recipes, vendor compatibility and UI startup.

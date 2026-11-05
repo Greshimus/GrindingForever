@@ -2807,8 +2807,20 @@ local function objectiveLocation(id,slot,s)
   if kind and o.target then return Q.NearestSource({{kind=kind,id=o.target}},s)end
  end end
 end
+function Q.Anchor(s)
+ local current=s.position and s.position.mapID
+ local anchor=E.db and E.db.questAnchor
+ local function zone(id)
+  if not id or id==1414 or id==1415 or id==1945 or id==947 then return false end
+  local info=E.Call(C_Map and C_Map.GetMapInfo,id)
+  if info and E.Public(info.mapType)and type(info.mapType)=='number'and info.mapType<3 then return false end
+  return(next(D.zoneQuests[id]or{})or next(Q.zoneCandidates[id]or{}))~=nil
+ end
+ if not zone(anchor)and zone(current)then anchor=current;if E.db then E.db.questAnchor=current end end
+ return anchor or current
+end
 function Q.Build(s)
- local anchor=E.db and E.db.questAnchor or s.position and s.position.mapID
+ local anchor=Q.Anchor(s)
  local preferred=Q.Profile(s);Q.own=preferred and Q.profileQuests[preferred]or{}
  local candidates={};for _,id in ipairs(D.zoneQuests[anchor]or{})do candidates[id]=true end
  for id in pairs(s.quests or{})do candidates[id]=true end
