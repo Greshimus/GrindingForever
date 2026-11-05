@@ -114,7 +114,7 @@ function E.WithSnapshot(fn,...)
 end
 function E.ReadBook()
  local function add(id,name,learned,product,reagents,profession,required)
-  if not id then return end
+  if not id or profession=='Skinning'or profession=='Herbalism'or profession=='Fishing'then return end
   if learned==true then E.known[id]=true elseif learned==false then E.known[id]=nil end
   local r=E.recipes[id]or{spellID=id,name=name or spell(id),sources={},locations={}};E.recipes[id]=r
   r.name=name or r.name;r.profession=profession or r.profession;r.requiredSkill=required or r.requiredSkill;r.productID=product or r.productID;r.reagents=reagents or r.reagents;r.observed=true
@@ -1127,7 +1127,7 @@ local function safeNumber(v,a,b) return ns.Retail.Client.Number(v,a,b) end
 local function color(t,r,g,b,a) t:SetColorTexture(r,g,b,a or 1) end
 local function text(parent,size,value,dark)
  local f=parent:CreateFontString(nil,"OVERLAY","GameFontNormal")
- local font="Fonts\\ARIALN.TTF";f:SetFont(font,(size)+1,"");f:SetText(value or "");if f.SetShadowOffset then f:SetShadowOffset(0,0)end
+ local font="Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf";f:SetFont(font,(size)+1,"");f:SetText(value or "");if f.SetShadowOffset then f:SetShadowOffset(0,0)end
  if dark then f:SetTextColor(.18,.105,.045) else f:SetTextColor(.94,.81,.54) end
  f:SetJustifyH("LEFT");f:SetWordWrap(true);return f
 end
@@ -1503,7 +1503,7 @@ local function layout()
  root.headerTopRail:SetPoint("BOTTOMRIGHT",root.wood,"TOPRIGHT",0,-2.325625);root.headerTopRail:SetHeight(9.34875);rail(root.headerTopRail,"TOP")
  root.titleMetal:Hide();root.foreverCrest:Hide();title:Hide()
  local titleSize=math.min(38,headerHeight*.62)
- for _,f in ipairs({root.titleLeft,root.titleRight})do f:SetFont("Fonts\\ARIALN.TTF",titleSize,"");f:SetTextColor(.93,.73,.37);f:SetHeight(headerHeight);f:SetWidth(230)end
+ for _,f in ipairs({root.titleLeft,root.titleRight})do f:SetFont("Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf",titleSize,"");f:SetTextColor(.93,.73,.37);f:SetHeight(headerHeight);f:SetWidth(230)end
  root.headerEmblem:ClearAllPoints();root.headerEmblem:SetPoint("CENTER",root.wood,"CENTER",0,0);root.headerEmblem:SetSize(headerHeight*.88,headerHeight*.88)
  root.titleLeft:ClearAllPoints();root.titleLeft:SetPoint("RIGHT",root.headerEmblem,"LEFT",-8,0);root.titleLeft:SetJustifyH("RIGHT")
  root.titleRight:ClearAllPoints();root.titleRight:SetPoint("LEFT",root.headerEmblem,"RIGHT",8,0)
@@ -1889,7 +1889,7 @@ function N.RefreshRecipes()
    b:SetScript("OnClick",function() if b.record then N.SelectRecipe(b.record.id or b.record.name) end end)
   end
   b.record=record;b:SetWidth(width);b:ClearAllPoints();b:SetPoint("TOPLEFT",root.recipeContent,"TOPLEFT",0,-y)
-  b.label:ClearAllPoints();b.label:SetPoint("TOPLEFT",b,"TOPLEFT",36,-7);b.label:SetWidth(width-40);b.label:SetHeight(22);b.label:SetFont("Fonts\\ARIALN.TTF",17,"");b.label:SetText(record.name);if N.sideMaterial=="parchment" then b.label:SetTextColor(.18,.105,.045) end
+  b.label:ClearAllPoints();b.label:SetPoint("TOPLEFT",b,"TOPLEFT",36,-7);b.label:SetWidth(width-40);b.label:SetHeight(22);b.label:SetFont("Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf",17,"");b.label:SetText(record.name);if N.sideMaterial=="parchment" then b.label:SetTextColor(.18,.105,.045) end
   b.icon:SetTexture(recipeIcon(record))
   b.menuHighlight:ClearAllPoints();b.menuHighlight:SetPoint("TOPLEFT",b,"TOPLEFT",0,0);b.menuHighlight:SetPoint("TOPRIGHT",b,"TOPRIGHT",0,0);b.menuHighlight:SetHeight(32)
   local height=36
@@ -2042,7 +2042,7 @@ local function ensure()
   row=btn(left,"",180,function() if row.stepID then session.index=row.stepID;activate();N.Refresh() end end);plainStepRow(row)
   row:SetHeight(39)
   row.label:ClearAllPoints();row.label:SetPoint("LEFT",row,"LEFT",10,0);row.label:SetJustifyH("LEFT")
-  local font=select(1,row.label:GetFont());row.label:SetFont("Fonts\\ARIALN.TTF",18,"");row.label:SetWordWrap(true);row.category=text(row,15,"",N.sideMaterial=="parchment");row.category:SetWordWrap(false);row.category:SetHeight(26);row.category:SetJustifyV("MIDDLE");rows[i]=row
+  local font=select(1,row.label:GetFont());row.label:SetFont("Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf",18,"");row.label:SetWordWrap(true);row.category=text(row,15,"",N.sideMaterial=="parchment");row.category:SetWordWrap(false);row.category:SetHeight(26);row.category:SetJustifyV("MIDDLE");rows[i]=row
  end
  left:EnableMouseWheel(true);left:SetScript("OnMouseWheel",function(_,delta)
   -- Browse without changing the active step or its destination.
@@ -2670,7 +2670,7 @@ frame:SetScript('OnEvent',function(_,event,...)
  elseif event=='CHAT_MSG_LOOT'then local message=...;local id=E.ItemID(message);local gathering=E.lastGather and E.Time()-E.lastGather.time<20;E.Record(gathering and'gathered-item'or'loot-message',{itemID=id,profession=gathering and E.lastGather.profession or nil,quantity=type(message)=='string'and tonumber(message:match('x(%d+)'))or nil})
  elseif event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;local profession=({[7620]='Fishing',[2575]='Mining',[2366]='Herbalism',[8613]='Skinning'})[id];if profession then E.lastGather={time=E.Time(),profession=profession};E.Record('gather-success',{spellID=id,profession=profession})elseif E.known[id]then E.Record('craft-completed',{spellID=id})end
  end
- if event=='CHAT_MSG_LOOT'then return end
+ if event=='CHAT_MSG_LOOT'or event=='UNIT_AURA'then return end
  if event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;if not E.known[id]and not({[7620]=true,[2575]=true,[2366]=true,[8613]=true})[id]then return end end
  dirty=true
 end)
@@ -2908,6 +2908,19 @@ function Q.Build(s)
   end end
   if nextZone then for _,id in ipairs(D.zoneQuests[nextZone]or{})do emit(id,true)end end
  end
+ local grouped,byQuest={},{}
+ for _,row in ipairs(out)do
+  if row.kind=='objective'then
+   local group=byQuest[row.quest]
+   if not group then group={};for k,v in pairs(row)do group[k]=v end;group.id='fq:'..row.quest..':objective:all';group.slot=nil;group.objectives={};group.mobIDs={};group.title=(D.quests[row.quest]or{}).title or row.title;group.body='';byQuest[row.quest]=group;grouped[#grouped+1]=group end
+   group.objectives[#group.objectives+1]=row
+   group.body=group.body..(group.body~=''and'\n'or'')..row.title
+   for _,id in ipairs(row.mobIDs or{})do local found=false;for _,old in ipairs(group.mobIDs)do if old==id then found=true end end;if not found then group.mobIDs[#group.mobIDs+1]=id end end
+   local d=row.destination and E.Distance(s.position,row.destination)
+   if d and(not group.nearestDistance or d<group.nearestDistance)then group.destination=row.destination;group.nearestDistance=d end
+  else grouped[#grouped+1]=row end
+ end
+ out=grouped
  return out
 end
 -- The builder already covers both reference coordinates and the standalone DB.
@@ -3120,7 +3133,7 @@ function W.Layout()
  local headerCenter=compact and 8+stepW/2 or width/2
  r.wood:ClearAllPoints();r.wood:SetPoint('BOTTOM',r,'TOPLEFT',headerCenter,-top-3);r.wood:SetSize(headerW,40)
  for i,cap in ipairs(r.endcaps)do local cw=compact and 160 or 194;cap:SetSize(cw,cw*282/482);cap:ClearAllPoints();cap:SetPoint('BOTTOM',r.wood,i==1 and 'BOTTOMLEFT'or'BOTTOMRIGHT',i==1 and -cw*.25 or cw*.25,0)end
- for _,f in ipairs({r.titleLeft,r.titleRight})do f:SetFont('Fonts\\ARIALN.TTF',compact and 23 or 26,'');f:SetWidth(headerW*.38)end
+ for _,f in ipairs({r.titleLeft,r.titleRight})do f:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',compact and 23 or 26,'');f:SetWidth(headerW*.38)end
  r.headerEmblem:SetSize(32,32)
  r.workflowGrip:ClearAllPoints();r.workflowGrip:SetPoint('CENTER',collapsed and p[2]or p[1],'LEFT',0,0);r.workflowGrip.glyph:SetTexture((collapsed and r.forward.glyph or r.back.glyph):GetTexture());r.workflowGrip:SetShown(not compact)
  r.modeButton:SetParent(p[1]);point(r.modeButton,p[1],stepW-104,20,80,28);r.modeButton:Show()
@@ -3130,11 +3143,11 @@ function W.Layout()
  if r.paceSwitch then point(r.paceSwitch,p[1],28,97,stepW-56,32);r.paceSwitch:Fit(stepW-56);r.paceSwitch:SetShown(not short and E.db.journey~='Completionist')end
  local filterY=short and 20 or E.db and E.db.journey=='Completionist'and 59 or 99;local fx=28
  local filterLabels={'All','Quests','Gatherables','Crafts'};local fractions={.16,.21,.37,.26};local usable=stepW-74
- for i,b in ipairs(r.filterButtons)do local fw=usable*fractions[i];point(b,p[1],fx,filterY,fw,36);b.label:SetFont('Fonts\\ARIALN.TTF',16,'');fx=fx+fw+6;b:Hide() end
+ for i,b in ipairs(r.filterButtons)do local fw=usable*fractions[i];point(b,p[1],fx,filterY,fw,36);b.label:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',16,'');fx=fx+fw+6;b:Hide() end
  r.controls:SetParent(p[1]);point(r.controls,p[1],28,height-66,stepW-56,38)
  r.back:Hide();r.forward:Hide();r.stepButton.label:SetText('Fresh Steps');r.stepButton:SetScript('OnClick',function()if N.FreshSteps then N.FreshSteps()end end)
  local buttons={r.stepButton,r.reset,r.settings};local widths={112,68,82};local total=274;local bx=math.max(0,(stepW-56-total)/2)
- for i,b in ipairs(buttons)do point(b,r.controls,bx,0,widths[i],36);b.label:SetFont('Fonts\\ARIALN.TTF',16,'');bx=bx+widths[i]+6 end
+ for i,b in ipairs(buttons)do point(b,r.controls,bx,0,widths[i],36);b.label:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',16,'');bx=bx+widths[i]+6 end
  r.actionDivider:SetParent(p[1]);r.actionDivider:ClearAllPoints();r.actionDivider:SetPoint('BOTTOMLEFT',p[1],'BOTTOMLEFT',28,82);r.actionDivider:SetPoint('BOTTOMRIGHT',p[1],'BOTTOMRIGHT',-28,82);r.actionDivider:SetHeight(1)
  if N.farmButton then N.farmButton:SetParent(p[2]);point(N.farmButton,p[2],math.max(28,(mapW-200)/2),height-64,200,34);N.farmButton:SetShown(not compact)end
  r.infoTitle:Hide();r.heading:Hide();local _,_,stepLabel=N.WorkflowBody();stepLabel:Hide();r.compactNext:Hide();r.compactNextHit:Hide();r.compactDetails:Hide()
@@ -3163,7 +3176,7 @@ function N.LayoutStepRows(visible,start)
  for i,row in ipairs(N.stepRows)do
   local step=visible[start+i-1];row:Hide();row.stepID=nil
   if step and not hidden and y+40<room then
-   step=N.WorkflowLive(step);row.label:SetText(step.title or'');row.label:SetWidth(width-20);row.label:SetHeight(0);row.label:SetWordWrap(true);row.label:SetFont('Fonts\\ARIALN.TTF',20,'');row.category:Hide()
+   step=N.WorkflowLive(step);row.label:SetText(step.title or'');row.label:SetWidth(width-20);row.label:SetHeight(0);row.label:SetWordWrap(true);row.label:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',20,'');row.category:Hide()
    local h=math.max(38,row.label:GetStringHeight()+16);local active=step.id==selected
    row.selected=active and W.selection~='source';row:SetEnamelTint();row.stepID=step.id;point(row,panel,28,y,width,h);row.label:ClearAllPoints();row.label:SetPoint('TOPLEFT',row,'TOPLEFT',10,-8)
    if active then
@@ -3233,8 +3246,8 @@ function N.RefreshRecipes()
  W.sourceCollapsed=W.sourceCollapsed or{}
  local function header(label,key)
   headers=headers+1;local f=r.workflowHeaders[headers]
-  if not f then f=CreateFrame('Button',nil,r.recipeContent);f.label=text(f,18,'');f.label:SetAllPoints(f);r.workflowHeaders[headers]=f end
-  point(f,r.recipeContent,0,y,width,28);f.label:SetText(key and((W.sourceCollapsed[key]and'> 'or'v ')..label)or label)
+  if not f then f=CreateFrame('Button',nil,r.recipeContent);f.label=text(f,18,'');f.label:SetPoint('LEFT',24,0);f.arrow=f:CreateTexture(nil,'ARTWORK');f.arrow:SetTexture('Interface\\AddOns\\GrindingForever\\Assets\\NormalRevision_20261026_R1\\TriangleRight');f.arrow:SetSize(14,14);f.arrow:SetPoint('LEFT',3,0);r.workflowHeaders[headers]=f end
+  point(f,r.recipeContent,0,y,width,28);f.label:SetText(label);f.arrow:SetRotation(key and W.sourceCollapsed[key]and 0 or-math.pi/2)
   f:SetScript('OnClick',key and function()W.sourceCollapsed[key]=not W.sourceCollapsed[key];N.RefreshRecipes()end or nil)
   f:Show();y=y+32
  end
@@ -3981,7 +3994,7 @@ ns.NavigationCompass=K
 local function read(fn,...)if type(fn)=='function'then local ok,a,b,c=pcall(fn,...);if ok then return a,b,c end end end
 local function wrap(a)return(a+math.pi)%(math.pi*2)-math.pi end
 local function text(parent,size,value)
- local t=parent:CreateFontString(nil,'OVERLAY');t:SetFont('Fonts\\ARIALN.TTF',size);t:SetTextColor(.13,.08,.025);t:SetText(value or'');return t
+ local t=parent:CreateFontString(nil,'OVERLAY');t:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',size);t:SetTextColor(.13,.08,.025);t:SetText(value or'');return t
 end
 local function texture(parent,path,layer)local t=parent:CreateTexture(nil,layer or'ARTWORK');t:SetTexture(AS..path);return t end
 local function icon(id)return read(C_Item and C_Item.GetItemIconByID or GetItemIcon,id)or'Interface\\Icons\\INV_Misc_Book_09'end
@@ -3998,7 +4011,7 @@ local function distance(loc,p)
  local a=world(loc);local b=p and world({mapID=p.mapID,x=p.x*100,y=p.y*100})
  if a and b and a[1]==b[1]then local dx,dy=a[2]-b[2],a[3]-b[3];return math.sqrt(dx*dx+dy*dy),math.atan2(dy,dx)end
 end
-function K.Mode()return ns.db and ns.db.navigationStyle or'Arrow'end
+function K.Mode()return F and F.route and'Arrow'or'Compass'end
 function K.Enabled()return not ns.db or ns.db.normalArrow~=false end
 function K.SetMode(mode)
  if mode~='Arrow'and mode~='Compass'then return false end
@@ -4021,7 +4034,7 @@ function K.Collect()
  local rows={};local d=read(P.Destination);local row=P.selected
  if d and not N.gpsSuppressed and not N.areaNavigation then
   local id=d.materialID or F.route and F.route.item or row and(row.materialID or row.itemID)
-  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\Icons\\INV_Sword_04',active=true}
+  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\WorldMap\\UI-WorldMap-QuestIcon',active=true}
  end
  local route=F.route;local p=position()
  if route and route.multiMaterials then
@@ -4078,19 +4091,7 @@ function K.Settings()
  if N.arrowToggle then N.arrowToggle:Hide()end
  if not K.gpsButton then
   K.gpsButton=N.MakeButton(f,'GPS: On',294,function()N.SetArrow(not K.Enabled())end);K.gpsButton:SetPoint('TOPLEFT',f,'TOPLEFT',18,-48);K.gpsButton:SetSize(294,39)
-  K.switch=CreateFrame('Button',nil,f);K.switch:SetSize(52,24);K.switch:SetPoint('TOP',K.gpsButton,'BOTTOM',0,-16)
-  local function mask(t)local v=K.switch.CreateMaskTexture and K.switch:CreateMaskTexture(nil,'ARTWORK');if v and t.AddMaskTexture then v:SetTexture('Interface\\CharacterFrame\\TempPortraitAlphaMask');v:SetAllPoints(t);t:AddMaskTexture(v)end end
-  local outer=K.switch:CreateTexture(nil,'BACKGROUND');outer:SetPoint('CENTER');outer:SetSize(28,24);outer:SetColorTexture(.57,.36,.13,1)
-  local recess=texture(K.switch,'WinglessCrest_20261025_R1\\PatinaRail','BORDER');recess:SetPoint('CENTER');recess:SetSize(28,20);recess:SetVertexColor(.22,.18,.12)
-  for _,side in ipairs({'LEFT','RIGHT'})do
-   local cap=K.switch:CreateTexture(nil,'BACKGROUND');cap:SetSize(24,24);cap:SetPoint(side,K.switch,side);cap:SetColorTexture(.57,.36,.13,1);mask(cap)
-   local inner=texture(K.switch,'WinglessCrest_20261025_R1\\PatinaRail','BORDER');inner:SetSize(20,20);inner:SetPoint(side,K.switch,side,side=='LEFT'and 2 or-2,0);inner:SetTexCoord(.45,.55,0,1);inner:SetVertexColor(.22,.18,.12);mask(inner)
-  end
-  K.thumb=texture(K.switch,'WinglessCrest_20261025_R1\\PatinaRail','OVERLAY');K.thumb:SetSize(20,20);K.thumb:SetTexCoord(.45,.55,0,1)
-  mask(K.thumb)
-  local l=text(f,19,'Arrow');l:SetTextColor(.94,.82,.55);l:SetPoint('RIGHT',K.switch,'LEFT',-18,0)
-  local r=text(f,19,'Compass');r:SetTextColor(.94,.82,.55);r:SetPoint('LEFT',K.switch,'RIGHT',18,0)
-  K.switch:SetScript('OnClick',function()K.SetMode(K.Mode()=='Arrow'and'Compass'or'Arrow')end)
+
  end
  f:SetWidth(332);f:SetHeight(592);f:EnableMouse(true);f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+200)
  K.gpsButton:SetWidth(294)
@@ -4234,7 +4235,7 @@ end)(ADDON,GF)
 ;(function(...)
 local _,ns=...;local N,P,W,K,R,F=ns.NormalUI,ns.ProfessionGuide,ns.WindowWorkflow,ns.NavigationCompass,ns.MaterialRoutes,ns.FarmingPlanner
 local AS='Interface\\AddOns\\GrindingForever\\Assets\\'
-local function text(p,size,value)local t=p:CreateFontString(nil,'OVERLAY');t:SetFont('Fonts\\ARIALN.TTF',size);t:SetTextColor(.15,.09,.035);t:SetText(value or'');return t end
+local function text(p,size,value)local t=p:CreateFontString(nil,'OVERLAY');t:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',size);t:SetTextColor(.15,.09,.035);t:SetText(value or'');return t end
 local function tex(p,path,layer)local t=p:CreateTexture(nil,layer or'ARTWORK');t:SetTexture(AS..path);return t end
 local function icon(id)local fn=C_Item and C_Item.GetItemIconByID or GetItemIcon;return fn and fn(id)or'Interface\\Icons\\INV_Misc_Book_09'end
 local function now()return type(GetTime)=='function'and GetTime()or 0 end
@@ -4333,7 +4334,7 @@ end)(ADDON,GF)
 local _,ns=...;local N,W,E,U,F,M=ns.NormalUI,ns.WindowWorkflow,ns.SharedExplorer,ns.SharedUI,ns.FarmingPlanner,ns.KnownNodePins
 local AS='Interface\\AddOns\\GrindingForever\\Assets\\'
 local function read(fn,...)if type(fn)=='function'then local ok,a,b,c,d,e,f,g,h,i,j,k,l,m=pcall(fn,...);if ok then return a,b,c,d,e,f,g,h,i,j,k,l,m end end end
-local function text(p,size,value)local t=p:CreateFontString(nil,'OVERLAY');t:SetFont('Fonts\\ARIALN.TTF',size);t:SetTextColor(.15,.09,.035);t:SetText(value or'');return t end
+local function text(p,size,value)local t=p:CreateFontString(nil,'OVERLAY');t:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',size);t:SetTextColor(.15,.09,.035);t:SetText(value or'');return t end
 local function db()return ns.Forever and ns.Forever.db or GrindingForeverAnniversaryCharacterDB or ns.db end
 local V={pins={},modeNames={'World Map','Minimap','Both','Off'},boss=nil,class='All Classes'};ns.MapControls99=V
 function V.Mode()local d=db();return d and d.nodeDisplay or(d and d.knownNodePins==false and'Off'or'Both')end
@@ -4465,10 +4466,10 @@ R.collapsed100=R.collapsed100 or{};local category={{'Mining','Mining'},{'Herbali
 function R.Fill()
  if not R.body then return end;if not R.grid100 then for _,b in ipairs(R.buttons or{})do b:Hide()end;R.buttons={};R.grid100=true end;R.headers100=R.headers100 or{};local y,index=0,0
  for _,cat in ipairs(category)do local title,kind=cat[1],cat[2];local list={};for _,m in ipairs(R.materials)do if(m.kind==kind or kind=='Cloth'and(m.id==2589 or(m.name or''):find('Cloth',1,true)))and not(kind~='Cloth'and(m.name or''):find('Cloth',1,true))then list[#list+1]=m end end;table.sort(list,function(a,b)return a.name<b.name end)
-  local h=R.headers100[title];if not h then h=CreateFrame('Button',nil,R.body);h.label=h:CreateFontString(nil,'OVERLAY');h.label:SetFont('Fonts\\ARIALN.TTF',18);h.label:SetTextColor(.16,.09,.03);h.label:SetPoint('LEFT',24,0);h.arrow=h:CreateTexture(nil,'ARTWORK');h.arrow:SetTexture(AS..'NormalRevision_20261026_R1\\TriangleRight');h.arrow:SetSize(12,12);h.arrow:SetPoint('LEFT',4,0);h:SetScript('OnClick',function()R.collapsed100[title]=not R.collapsed100[title];R.Fill()end);R.headers100[title]=h end
+  local h=R.headers100[title];if not h then h=CreateFrame('Button',nil,R.body);h.label=h:CreateFontString(nil,'OVERLAY');h.label:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',18);h.label:SetTextColor(.16,.09,.03);h.label:SetPoint('LEFT',24,0);h.arrow=h:CreateTexture(nil,'ARTWORK');h.arrow:SetTexture(AS..'NormalRevision_20261026_R1\\TriangleRight');h.arrow:SetSize(12,12);h.arrow:SetPoint('LEFT',4,0);h:SetScript('OnClick',function()R.collapsed100[title]=not R.collapsed100[title];R.Fill()end);R.headers100[title]=h end
   h:ClearAllPoints();h:SetPoint('TOPLEFT',R.body,'TOPLEFT',0,-y);h:SetSize(600,30);h.label:SetText(title);h.arrow:SetRotation(R.collapsed100[title]and 0 or-math.pi/2);h:Show();y=y+34
   if not R.collapsed100[title]then for j,m in ipairs(list)do index=index+1;local b=R.buttons[index]
-   if not b then b=CreateFrame('Button',nil,R.body);b.icon=b:CreateTexture(nil,'ARTWORK');b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Fonts\\ARIALN.TTF',13);b.label:SetTextColor(.16,.09,.03);b.check=CreateFrame('Button',nil,b);b.box=b.check:CreateTexture(nil,'ARTWORK');b.box:SetAllPoints();b.box:SetTexture(AS..'NormalRevision_20261026_R1\\ButtonNormal');b.tick=b.check:CreateTexture(nil,'OVERLAY');b.tick:SetAllPoints();b.tick:SetTexture('Interface\\Buttons\\UI-CheckBox-Check');b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.15);R.buttons[index]=b end
+   if not b then b=CreateFrame('Button',nil,R.body);b.icon=b:CreateTexture(nil,'ARTWORK');b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',13);b.label:SetTextColor(.16,.09,.03);b.check=CreateFrame('Button',nil,b);b.box=b.check:CreateTexture(nil,'ARTWORK');b.box:SetAllPoints();b.box:SetTexture(AS..'NormalRevision_20261026_R1\\ButtonNormal');b.tick=b.check:CreateTexture(nil,'OVERLAY');b.tick:SetAllPoints();b.tick:SetTexture('Interface\\Buttons\\UI-CheckBox-Check');b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.15);R.buttons[index]=b end
    b.material=m;b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((j-1)%6)*98,-y-math.floor((j-1)/6)*78);b:SetSize(94,74);b.icon:ClearAllPoints();b.icon:SetSize(36,36);b.icon:SetPoint('TOP',b,'TOP',-5,-3);b.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,m.id));b.label:ClearAllPoints();b.label:SetPoint('TOPLEFT',b,'TOPLEFT',1,-44);b.label:SetWidth(92);b.label:SetHeight(28);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true);b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:ClearAllPoints();b.check:SetSize(19,19);b.check:SetPoint('TOPLEFT',b,'TOPLEFT',56,-26);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);b:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);if b.check.SetChecked then b.check:SetChecked(K.selected[m.id]==true)end;if b.tick then b.tick:SetShown(K.selected[m.id]==true)end;b.wash:SetShown(K.selected[m.id]==true);b:Show()
   end;y=y+math.ceil(#list/6)*78 end
  end
@@ -4554,13 +4555,13 @@ K.Collect=function(...)
  K.near100=near;if near then K.targets[#K.targets+1]=near end
 end
 local update=K.Update
-K.Update=function(...)local v=update(...);for i,target in ipairs(K.targets or{})do local marker=K.markers and K.markers[i];if marker and target.nearby then if marker.scale100~=.70 then marker:SetScale(.70);marker.scale100=.70 end;if not marker.nearLabel100 then marker.nearLabel100=marker:CreateFontString(nil,'OVERLAY');marker.nearLabel100:SetFont('Fonts\\ARIALN.TTF',16);marker.nearLabel100:SetPoint('TOP',marker,'BOTTOM',0,-4)end;local caption=math.floor(target.distance or 0)..' yd';if marker.caption100~=caption then marker.nearLabel100:SetText(caption);marker.caption100=caption end;marker.nearLabel100:Show()elseif marker then if marker.scale100~=1 then marker:SetScale(1);marker.scale100=1 end;if marker.nearLabel100 then marker.nearLabel100:Hide()end end end;return v end
+K.Update=function(...)local v=update(...);for i,target in ipairs(K.targets or{})do local marker=K.markers and K.markers[i];if marker and target.nearby then if marker.scale100~=.70 then marker:SetScale(.70);marker.scale100=.70 end;if not marker.nearLabel100 then marker.nearLabel100=marker:CreateFontString(nil,'OVERLAY');marker.nearLabel100:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',16);marker.nearLabel100:SetPoint('TOP',marker,'BOTTOM',0,-4)end;local caption=math.floor(target.distance or 0)..' yd';if marker.caption100~=caption then marker.nearLabel100:SetText(caption);marker.caption100=caption end;marker.nearLabel100:Show()elseif marker then if marker.scale100~=1 then marker:SetScale(1);marker.scale100=1 end;if marker.nearLabel100 then marker.nearLabel100:Hide()end end end;return v end
 local D={};ns.Review100=D
 function D.Menu(anchor,values,callback)
  if V.menu then V.menu:Hide()end
  if not D.menu then local f=CreateFrame('Frame',nil,UIParent,'BackdropTemplate');D.menu=f;f:SetBackdrop({bgFile='Interface\\Tooltips\\UI-Tooltip-Background',edgeFile='Interface\\Tooltips\\UI-Tooltip-Border',edgeSize=10});f:SetBackdropColor(.025,.02,.01,1);f:SetFrameStrata('TOOLTIP');f:SetClampedToScreen(true);f.buttons={};local scroll=CreateFrame('ScrollFrame',nil,f);f.scroll=scroll;scroll:SetPoint('TOPLEFT',6,-6);scroll:SetPoint('BOTTOMRIGHT',-6,6);scroll:SetClipsChildren(true);scroll:EnableMouseWheel(true);f.body=CreateFrame('Frame',nil,scroll);scroll:SetScrollChild(f.body);scroll:SetScript('OnMouseWheel',function(_,d)scroll:SetVerticalScroll(math.max(0,math.min(math.max(0,f.body:GetHeight()-scroll:GetHeight()),(scroll:GetVerticalScroll()or 0)-d*27)))end)end
  local f=D.menu;local scale=read(N.root.GetEffectiveScale,N.root)or read(N.root.GetScale,N.root)or 1;local parent=read(UIParent.GetEffectiveScale,UIParent)or 1;f:SetScale(scale/parent);f:SetFrameLevel(N.root:GetFrameLevel()+350);f:ClearAllPoints();f:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT',0,-2);local width=math.max(180,anchor:GetWidth());f:SetSize(width,math.min(290,#values*27+12));f.body:SetSize(width-12,math.max(1,#values*27));f.scroll:SetVerticalScroll(0)
- for i,row in ipairs(values)do local b=f.buttons[i];if not b then b=CreateFrame('Button',nil,f.body);b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Fonts\\ARIALN.TTF',17);b.label:SetTextColor(.94,.78,.42);b.label:SetPoint('LEFT',8,0);b.label:SetPoint('RIGHT',-8,0);b.label:SetJustifyH('LEFT');b.highlight=b:CreateTexture(nil,'BACKGROUND');b.highlight:SetAllPoints();b.highlight:SetColorTexture(.45,.36,.16,.4);b:SetScript('OnEnter',function(self)self.highlight:Show()end);b:SetScript('OnLeave',function(self)self.highlight:SetShown(self.selected)end);f.buttons[i]=b end;b:ClearAllPoints();b:SetPoint('TOPLEFT',f.body,'TOPLEFT',0,-(i-1)*27);b:SetSize(width-12,27);b.label:SetText(row.name);b.selected=row.selected;b.highlight:SetShown(row.selected==true);b:SetScript('OnClick',function()f:Hide();callback(row)end);b:Show()end
+ for i,row in ipairs(values)do local b=f.buttons[i];if not b then b=CreateFrame('Button',nil,f.body);b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Interface\\AddOns\\GrindingForever\\Assets\\Naowh.ttf',17);b.label:SetTextColor(.94,.78,.42);b.label:SetPoint('LEFT',8,0);b.label:SetPoint('RIGHT',-8,0);b.label:SetJustifyH('LEFT');b.highlight=b:CreateTexture(nil,'BACKGROUND');b.highlight:SetAllPoints();b.highlight:SetColorTexture(.45,.36,.16,.4);b:SetScript('OnEnter',function(self)self.highlight:Show()end);b:SetScript('OnLeave',function(self)self.highlight:SetShown(self.selected)end);f.buttons[i]=b end;b:ClearAllPoints();b:SetPoint('TOPLEFT',f.body,'TOPLEFT',0,-(i-1)*27);b:SetSize(width-12,27);b.label:SetText(row.name);b.selected=row.selected;b.highlight:SetShown(row.selected==true);b:SetScript('OnClick',function()f:Hide();callback(row)end);b:Show()end
  for i=#values+1,#f.buttons do f.buttons[i]:Hide()end;f:Show();V.menu=f
 end
 local raids={'molten','onyxia','blackwing','ahnqiraj','zulaman','zulgurub','karazhan','gruul','magtheridon','serpentshrine','tempestkeeptempestkeep','theeye','hyjal','blacktemple','sunwell','barrowdeeps','naxxramas'}
@@ -4881,7 +4882,7 @@ function R.CaptureBook()
   local context=read(api.GetProfessionInfoBySkillLineID,base.professionID)
   local known=skills()[profession]
   local rank=base.skillLevel or(type(context)=='table'and context.skillLevel)or(known and known.rank)
-  if type(profession)~='string'or type(rank)~='number'then return end
+  if type(profession)~='string'or type(rank)~='number'or profession=='Skinning'or profession=='Herbalism'or profession=='Fishing'then return end
   local rows={};local colors=Enum and Enum.TradeskillRelativeDifficulty or{}
   for _,id in ipairs(ids)do
    local info=read(api.GetRecipeInfo,id);local schematic=read(api.GetRecipeSchematic,id,false)
@@ -4994,6 +4995,7 @@ local function recipes()
  table.sort(out,function(a,b)return a.id<b.id end);return out
 end
 function R.Snapshot()
+ if R.snapshotEpoch==R.epoch and R.snapshotCache then return R.snapshotCache end
  local s={skills=skills(),recipes=recipes(),inventory={},rare={},prices={},vendorStock={}}
  local inspected={}
  for _,r in ipairs(s.recipes)do
@@ -5018,6 +5020,7 @@ function R.Snapshot()
    end
   end
  end
+ R.snapshotEpoch=R.epoch;R.snapshotCache=s
  return s
 end
 function R.Kind(id)
@@ -5031,7 +5034,8 @@ end
 -- gathering events; nearby-node distance checks reuse this small zone index.
 function R.ZoneNodes(pos)
  if not pos or not F then return{}end
- if R.nodeMap==pos.mapID and R.nodeEpoch==R.epoch then return R.nodes end
+ if R.nodeMap==pos.mapID and R.nodeAt and GetTime()-R.nodeAt<5 then return R.nodes end
+ R.nodeAt=GetTime()
  read(F.LoadKnown);local nodes={}
  for kind,maps in pairs(F.known or{})do
   for coord,id in pairs(maps[pos.mapID]or{})do
@@ -5173,7 +5177,8 @@ function R.FarmRow(plan)
 end
 function R.Apply(rows)
  if not mode()or manual()then return rows end
- local snapshot=R.Snapshot();local plan=Q.Plan(snapshot);R.plan=plan
+ local snapshot=R.Snapshot();local plan=R.plan
+ if not plan or R.planEpoch~=R.epoch then plan=Q.Plan(snapshot);R.plan=plan;R.planEpoch=R.epoch end
  local sources,names=R.Sources(plan,position(),rows)
  local base={};for _,row in ipairs(rows)do if not row.integratedProfession then base[#base+1]=row end end
  local out=Q.Rewrite(base,plan,{sources=sources,names=names})
@@ -5259,12 +5264,20 @@ if compass then
   end
  end
 end
+local originalReadBook=E.ReadBook
+ E.ReadBook=function()R.bookDirty=true;R.bookDue=GetTime()+.3 end
 local worker=CreateFrame('Frame');R.worker=worker
-for _,event in ipairs({'TRADE_SKILL_SHOW','TRADE_SKILL_UPDATE','CRAFT_SHOW','CRAFT_UPDATE','SKILL_LINES_CHANGED','BAG_UPDATE_DELAYED','PLAYER_ENTERING_WORLD','MERCHANT_SHOW','ZONE_CHANGED_NEW_AREA'})do pcall(worker.RegisterEvent,worker,event)end
+for _,event in ipairs({'TRADE_SKILL_SHOW','TRADE_SKILL_UPDATE','CRAFT_SHOW','CRAFT_UPDATE','SKILL_LINES_CHANGED','BAG_UPDATE_DELAYED','PLAYER_ENTERING_WORLD','MERCHANT_SHOW','MERCHANT_CLOSED','PLAYER_EQUIPMENT_CHANGED','ZONE_CHANGED_NEW_AREA'})do pcall(worker.RegisterEvent,worker,event)end
+worker:SetScript('OnUpdate',function()
+ if not R.bookDue or GetTime()<R.bookDue then return end
+ R.bookDue=nil
+ if R.bookDirty then R.bookDirty=nil;originalReadBook();R.CaptureBook()end
+ if R.craftDirty then R.craftDirty=nil;R.CaptureCraftBook()end
+ end)
 worker:SetScript('OnEvent',function(_,event)
  R.epoch=R.epoch+1
- if event=='TRADE_SKILL_SHOW'or event=='TRADE_SKILL_UPDATE'or event=='SKILL_LINES_CHANGED'then R.CaptureBook()end
- if event=='CRAFT_SHOW'or event=='CRAFT_UPDATE'then R.CaptureCraftBook()end
+ if event=='TRADE_SKILL_SHOW'or event=='TRADE_SKILL_UPDATE'or event=='SKILL_LINES_CHANGED'then R.bookDirty=true;R.bookDue=GetTime()+.3 end
+ if event=='CRAFT_SHOW'or event=='CRAFT_UPDATE'then R.craftDirty=true;R.bookDue=GetTime()+.3 end
 end)
 
 end)(ADDON,GF)
