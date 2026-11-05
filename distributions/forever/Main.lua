@@ -40,7 +40,10 @@ function E.CurrentPosition()local p=E.Position();if p.status=='available'then re
 function E.QuestState(id)
  if not num(id,1,1e8)then return{status='invalid'}end
  local q=C_QuestLog or{};local inLog=call(q.IsOnQuest,id);local rewarded=call(q.IsQuestFlaggedCompleted or IsQuestFlaggedCompleted,id)
- if inLog==nil then local index=call(q.GetLogIndexForQuestID or GetQuestLogIndexByID,id);if type(index)=='number'then inLog=index>0 end end
+ if not public(inLog)then inLog=nil end;if not public(rewarded)then rewarded=nil end
+ if inLog~=true and inLog~=false then local index=call(q.GetLogIndexForQuestID or GetQuestLogIndexByID,id);if num(index,0,1e8)then inLog=index>0 elseif public(inLog)and type(inLog)=='number'then inLog=inLog==1 else inLog=nil end end
+  rewarded=rewarded==true or rewarded==1
+  if inLog~=true then return{status=inLog==false and'available'or'unavailable',inLog=false,rewarded=rewarded,ready=false,complete=false}end
  local objectives=call(q.GetQuestObjectives,id);local ready=call(q.IsComplete or IsQuestComplete,id)
  if type(objectives)~='table'then local index=call(q.GetLogIndexForQuestID or GetQuestLogIndexByID,id);if index and index>0 then objectives={};for slot=1,call(GetNumQuestLeaderBoards,index)or 0 do local text,kind,done=call(GetQuestLogLeaderBoard,slot,index);if text then local current,total=text:match('(%d+)%s*/%s*(%d+)');objectives[#objectives+1]={text=text,type=kind,finished=done==true,numFulfilled=tonumber(current),numRequired=tonumber(total)}end end end end
  return{status=type(inLog)=='boolean'and'available'or'unavailable',inLog=inLog,rewarded=rewarded,complete=ready,ready=ready,objectives=type(objectives)=='table'and objectives or nil}
@@ -55,8 +58,8 @@ function E.Snapshot()
  end
  for id,v in pairs(E.known)do if v then s.known[id]=true end end
  local ids=call(C_QuestLog and C_QuestLog.GetAllCompletedQuestIDs)
- if type(ids)=='table'then for _,id in ipairs(ids)do s.completed[id]=true end end
- local n=call(C_QuestLog and C_QuestLog.GetNumQuestLogEntries or GetNumQuestLogEntries)or 0
+ s.completedAvailable=type(ids)=='table';if s.completedAvailable then for _,id in ipairs(ids)do s.completed[id]=true end end
+ local n=call(C_QuestLog and C_QuestLog.GetNumQuestLogEntries or GetNumQuestLogEntries);s.questLogAvailable=num(n,0,1e5)~=nil;n=s.questLogAvailable and n or 0
  for i=1,n do local q=call(C_QuestLog and C_QuestLog.GetInfo,i);if not q then local title,_,_,header,_,_,_,id=call(GetQuestLogTitle,i);if title and id then q={questID=id,isHeader=header,title=title}end end;if q and q.questID and not q.isHeader then s.quests[q.questID]=E.QuestState(q.questID);s.quests[q.questID].title=q.title;s.quests[q.questID].inLog=true;if q.isComplete==true or q.isComplete==1 then s.quests[q.questID].ready=true end end end
  if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
   for i=1,80 do local a=call(C_UnitAuras.GetAuraDataByIndex,'player',i,'HELPFUL');if not a then break end;if public(a.spellId)then s.auras[a.spellId]={duration=a.duration,expiration=a.expirationTime}end end
@@ -70,19 +73,29 @@ end
 -- retain it across events or movement, and always restore APIs after errors.
 function E.WithSnapshot(fn,...)
  if E.snapshotScope then return fn(...)end
- local snapshot,questState,known=E.Snapshot,E.QuestState,E.Known
- local state=snapshot();local fallback={};local recipeKnowledge={}
+ local snapshot,questState,known,world=E.Snapshot,E.QuestState,E.Known,E.World
+ local state=snapshot();local fallback={};local recipeKnowledge={};local positions={}
+ E.World=function(map,x,y)
+  if not num(map,1,1e8)or not num(x,0,100)or not num(y,0,100)then return end
+  local maps=positions[map];if not maps then maps={};positions[map]=maps end
+  local xs=maps[x];if not xs then xs={};maps[x]=xs end
+  local value=xs[y];if not value then value={world(map,x,y)};xs[y]=value end;return unpack(value)
+ end
  if known then E.Known=function(r)local v=recipeKnowledge[r];if not v then v={known(r)};recipeKnowledge[r]=v end;return v[1]end end
  E.snapshotScope=true;E.Snapshot=function()return state end
  E.QuestState=function(id)
   if state.quests[id]then return state.quests[id]end
   if state.completed[id]then return{rewarded=true,inLog=false}end
+  if state.questLogAvailable then
+   if fallback[id]==nil then fallback[id]={status='available',inLog=false,ready=false,complete=false,rewarded=not state.completedAvailable and call(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted or IsQuestFlaggedCompleted,id)==true or false}end
+   return fallback[id]
+  end
   if fallback[id]==nil then fallback[id]=questState(id)or{}end
   return fallback[id]
  end
  local function pack(...)return{n=select('#',...),...}end
  local result=pack(pcall(fn,...))
- E.Snapshot=snapshot;E.QuestState=questState;E.Known=known;E.snapshotScope=nil
+ E.Snapshot=snapshot;E.QuestState=questState;E.Known=known;E.World=world;E.snapshotScope=nil
  if not result[1]then error(result[2],0)end
  return unpack(result,2,result.n)
 end
@@ -118,7 +131,23 @@ function E.Known(r)
  if r.knowledgeVerified==true and r.learned==false then return false end
  return nil -- Unknown knowledge evidence is not an unknown acquisition category.
 end
+local seasonalRecipes={[21143]=true,[21144]=true,[45022]=true}
+local seasonalItems={[17200]=true,[17201]=true,[34413]=true}
+local seasonalMerchants={[13429]=true,[13432]=true,[13420]=true,[13433]=true,[13435]=true}
+function E.SeasonalAvailable(row)
+ local recipe=seasonalRecipes[row.spellID]or seasonalItems[row.learnableItemID]
+ if not recipe and not seasonalMerchants[row.npcID]then return true end
+ if not MerchantFrame or call(MerchantFrame.IsShown,MerchantFrame)~=true then return false end
+ local guid=call(UnitGUID,'npc');local npc=type(guid)=='string'and tonumber(guid:match('Creature%-%d+%-%d+%-%d+%-%d+%-(%d+)'))
+ if row.npcID and npc~=row.npcID then return false end
+ for i=1,call(GetMerchantNumItems)or 0 do
+  local id=E.ItemID(call(GetMerchantItemLink,i))
+  if id and(recipe and id==row.learnableItemID or not recipe and seasonalItems[id])then return true end
+ end
+ return false
+end
 function E.Eligible(row,state)
+ if not E.SeasonalAvailable(row)then return false end
  state=state or E.state or E.Snapshot()
  if row.faction and row.faction~='Both'and row.faction~='Neutral'and row.faction~=state.faction then return false end
  if row.race and row.race~=state.race or row.class and row.class~=state.class then return false end
@@ -2735,7 +2764,7 @@ for _,p in ipairs(D.profiles)do
  end
 end
 function Q.Ready(live)
- if not live or not live.inLog then return false end
+ if not live or live.inLog~=true then return false end
  local required,finished=0,true
  for _,o in ipairs(live.objectives or{})do if not o.isOptional then
   required=required+1
@@ -2861,11 +2890,11 @@ function Q.AddDatabaseQuests()end
 local eligible=E.Eligible
 E.Eligible=function(row,s)
  s=s or E.state or E.Snapshot()
- if row.routeAction and row.quest then
+ if row.quest and(row.kind=='accept'or row.kind=='objective'or row.kind=='turnin')then
   local live=qs(row.quest,s)
   if not live.inLog and not Q.Eligible(row.quest,s)then return false end
   if row.kind=='accept'and live.inLog then return false end
-  if(row.kind=='objective'or row.kind=='turnin')and not live.inLog then return false end
+  if(row.kind=='objective'or row.kind=='turnin')and not(s.quests and s.quests[row.quest]and s.quests[row.quest].inLog==true)then return false end
   if row.kind=='turnin'and not Q.Ready(live)then return false end
  end
  return eligible(row,s)
@@ -3137,7 +3166,7 @@ function W.SourceRows(records,query)
  for _,r in ipairs(records or{})do
   if r.kind=='trainer'then
    if N.sourceFilters.Trainer and N.professionFilters[r.profession]then local c={};for k,v in pairs(r)do c[k]=v end;c.workflowSource='Trainer';out[#out+1]=c end
-  elseif not r.kind and N.professionFilters[r.profession]~=false then
+  elseif not r.kind and N.professionFilters[r.profession]~=false and E.Eligible(r)then
    for _,loc in ipairs(r.locations or{})do
     if N.sourceFilters[loc.source]and E.Eligible(loc)and(query or loc.zone==N.selectedZone)then
      local key=tostring(r.spellID or r.id or r.name)..':'..tostring(loc.source)..':'..tostring(loc.npcID or loc.name)..':'..tostring(loc.mapID)..':'..tostring(loc.x)..':'..tostring(loc.y)
@@ -4906,15 +4935,16 @@ local function recipes()
 end
 function R.Snapshot()
  local s={skills=skills(),recipes=recipes(),inventory={},rare={},prices={},vendorStock={}}
+ local inspected={}
  for _,r in ipairs(s.recipes)do
   if r.product then s.inventory[r.product]=count(r.product)end
-  for id in pairs(r.reagents)do
+  for id in pairs(r.reagents)do if not inspected[id]then inspected[id]=true
    s.inventory[id]=count(id)
    local policy=ns.MaterialAcquisitionPolicy
    s.rare[id]=policy and read(policy.ChanceMaterial,{id=id,name=name(id)})or false
    local prices=ns.CraftingEvaluation
    s.prices[id]=prices and read(prices.Price,id)
-  end
+  end end
  end
  -- Only the currently open merchant window establishes purchasable stock.
  R.merchant={}
