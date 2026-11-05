@@ -52,9 +52,22 @@ function E.Record()end
 function E.Snapshot()
  local _,race=call(UnitRace,'player');local _,class=call(UnitClass,'player')
  local s={faction=call(UnitFactionGroup,'player'),race=race,class=class,level=call(UnitLevel,'player'),position=E.CurrentPosition(),skills={},known={},quests={},completed={},auras={},talents={},reputations={},speed=call(GetUnitSpeed,'player'),money=call(GetMoney)}
- for i=1,call(GetNumSkillLines)or 0 do local name,header,_,rank,_,_,cap=call(GetSkillLineInfo,i);if name and not header and type(rank)=='number'then s.skills[name]={rank=rank,cap=cap}end end
+ -- Read learned skills through the client's available API generation.
+ local function learned(name,rank,cap,id)
+  if public(name)and type(name)=='string'and num(rank,1,10000)then s.skills[name]={rank=rank,cap=num(cap,1,10000)or rank,id=id}end
+ end
+ local api=C_SkillInfo or{}
+ if type(api.GetNumSkillLines)=='function'and type(api.GetSkillLineInfo)=='function'then
+  for i=1,num(call(api.GetNumSkillLines),0,10000)or 0 do local v=call(api.GetSkillLineInfo,i);if type(v)=='table'and public(v.isHeader)and not v.isHeader then learned(v.name,v.rank,v.maxRank or v.maxSkillLevel,v.skillLineID)end end
+ else
+  for i=1,num(call(GetNumSkillLines),0,10000)or 0 do local name,header,_,rank,_,_,cap=call(GetSkillLineInfo,i);if public(header)and not header then learned(name,rank,cap)end end
+ end
+ if type(api.GetSkillLineInfoByID)=='function'then
+  for _,id in ipairs({171,164,333,202,182,755,165,186,393,197,185,129,356})do local v=call(api.GetSkillLineInfoByID,id);if type(v)=='table'then learned(v.name,v.rank,v.maxRank or v.maxSkillLevel,id)end end
+ end
+ local indexes={call(GetProfessions)};for slot=1,6 do local index=indexes[slot];if num(index,1,10000)then local name,_,rank,cap,_,_,id=call(GetProfessionInfo,index);learned(name,rank,cap,id)end end
  if C_TradeSkillUI and C_TradeSkillUI.GetAllProfessionTradeSkillLines then
-  for _,id in ipairs(call(C_TradeSkillUI.GetAllProfessionTradeSkillLines)or{})do local v=call(C_TradeSkillUI.GetProfessionInfoBySkillLineID,id);if v and v.professionName and v.skillLevel then s.skills[v.professionName]={rank=v.skillLevel,cap=v.maxSkillLevel,id=id}end end
+  for _,id in ipairs(call(C_TradeSkillUI.GetAllProfessionTradeSkillLines)or{})do local v=call(C_TradeSkillUI.GetProfessionInfoBySkillLineID,id);if type(v)=='table'then learned(v.professionName,v.skillLevel,v.maxSkillLevel,id)end end
  end
  for id,v in pairs(E.known)do if v then s.known[id]=true end end
  local ids=call(C_QuestLog and C_QuestLog.GetAllCompletedQuestIDs)
@@ -3562,7 +3575,7 @@ function F.LoadKnown()
  end;return true
 end
 
-function F.Skill(kind)local s=E.Snapshot();local v=s.skills[kind];return v and v.rank,v and v.cap end
+function F.Skill(kind)local s=E.state or E.Snapshot();local v=s.skills[kind];return v and v.rank,v and v.cap end
 function F.Material(id)return id,E.ItemName(id)end
 local function update()
  local r=F.route;E.farmSteps=r and{r.steps[r.cursor]}or{};P.Refresh();if N.root then N.Resync();if r then N.model.index=r.steps[r.cursor].id;P.selected=r.steps[r.cursor];N.Refresh()end end
@@ -3832,7 +3845,12 @@ for _,m in ipairs({{21071,'Raw Sagefish',75},{21153,'Raw Greater Sagefish',175},
 for _,m in ipairs({{2318,'Light Leather',1},{2319,'Medium Leather',75},{4234,'Heavy Leather',155},{4304,'Thick Leather',205},{8170,'Rugged Leather',260}})do material(m[1],m[2],'Skinning',m[3])end
 material(2589,'Linen Cloth','Cloth',0)
 local zoneMaps={["Durotar"]=1411,["Mulgore"]=1412,["Tirisfal Glades"]=1420,["Elwynn Forest"]=1429,["Teldrassil"]=1438,["Dun Morogh"]=1426,["The Barrens"]=1413,["Silverpine Forest"]=1421,["Loch Modan"]=1432,["Darkshore"]=1439,["Hillsbrad Foothills"]=1424,["Wetlands"]=1437,["Stonetalon Mountains"]=1442,["Stranglethorn Vale"]=1434,["Arathi Highlands"]=1417,["Tanaris"]=1446,["Searing Gorge"]=1427,["The Hinterlands"]=1425,["Felwood"]=1448,["Desolace"]=1443,["Thousand Needles"]=1441,["Un'Goro Crater"]=1449,["Blasted Lands"]=1419,["Eastern Plaguelands"]=1423,["Winterspring"]=1452,["Burning Steppes"]=1428,["Feralas"]=1444}
-local function mapFor(zone)
+-- Bind baseline gathering zones only when this client confirms the map name.
+ for zone,id in pairs(zoneMaps)do
+  local info=read(C_Map and C_Map.GetMapInfo,id)
+  if type(info)=='table'and info.name==zone then local entry=ns.ForeverData.zones[zone]or{name=zone};ns.ForeverData.zones[zone]=entry;entry.mapID=entry.mapID or id end
+ end
+ local function mapFor(zone)
  
  local z=ns.ForeverData.zones[zone];if z then return z.mapID end
  for _,m in pairs(ns.TBCFullMapManifest or{})do if type(m)=='table'and m.name==zone then return m.mapID end end
@@ -4854,6 +4872,36 @@ local function distance(a,b)return a and b and read(E.Distance,a,b)end
 local function unsafe()return read(UnitAffectingCombat,'player')or read(UnitIsDeadOrGhost,'player')or read(UnitOnTaxi,'player')end
 -- Only live, unlinked books supply learned recipes and current difficulty.
 function R.CaptureBook()
+ local api=C_TradeSkillUI or{}
+ if type(api.GetAllRecipeIDs)=='function'and type(api.GetBaseProfessionInfo)=='function'then
+  if read(api.IsTradeSkillLinked)==true or read(api.IsTradeSkillGuild)==true then return end
+  local base=read(api.GetBaseProfessionInfo);local ids=read(api.GetAllRecipeIDs)
+  if type(base)~='table'or type(ids)~='table'then return end
+  local profession=base.professionName
+  local context=read(api.GetProfessionInfoBySkillLineID,base.professionID)
+  local known=skills()[profession]
+  local rank=base.skillLevel or(type(context)=='table'and context.skillLevel)or(known and known.rank)
+  if type(profession)~='string'or type(rank)~='number'then return end
+  local rows={};local colors=Enum and Enum.TradeskillRelativeDifficulty or{}
+  for _,id in ipairs(ids)do
+   local info=read(api.GetRecipeInfo,id);local schematic=read(api.GetRecipeSchematic,id,false)
+   if type(info)=='table'and info.learned==true and type(schematic)=='table'and type(schematic.reagentSlotSchematics)=='table'then
+    local kind=info.relativeDifficulty==colors.Optimal and'optimal'or info.relativeDifficulty==colors.Medium and'medium'or info.relativeDifficulty==colors.Easy and'easy'or'trivial'
+    local row={id=id,name=info.name,profession=profession,known=true,bookRank=rank,orange=kind=='optimal',reagents={},kind=kind,product=schematic.outputItemID,output=schematic.quantityMin or 1}
+    local valid=true
+    for _,slot in ipairs(schematic.reagentSlotSchematics)do
+     local basic=Enum and Enum.CraftingReagentType and Enum.CraftingReagentType.Basic
+     if slot.reagentType==basic or slot.required==true then
+      local material=slot.reagents and slot.reagents[1]
+      if not material or not material.itemID or type(slot.quantityRequired)~='number'or slot.quantityRequired<=0 or #slot.reagents~=1 then valid=false;break end
+      row.reagents[material.itemID]=(row.reagents[material.itemID]or 0)+slot.quantityRequired
+     end
+    end
+    if valid and next(row.reagents)then rows[#rows+1]=row end
+   end
+  end
+  R.books[profession]={rank=rank,rows=rows};R.epoch=R.epoch+1;return
+ end
  if read(GetTradeSkillIsLinked)==true then return end
  local profession,rank=read(GetTradeSkillLine)
  local total=read(GetNumTradeSkills)
@@ -5027,6 +5075,18 @@ function R.Stop(profession,recipe)
  -- name alone is insufficient. Caller may attach verified station observations.
  local required=({Blacksmithing='Anvil',Engineering='Anvil',Cooking='Cooking Fire',Mining='Forge'})[profession]
  if required then
+  local api=C_TradeSkillUI or{}
+  local base=read(api.GetBaseProfessionInfo)
+  if recipe and type(base)=='table'and base.professionName==profession and type(api.GetRecipeRequirements)=='function'then
+   local requirements=read(api.GetRecipeRequirements,recipe.id)
+   local types=Enum and Enum.RecipeRequirementType or{}
+   local station=false;local ready=true
+   for _,requirement in ipairs(type(requirements)=='table'and requirements or{})do
+    if requirement.type==types.SpellFocus or requirement.type==types.Area then station=true end
+    if requirement.met~=true then ready=false end
+   end
+   if station and ready then return true end
+  end
   -- Query current tool availability while the matching book is open. Never
   -- persist "near an anvil" from an old book inspection after walking away.
   if recipe and read(GetTradeSkillLine)==profession and recipe.index and type(GetTradeSkillTools)=='function'then
