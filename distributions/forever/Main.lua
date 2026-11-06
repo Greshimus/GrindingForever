@@ -2654,7 +2654,7 @@ local function hookTooltips()
   end
  end
 end
-for _,event in ipairs({'PLAYER_LOGIN','PLAYER_ENTERING_WORLD','PLAYER_LOGOUT','ADDON_LOADED','QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','QUEST_LOG_UPDATE','UNIT_QUEST_LOG_CHANGED','SKILL_LINES_CHANGED','TRADE_SKILL_SHOW','TRADE_SKILL_LIST_UPDATE','CRAFT_SHOW','CRAFT_UPDATE','TRAINER_SHOW','TRAINER_UPDATE','MERCHANT_SHOW','LOOT_OPENED','CHAT_MSG_LOOT','UNIT_SPELLCAST_SUCCEEDED','UNIT_AURA','PLAYER_LEVEL_UP','BAG_UPDATE_DELAYED','UPDATE_FACTION','PLAYER_TALENT_UPDATE','TAXIMAP_OPENED'})do call(frame.RegisterEvent,frame,event)end
+for _,event in ipairs({'PLAYER_LOGIN','PLAYER_ENTERING_WORLD','PLAYER_LOGOUT','ADDON_LOADED','QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','GOSSIP_SHOW','GOSSIP_CLOSED','QUEST_DETAIL','QUEST_LOG_UPDATE','UNIT_QUEST_LOG_CHANGED','SKILL_LINES_CHANGED','TRADE_SKILL_SHOW','TRADE_SKILL_LIST_UPDATE','CRAFT_SHOW','CRAFT_UPDATE','TRAINER_SHOW','TRAINER_UPDATE','MERCHANT_SHOW','LOOT_OPENED','CHAT_MSG_LOOT','UNIT_SPELLCAST_SUCCEEDED','UNIT_AURA','PLAYER_LEVEL_UP','BAG_UPDATE_DELAYED','UPDATE_FACTION','PLAYER_TALENT_UPDATE','TAXIMAP_OPENED'})do call(frame.RegisterEvent,frame,event)end
 frame:SetScript('OnEvent',function(_,event,...)
  if event=='PLAYER_LOGIN'then initialize();hookTooltips();return end
  if event=='PLAYER_LOGOUT'then save();return end
@@ -2731,7 +2731,7 @@ function Q.Eligible(id,s)
  -- Live acceptance is stronger evidence than incomplete custom-race metadata.
  if live.inLog==true then return true end
  local profession=Q.professionQuests[id]
- if profession then local skill=s.skills and s.skills[profession];if not skill or not E.Public(skill.rank)or type(skill.rank)~='number'or skill.rank<=0 then return false end end
+ if profession then local skill=s.skills and s.skills[profession];if not skill or not E.Public(skill.rank)or type(skill.rank)~='number'or skill.rank<=0 or not offeredNow(id)then return false end end
  -- Holiday dates can differ on Forever: require a current NPC offer, not a guessed calendar.
  if Q.seasonalQuests[id]and not offeredNow(id)then return false end
  if q.side==1 and s.faction~='Alliance'or q.side==2 and s.faction~='Horde'then return false end
@@ -3905,11 +3905,11 @@ function F.Plan(kind,item,limit)
  return nodes,nil,{mapID=choice.mapID}
 end
 function R.Start(m,target)
- if m.kind=='Mining'and(read(GetItemCount,2901)or 0)<1 then return false,'Carry a Mining Pick.'end
- if m.kind=='Skinning'and(read(GetItemCount,7005)or 0)<1 then return false,'Carry a Skinning Knife.'end
+ if m.kind=='Mining'and(read(C_Item and C_Item.GetItemCount or GetItemCount,2901,false)or 0)<1 then return false,'Carry a Mining Pick.'end
+ if m.kind=='Skinning'and(read(C_Item and C_Item.GetItemCount or GetItemCount,7005,false)or 0)<1 then return false,'Carry a Skinning Knife.'end
  if read(IsInInstance)then return false,'Use an outdoor farming route.'end
  local choice,why=R.Recommend(m);R.request=choice
- local ok,err=F.Start(m.kind,m.id,target or((read(GetItemCount,m.id)or 0)+20));R.request=nil
+ local ok,err=F.Start(m.kind,m.id,target or((read(C_Item and C_Item.GetItemCount or GetItemCount,m.id,false)or 0)+20));R.request=nil
  if not ok then return false,err or why end
  if choice then F.route.traced=true;F.route.reference=choice.reference
   for i,step in ipairs(F.route.steps)do step.title='Farm '..m.name..' - '..i..' / '..#F.route.steps;step.body=(m.kind=='Skinning'and'Kill, loot and skin suitable beasts.'or m.kind=='Fishing'and'Fish matching pools along the route.'or'Gather '..m.name..' along the route.')..'\n\nApproximate route from your supplied map. Follow accessible terrain; Skip bypasses a waypoint.';step.destination.name=choice.reference.zone..' Farming Route'end
@@ -4156,8 +4156,8 @@ function R.StartSelection()
  for _,m in ipairs(materials)do
   local rank=m.kind=='Cloth'and 1 or F.Skill(m.kind)
   if not rank or rank<(m.skill or 0)then return false,'Requires '..m.kind..' '..tostring(m.skill or 1)..' for '..m.name..'.'end
-  if m.kind=='Mining'and(read(GetItemCount,2901)or 0)<1 then return false,'Carry a Mining Pick.'end
-  if m.kind=='Skinning'and(read(GetItemCount,7005)or 0)<1 then return false,'Carry a Skinning Knife.'end
+  if m.kind=='Mining'and(read(C_Item and C_Item.GetItemCount or GetItemCount,2901,false)or 0)<1 then return false,'Carry a Mining Pick.'end
+  if m.kind=='Skinning'and(read(C_Item and C_Item.GetItemCount or GetItemCount,7005,false)or 0)<1 then return false,'Carry a Skinning Knife.'end
   local choice=R.Recommend(m);R.request=choice;local ok,planned,why=pcall(F.Plan,m.kind,m.id,12);R.request=nil
   if not ok or not planned or #planned==0 then return false,m.name..': '..tostring(why or'No eligible located route available.')end
   local added=0
@@ -4776,6 +4776,11 @@ function Q.Plan(state)
     local points=secondary[profession]and 10 or 5
     local count
     if useful>0 and r.output and r.output>0 then count=math.ceil(useful/r.output)
+     local available=math.huge
+     for id,quantity in pairs(r.reagents)do
+      if type(quantity)=='number'and quantity>0 then available=math.min(available,math.floor((stock[id]or 0)/quantity))end
+     end
+     if available>0 and available<count then count=available end
     elseif r.orange and r.orangeUntil and r.orangeUntil-skill.rank>=points and skill.cap-skill.rank>=points then count=points end
     local valid=true;for _,quantity in pairs(r.reagents)do if type(quantity)~='number'or quantity<=0 then valid=false end end
     if valid and count and count>0 and count<=40 then
@@ -4956,9 +4961,10 @@ local function recipes()
  local out={}
  for profession,skill in pairs(skills())do
   local book=R.books[profession]
-  if book and book.rank==skill.rank then
+  if book then
    for _,base in ipairs(book.rows)do
     local r=copy(base)
+    if book.rank~=skill.rank then r.bookRank=skill.rank;r.orange=false;r.orangeUntil=nil end
     -- TBC facts are never applied to Forever's custom skill rules.
     local fact=not ns.Forever and ns.TBCRecipes and ns.TBCRecipes[r.id]
     if fact and fact.difficulty then r.orangeUntil=tonumber(fact.difficulty[2])end
@@ -5302,7 +5308,7 @@ end)(ADDON,GF)
  if not E or not Q then return end
  local revision=0;local cached;local build=Q.Build
  local events=CreateFrame('Frame')
- for _,event in ipairs({'QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','QUEST_LOG_UPDATE','UNIT_QUEST_LOG_CHANGED','PLAYER_LEVEL_UP','SKILL_LINES_CHANGED','PLAYER_ENTERING_WORLD','ZONE_CHANGED_NEW_AREA','ZONE_CHANGED','UPDATE_FACTION'})do events:RegisterEvent(event)end
+ for _,event in ipairs({'QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','GOSSIP_SHOW','GOSSIP_CLOSED','QUEST_DETAIL','QUEST_LOG_UPDATE','UNIT_QUEST_LOG_CHANGED','PLAYER_LEVEL_UP','SKILL_LINES_CHANGED','PLAYER_ENTERING_WORLD','ZONE_CHANGED_NEW_AREA','ZONE_CHANGED','UPDATE_FACTION'})do events:RegisterEvent(event)end
  events:SetScript('OnEvent',function()revision=revision+1;cached=nil end)
  Q.Build=function(s)
   local anchor=Q.Anchor(s);local t=E.Time();local p=s.position
@@ -5316,3 +5322,93 @@ end)(ADDON,GF)
  Q.Fresh=function(...)cached=nil;revision=revision+1;return fresh(...)end
  Q.InvalidateRefreshCache=function()cached=nil;revision=revision+1 end
 end)(ADDON,GF)
+-- GF_QUEST_SHARED_SPACE_25: live objectives own completion; resources are optional.
+;(function(_,ns)
+ local E,Q,N=ns.Forever,ns.QuestGathering,ns.NormalUI
+ if not E or not Q or not Q.Runtime or not N then return end
+ local R=Q.Runtime
+ local function clone(t)local r={};for k,v in pairs(t or{})do r[k]=v end;return r end
+ -- Gathering professions must work even before a crafting book is inspected.
+ -- These are soft inventory reserves, never required quest objectives.
+ local seeds={Mining={{1,2770},{65,2771},{125,2772},{175,3858},{245,10620}},
+  Skinning={{1,2318},{100,2319},{150,4234},{200,4304},{250,8170}},
+  ['First Aid']={{1,2589},{80,2592},{150,4306},{210,4338},{260,14047}}}
+ local snapshot=R.Snapshot
+ function R.Snapshot()
+  local s=snapshot()
+  if s.sharedReserves then return s end
+  s.sharedReserves={}
+  for profession,tiers in pairs(seeds)do
+   local skill=s.skills[profession];local id
+   if skill and type(skill.rank)=='number'then
+    for _,tier in ipairs(tiers)do if skill.rank>=tier[1]then id=tier[2]end end
+   end
+   if id then
+    local have=E.Call(C_Item and C_Item.GetItemCount or GetItemCount,id,false)
+    if (not E.Public or E.Public(have))and type(have)=='number'then
+     s.inventory[id]=have;s.sharedReserves[id]=20
+    end
+   end
+  end
+  local herb=s.skills.Herbalism
+  if herb and type(herb.rank)=='number'then
+   local F=ns.FarmingPlanner
+   for _,meta in pairs(F and F.meta or{})do
+    if meta.kind=='Herbalism'and meta.item and type(meta.skill)=='number'and meta.skill<=herb.rank and meta.skill>=math.max(0,herb.rank-75)then
+     local have=E.Call(C_Item and C_Item.GetItemCount or GetItemCount,meta.item,false)
+     if (not E.Public or E.Public(have))and type(have)=='number'then s.inventory[meta.item]=have;s.sharedReserves[meta.item]=20 end
+    end
+   end
+  end
+  return s
+ end
+ local plan=Q.Plan
+ function Q.Plan(s)
+  local p=plan(s)
+  for id,target in pairs(s.sharedReserves or{})do
+   local have=s.inventory[id]or 0
+   if have<target and not p.needs[id]then p.needs[id]={id=id,have=have,target=target,missing=target-have,professions={},optional=true}end
+  end
+  return p
+ end
+ -- All objective rows from the same quest share one card, including rows
+ -- supplied by older route providers. Keep child identities for navigation.
+ local apply=R.Apply
+ function R.Apply(rows)
+  local grouped,seen={},{}
+  for _,row in ipairs(rows or{})do
+   if row.quest and row.kind=='objective'and not row.complete then
+    local g=seen[row.quest]
+    if not g then
+     g=clone(row);g.id='fq:'..row.quest..':objective:all';g.slot=nil;g.objectives={};g.mobIDs={}
+     seen[row.quest]=g;grouped[#grouped+1]=g
+    end
+    for _,child in ipairs(row.objectives or{row})do g.objectives[#g.objectives+1]=child end
+    for _,id in ipairs(row.mobIDs or{})do local found=false;for _,old in ipairs(g.mobIDs)do if old==id then found=true end end;if not found then g.mobIDs[#g.mobIDs+1]=id end end
+   else grouped[#grouped+1]=row end
+  end
+  return apply(grouped)
+ end
+ local display=N.WorkflowLive
+ function N.WorkflowLive(step)
+  if not step or step.kind~='objective'or not step.quest then return display(step)end
+  local state=E.QuestState(step.quest)
+  local goals=state and state.objectives
+  if type(goals)~='table'then return display(step)end
+  local row=clone(step);local lines={}
+  for _,goal in ipairs(goals)do
+   if (not E.Public or E.Public(goal.text)and E.Public(goal.finished)and E.Public(goal.numFulfilled)and E.Public(goal.numRequired))and goal.finished~=true and type(goal.text)=='string'and goal.text~=''then
+    local label=goal.text;local have,total=goal.numFulfilled,goal.numRequired
+    if type(have)=='number'and type(total)=='number'and total>0 and not label:find('%d+%s*/%s*%d+')then label=label..' ('..have..'/'..total..')'end
+    lines[#lines+1]=label
+   end
+  end
+  local data=ns.ForeverQuestData;local fact=data and data.quests and data.quests[step.quest]
+  row.title=fact and fact.title or step.title
+  for _,counter in ipairs(step.resourceCounters or{})do lines[#lines+1]=counter.text end
+  row.body=table.concat(lines,'\n');return row
+ end
+ ns.LiveObjectiveDisplay=N.WorkflowLive
+end)(ADDON,GF)
+
+-- Automatic quest marking disabled: client protected-action restriction.
