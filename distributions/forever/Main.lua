@@ -209,9 +209,10 @@ function E.CampPlan(state)
 end
 function E.RecipeOpportunity(r,state)
  state=state or E.state or E.Snapshot();local skill=r.profession and state.skills[r.profession]
- if not skill or E.Known(r)~=false or not E.Eligible(r,state)then return end
+ if not skill then return end
  if type(r.requiredSkill)~='number'or r.requiredSkill>skill.rank+25 then return end
  if r.requiredSkill<skill.rank-25 and not r.specializationSpell then return end
+ if E.Known(r)~=false or not E.Eligible(r,state)then return end
  local locations={};for _,v in ipairs(r.locations or{})do if v.source=='Vendor'and v.evidence~='classic-reference-unconfirmed'then locations[#locations+1]=v end end
  local near=E.Nearest(locations,state);local distance=near and E.Distance(state.position,near)
  if not distance or distance>650 then return end
@@ -4034,7 +4035,7 @@ function K.Collect()
  local rows={};local d=read(P.Destination);local row=P.selected
  if d and not N.gpsSuppressed and not N.areaNavigation then
   local id=d.materialID or F.route and F.route.item or row and(row.materialID or row.itemID)
-  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\WorldMap\\UI-WorldMap-QuestIcon',active=true}
+  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\AddOns\\GrindingForever\\Assets\\RecipeExplorer_20261025_R1\\RecipePin',active=true}
  end
  local route=F.route;local p=position()
  if route and route.multiMaterials then
@@ -5293,4 +5294,25 @@ end)(ADDON,GF)
   end
   copy.body=table.concat(lines,'\n\n');return copy
  end
+end)(ADDON,GF)
+
+-- GF_REFRESH_BUDGET_24: retain quest facts during unrelated loot/UI updates.
+;(function(_,ns)
+ local E,Q=ns.Forever,ns.ForeverQuestPlanner
+ if not E or not Q then return end
+ local revision=0;local cached;local build=Q.Build
+ local events=CreateFrame('Frame')
+ for _,event in ipairs({'QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','QUEST_LOG_UPDATE','UNIT_QUEST_LOG_CHANGED','PLAYER_LEVEL_UP','SKILL_LINES_CHANGED','PLAYER_ENTERING_WORLD','ZONE_CHANGED_NEW_AREA','ZONE_CHANGED','UPDATE_FACTION'})do events:RegisterEvent(event)end
+ events:SetScript('OnEvent',function()revision=revision+1;cached=nil end)
+ Q.Build=function(s)
+  local anchor=Q.Anchor(s);local t=E.Time();local p=s.position
+  local signature=tostring(s.level)..':'..tostring(s.class)..':'..tostring(s.race)..':'..tostring(s.faction)..':'..tostring(E.db and E.db.journey)..':'..tostring(E.db and E.db.pace)
+  local moved=cached and E.Distance(p,cached.position)
+  if cached and cached.revision==revision and cached.anchor==anchor and cached.signature==signature and t-cached.time<10 and moved and moved<100 then return cached.rows end
+  local rows=build(s);cached={rows=rows,revision=revision,anchor=anchor,signature=signature,time=t,position=p}
+  return rows
+ end
+ local fresh=Q.Fresh
+ Q.Fresh=function(...)cached=nil;revision=revision+1;return fresh(...)end
+ Q.InvalidateRefreshCache=function()cached=nil;revision=revision+1 end
 end)(ADDON,GF)
