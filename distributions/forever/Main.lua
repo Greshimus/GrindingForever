@@ -4035,7 +4035,7 @@ function K.Collect()
  local rows={};local d=read(P.Destination);local row=P.selected
  if d and not N.gpsSuppressed and not N.areaNavigation then
   local id=d.materialID or F.route and F.route.item or row and(row.materialID or row.itemID)
-  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\AddOns\\GrindingForever\\Assets\\RecipeExplorer_20261025_R1\\RecipePin',active=true}
+  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\AddOns\\GrindingForever\\Assets\\RecipeExplorer_20261025_R1\\RecipePin',active=true,pin=not id}
  end
  local route=F.route;local p=position()
  if route and route.multiMaterials then
