@@ -1,1 +1,0 @@
-TBC map images from Wowhead/ZAM TBC map endpoint. Private local addon reference use; no redistribution rights asserted. Original-world/Outland geography only; native maps remain fallback for unavailable images. One canonical runtime copy; downloaded JPEGs decoded in memory and not retained.

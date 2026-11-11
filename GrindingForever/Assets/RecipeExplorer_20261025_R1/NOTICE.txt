@@ -1,1 +1,0 @@
-Full popup row hover coverage; cursor-anchored1–8x map zoom and clamped drag pan; fixed-size recipe map pins transform with mapUV; scrollable expandable Zephras recipe test rows with crafted-item icons and sourced vendor/price/coordinates. No gameplay navigation actions.

@@ -1,9 +1,0 @@
-## Interface: 16001
-## Title: Grinding Forever
-## Notes: Unified adaptive quest and profession interleaving, recipes, maps and farming. Commands: /gf
-## Version: Forever-25
-## OptionalDeps: ForeverDungeonJournal, AtlasLootClassic
-## SavedVariablesPerCharacter: GrindingForeverLiveCharacterDB
-## X-GF-Client: FOREVER
-QuestData.lua
-Main.lua

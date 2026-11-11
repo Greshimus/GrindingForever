@@ -1,0 +1,15 @@
+## Interface: 16001
+## Title: Grinding Forever
+## Version: Forever-35
+## SavedVariablesPerCharacter: GrindingForeverLiveCharacterDB
+## X-GF-Client: FOREVER
+QuestData.lua
+DungeonReference.lua
+DungeonData.lua
+Main.lua
+GatheringMemory.lua
+DungeonLandmarks.lua
+DungeonBrowser.lua
+RecipeSourceFacts.lua
+RecipeCatalog.lua
+FieldPreview.lua

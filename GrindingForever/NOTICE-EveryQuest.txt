@@ -1,8 +1,0 @@
-EveryQuest TBC Anniversary catalog component
-Version v2026.4.1; https://github.com/ancestral-forge/EveryQuest-TBC-Anniversary/tree/v2026.4.1
-GPL-2.0-only. Full license: LICENSE-EveryQuest.txt.
-Original EveryQuest: kandarz. Anniversary maintenance: Ancestral Forge.
-Original quest data credit carried by EveryQuest: Wowhead; quest-history display credit: bayi.
-GF changes: module-local namespace wrapper; factual records kept intact, read by GF-authored adapters.
-Corresponding source is included as Data/EveryQuestCatalog.lua in this package.
-This notice does not relicense unrelated GF art or other separately licensed components.
