@@ -11,46 +11,21 @@ local function showRecipes()
         panel:SetShown(not panel:IsShown())
         return
     end
-    panel = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+    panel = CreateFrame("Frame", nil, UIParent)
     panel:SetSize(510, 528)
     panel:SetPoint("CENTER")
     panel:SetFrameStrata("DIALOG")
     panel:EnableMouse(true)
     panel:SetMovable(true)
     panel:SetClampedToScreen(true)
-    local grip = CreateFrame("Frame", nil, panel)
-    grip:SetPoint("TOPLEFT")
-    grip:SetPoint("TOPRIGHT", -35, 0)
-    grip:SetHeight(40)
-    grip:EnableMouse(true)
-    grip:RegisterForDrag("LeftButton")
-    grip:SetScript("OnDragStart", function() panel:StartMoving() end)
-    grip:SetScript("OnDragStop", function() panel:StopMovingOrSizing() end)
     local assets = "Interface\\AddOns\\GrindingForever\\Media\\"
-    panel:SetBackdrop({ bgFile = assets .. "MatteLeather",
-        edgeFile = assets .. "RidgedRidgeRail", edgeSize = 4 })
-    panel:SetBackdropColor(.45, .30, .20, 1)
-    local paper = panel:CreateTexture(nil, "BACKGROUND", nil, 1)
-    paper:SetPoint("TOPLEFT", 9, -36)
-    paper:SetPoint("BOTTOMRIGHT", -9, 9)
-    paper:SetTexture(assets .. "BaseParchment")
-    paper:SetTexCoord(0, 1254 / 2048, 0, 1254 / 2048)
-    local wood = grip:CreateTexture(nil, "BACKGROUND")
-    wood:SetPoint("TOPLEFT", 3, -3)
-    wood:SetPoint("BOTTOMRIGHT", 32, 4)
-    wood:SetTexture(assets .. "BaseWood")
-    wood:SetTexCoord(0, 1254 / 2048, 0, 1254 / 2048)
-    local title = grip:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 16, -11)
-    title:SetText("Recipes & Vendors")
-    CreateFrame("Button", nil, panel, "UIPanelCloseButton"):SetPoint("TOPRIGHT")
     local search = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
-    search:SetSize(178, 28)
+    search:SetSize(145, 28)
     search:SetPoint("TOPLEFT", 22, -44)
     search:SetAutoFocus(false)
     local mine = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
     mine:SetPoint("LEFT", search, "RIGHT", 10, 0)
-    local label = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local label = N.MakeText(panel, 12, "", true)
     label:SetPoint("LEFT", mine, "RIGHT", 1, 0)
     label:SetText("My Professions")
     label:SetTextColor(.18, .11, .06)
@@ -82,10 +57,14 @@ local function showRecipes()
     menu:SetBackdropColor(.10, .06, .035, 1)
     menu:SetBackdropBorderColor(.75, .51, .26)
     menu:Hide()
-    local scope = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    scope:SetPoint("TOPLEFT", 18, -108)
+    local scope = N.MakeText(panel, 12, "", true)
+    scope:SetPoint("TOPLEFT", 18, -118)
     scope:SetTextColor(.24, .16, .10)
-    local rows, buttons, page, pageButtons = {}, {}, 1, {}
+    local viewport = CreateFrame("Frame", nil, panel)
+    viewport:SetPoint("TOPLEFT", 18, -145)
+    viewport:SetPoint("BOTTOMRIGHT", -37, 59)
+    local rows, buttons, rowOffset = {}, {}, 0
+    local pageSize, syncScroll = 8
     local expanded, selected
     local recipes, revision
     local known = {}
@@ -107,8 +86,9 @@ local function showRecipes()
         return E.Public(icon) and icon or "Interface\\Icons\\INV_Scroll_03"
     end
     local function draw()
+        rowOffset = math.min(rowOffset, math.max(0, #rows - pageSize))
         for i, button in ipairs(buttons) do
-            local row = rows[(page - 1) * 9 + i]
+            local row = i <= pageSize and rows[rowOffset + i]
             button.record = row
             if row then
                 local loc, recipe = row.location, row.recipe
@@ -151,10 +131,9 @@ local function showRecipes()
                 button:Hide()
             end
         end
-        local pages = math.ceil(#rows / 9)
-        status:SetText(#rows == 0 and "No matching sources in this scope" or (page .. " / " .. pages))
-        pageButtons[1]:SetShown(page > 1)
-        pageButtons[2]:SetShown(page < pages)
+        status:SetText(#rows == 0 and "No matching sources in this scope" or
+            string.format("%d–%d / %d", rowOffset + 1, math.min(#rows, rowOffset + pageSize), #rows))
+        if syncScroll then syncScroll() end
     end
     local function refresh(keepPage)
         local query = search:GetText():match("^%s*(.-)%s*$"):lower()
@@ -226,17 +205,17 @@ local function showRecipes()
             rows[#rows + 1] = { heading = "Trained Recipes (" .. #trained .. ")", trained = true }
             if trainedExpanded then append(trained) end
         end
-        page = keepPage == true and math.min(page, math.max(1, math.ceil(#rows / 9))) or 1
+        if keepPage ~= true then rowOffset = 0 end
         draw()
     end
-    for i = 1, 9 do
-        local b = CreateFrame("Button", nil, panel)
-        b:SetSize(474, 36)
+    for i = 1, 22 do
+        local b = CreateFrame("Button", nil, viewport)
+        b:SetHeight(36)
         b.fill = b:CreateTexture(nil, "BACKGROUND")
         b.fill:SetAllPoints()
         b:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
         b:GetHighlightTexture():SetVertexColor(.8, .6, .3, .16)
-        b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        b.label = N.MakeText(b, 14, "", true)
         b.label:ClearAllPoints()
         b.label:SetPoint("TOPLEFT", 12, -2)
         b.label:SetPoint("TOPRIGHT", -12, -2)
@@ -249,11 +228,12 @@ local function showRecipes()
         b.disclosure:SetSize(10, 10)
         b.disclosure:SetPoint("LEFT", 4, 0)
         b.disclosure:SetTexture(assets .. "ControlTriangleRight")
-        b.detail = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        b.detail = N.MakeText(b, 11, "", true)
         b.detail:SetTextColor(.34, .22, .12)
         b.detail:SetJustifyH("LEFT")
         b.detail:SetWordWrap(false)
-        b:SetPoint("TOPLEFT", 18, -132 - (i - 1) * 37)
+        b:SetPoint("TOPLEFT", 0, -(i - 1) * 37)
+        b:SetPoint("TOPRIGHT", 0, -(i - 1) * 37)
         buttons[i] = b
         b:SetScript("OnEnter", function(self)
             local r = self.record and self.record.recipe
@@ -313,17 +293,6 @@ local function showRecipes()
             local result = pinned and "World Map" or "World Map pin unavailable"
             result = result .. (compass.Enabled() and " / Compass" or " / Compass Off")
             feedback:SetText((loc.name or loc.zone or r.name) .. "  ·  " .. result)
-            draw()
-        end)
-    end
-    for i, direction in ipairs({-1, 1}) do
-        local b = N.MakeButton(panel, "", 85)
-        pageButtons[i] = b
-        b:SetSize(85, 26)
-        b:SetPoint("BOTTOM", direction * 139, 13)
-        b.label:SetText(i == 1 and "Previous" or "Next")
-        b:SetScript("OnClick", function()
-            page = math.max(1, math.min(math.ceil(#rows / 9), page + direction))
             draw()
         end)
     end
@@ -424,12 +393,20 @@ local function showRecipes()
             resetFilters()
         end)
     end)
+    local function resizeRows()
+        pageSize = math.max(1, math.min(#buttons, math.floor((panel:GetHeight() - 204) / 37)))
+        draw()
+    end
+    syncScroll = N.PanelScroll(panel, viewport, function() return rowOffset end,
+        function(value) rowOffset = math.floor(value + .5); draw() end,
+        function() return math.max(0, #rows - pageSize) end, 3)
+    N.PanelChrome(panel, "Recipes & Vendors", 500, 430, resizeRows)
     panel:SetScript("OnShow", refresh)
     panel:SetScript("OnHide", function()
         recipes, rows, known = nil, {}, {}
         menu:Hide()
         local owner = GameTooltip:GetOwner()
-        if owner and owner.GetParent and owner:GetParent() == panel then GameTooltip:Hide() end
+        if owner and owner.GetParent and owner:GetParent() == viewport then GameTooltip:Hide() end
     end)
     search:SetScript("OnEnterPressed", function(self) self:ClearFocus(); refresh() end)
     local pendingSearch

@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: Grinding Forever
-## Version: Forever-35
+## Version: Forever-36
 ## SavedVariablesPerCharacter: GrindingForeverLiveCharacterDB
 ## X-GF-Client: FOREVER
 QuestData.lua

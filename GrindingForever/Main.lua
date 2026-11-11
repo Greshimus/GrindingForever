@@ -1,4 +1,4 @@
--- Grinding Forever: Forever tester build 35.
+-- Grinding Forever: Forever tester build 36.
 local ADDON,GF=...
 -- GF_MODULE_BEGIN Engine
 ;(function(...)
@@ -2033,12 +2033,12 @@ local function ensure()
  local left=inset(root,OLD.."GrindingForeverSidebar")
  left.fill:SetTexCoord(32/512,480/512,32/512,480/512)
  local middle=inset(root,AS.."Parchment")
- middle.fill:SetTexCoord(0,1254/2048,0,1254/2048)
+ middle.fill:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048)
  local right=inset(root,OLD.."GrindingForeverSidebar")
  right.fill:SetTexCoord(32/512,480/512,32/512,480/512)
  for _,panel in ipairs({left,right}) do local lift=tex(panel,nil,"BACKGROUND",1);lift:SetDrawLayer("ARTWORK",1);panel.fill:SetDrawLayer("ARTWORK",0);lift:SetAllPoints(panel.fill);color(lift,.60,.40,.25,.12);panel.leatherLift=lift end
  left.fill:Hide();right.fill:Hide();left.leatherLift:Hide();right.leatherLift:Hide() -- One shared chestnut surface continues beneath the parchment alpha.
- if N.sideMaterial=="parchment" then for _,panel in ipairs({left,right}) do panel.fill:SetTexture(AS.."Parchment");panel.fill:SetTexCoord(0,1254/2048,0,1254/2048);panel.fill:SetVertexColor(1,1,1,1);panel.fill:Show() end end
+ if N.sideMaterial=="parchment" then for _,panel in ipairs({left,right}) do panel.fill:SetTexture(AS.."Parchment");panel.fill:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048);panel.fill:SetVertexColor(1,1,1,1);panel.fill:Show() end end
  root.panels={left,middle,right}
  root.titleLeft=text(root,36,"Grinding");root.titleRight=text(root,36,"Forever")
  root.headerEmblem=tex(root,KIT.."ForeverEmblem","OVERLAY")
@@ -2432,6 +2432,91 @@ end)
 
 
 N.MakeButton=btn;N.MakeText=text;N.PlainOption=plainMenuOption;N.MakeCheckbox=checkbox
+
+function N.PanelChrome(frame, title, minimumWidth, minimumHeight, resize)
+ local compass=not title
+ if compass then
+  local fill=frame:CreateTexture(nil,"BACKGROUND",nil,-1)
+  fill:SetAllPoints();fill:SetColorTexture(.18,.095,.05,1)
+ end
+ local base=tex(frame,EXPLORER.."MatteLeather","BACKGROUND")
+ base:SetAllPoints()
+ if compass then base:SetTexCoord(60/2048,1194/2048,60/2048,1194/2048)else base:SetTexCoord(0,1254/2048,0,1254/2048)end
+ base:SetVertexColor(.57,.43,.32)
+ local layer=CreateFrame("Frame",nil,frame)
+ layer:SetAllPoints();layer:SetFrameLevel(frame:GetFrameLevel()+2);layer:EnableMouse(false)
+ local edges={}
+ for _,side in ipairs({"TOP","BOTTOM","LEFT","RIGHT"})do
+  local t=tex(layer,nil,"ARTWORK");edges[side]=t
+  if side=="TOP" or side=="BOTTOM" then
+   t:SetPoint(side.."LEFT",frame,side.."LEFT",5,0)
+   t:SetPoint(side.."RIGHT",frame,side.."RIGHT",-5,0)
+  else
+   t:SetPoint("TOP"..side,frame,"TOP"..side,0,-5)
+   t:SetPoint("BOTTOM"..side,frame,"BOTTOM"..side,0,5)
+  end
+ end
+ local hexagons={}
+ for _,corner in ipairs({"TOPLEFT","TOPRIGHT","BOTTOMLEFT","BOTTOMRIGHT"})do
+  local t=tex(layer,WORKING.."FacetedHex","OVERLAY")
+  t:SetPoint("CENTER",frame,corner,corner:find("LEFT") and 5 or -5,corner:find("TOP") and -5 or 5)
+  hexagons[#hexagons+1]=t
+ end
+ local function trim()
+  local width,height=frame:GetWidth(),frame:GetHeight()
+  local hex=compass and math.max(10,math.min(14,height/5)) or math.max(13,math.min(20,math.min(width,height)*.029))
+  local depth=compass and 5 or hex*.58
+  for side,t in pairs(edges)do
+   if side=="TOP" or side=="BOTTOM" then t:SetHeight(depth)else t:SetWidth(depth)end
+   rail(t,side)
+  end
+  for _,t in ipairs(hexagons)do t:SetSize(hex,hex)end
+ end
+ frame:HookScript("OnSizeChanged",trim);trim()
+ if compass then return end
+
+ -- Keep the full text area on the light surface, inside the metal rails.
+ local under=frame:CreateTexture(nil,"BACKGROUND",nil,1)
+ under:SetPoint("TOPLEFT",12,-42);under:SetPoint("BOTTOMRIGHT",-12,11)
+ under:SetColorTexture(.92,.75,.50,1)
+ local paper=frame:CreateTexture(nil,"BACKGROUND",nil,2)
+ paper:SetAllPoints(under);paper:SetTexture(AS.."Parchment")
+ paper:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048)
+ local header=CreateFrame("Frame",nil,frame)
+ header:SetPoint("TOPLEFT",7,-6);header:SetPoint("TOPRIGHT",-7,-6);header:SetHeight(34)
+ local wood=tex(header,AS.."Wood","BACKGROUND");wood:SetAllPoints()
+ wood:SetTexCoord(0,1254/2048,0,.10)
+ local titleText=text(header,18,title);titleText:SetPoint("LEFT",9,0);titleText:SetPoint("RIGHT",-40,0)
+ titleText:SetTextColor(1,.85,.30);titleText:SetWordWrap(false)
+ header:EnableMouse(true);header:RegisterForDrag("LeftButton")
+ frame:SetMovable(true);frame:SetResizable(true);frame:SetClampedToScreen(true)
+ header:SetScript("OnDragStart",function()frame:StartMoving()end)
+ header:SetScript("OnDragStop",function()frame:StopMovingOrSizing()end)
+
+ if frame.SetResizeBounds then
+  frame:SetResizeBounds(minimumWidth,minimumHeight,math.max(minimumWidth,math.min(1150,UIParent:GetWidth()-32)),math.max(minimumHeight,math.min(940,UIParent:GetHeight()-32)))
+ elseif frame.SetMinResize then
+  frame:SetMinResize(minimumWidth,minimumHeight)
+ end
+ local handle=CreateFrame("Button",nil,frame)
+ handle:SetSize(22,22);handle:SetPoint("BOTTOMRIGHT",0,0);handle:SetFrameLevel(frame:GetFrameLevel()+10)
+ local grip=tex(handle,WORKING.."FacetedHex","OVERLAY");grip:SetSize(13,13);grip:SetPoint("CENTER",2,-2)
+ handle:SetScript("OnMouseDown",function(_,button)
+  if button=="LeftButton"then frame:StartSizing("BOTTOMRIGHT")end
+ end)
+ handle:SetScript("OnMouseUp",function(_,button)
+  if button=="LeftButton"then frame:StopMovingOrSizing();if resize then resize()end end
+ end)
+ handle:SetScript("OnHide",function()frame:StopMovingOrSizing()end)
+ local close=C.Close(frame,function()frame:Hide()end)
+ close:ClearAllPoints();close:SetPoint("CENTER",hexagons[2],"CENTER");close:SetSize(22,22)
+ local function sizeClose()
+  local size=hexagons[2]:GetWidth()
+  close.phaseBClose.texture:SetSize(size,size)
+ end
+ frame:HookScript("OnSizeChanged",sizeClose);sizeClose()
+ return titleText
+end
 N.WorkflowBody=function()return body,bodyScroll,stepLabel,bodyContent,status end
 N.WorkflowLive=liveObjective
 N.WorkflowRelayout=layout
@@ -2618,7 +2703,7 @@ local function initialize()
  for _,r in pairs(copy(d.recipes or{},0))do E.IndexRecipe(r)end
  E.ReadZones();E.RefreshCatalog();E.Snapshot();started=true;ns.Retail.ready=true;ns.Retail.storageWritable=true
  ns.UI.Showcase.Login();ns.SendMessage('GF_LOADED');ns.SendMessage('GF_LOGIN');if ns.ForeverUI then ns.ForeverUI.Layout();ns.ForeverUI.SetPane(d.pane or'Recipes')end
- ns.Print('Forever tester build 35 loaded.')
+ ns.Print('Forever tester build 36 loaded.')
  E.Record('login',{client=version,build=build})
 end
 local function save()
@@ -2723,7 +2808,7 @@ for id,q in pairs(D.quests)do local name=q.title and q.title:match('^Camping 101
 -- The shipped facts omit holiday categories. Track known event quest IDs.
 Q.seasonalQuests={}
 for _,id in ipairs({6961,6962,6963,6984,7021,7022,7023,7024,7025,7042,7045,7061,7063,
- 8311,8312,8746,8762,8827,8828,8860,8861,8862,8863,8864,8865,8866,8867,8868,
+ 8311,8312,8744,8746,8762,8767,8788,8803,8827,8828,8860,8861,8862,8863,8864,8865,8866,8867,8868,
  8870,8871,8872,8873,8874,8875,8876,8877,8878,8879,8880,8881,8882,8883})do
  Q.seasonalQuests[id]=true
 end
@@ -3173,6 +3258,7 @@ local function makeScrollPair(parent,up,down)
   pair[i]=b
  end;return pair
 end
+W.MakeScrollPair=makeScrollPair
 function W.Ensure()
  local r=N.root;if not r or W.ready then return end
  r.inlineFarm=N.MakeButton(r,'Farm Route',100,function()local ok,why=W.StartStepFarm();if not ok then ns.Print(why)end end);r.inlineFarm:Hide()
@@ -3582,6 +3668,34 @@ function W.ScrollRail(pair,value,maximum,visible,changed)
  rail.syncing=true;rail:SetMinMaxValues(0,math.max(1,maximum));rail:SetValue(math.min(maximum,math.max(0,value)));rail.syncing=false
  rail:SetShown(visible and bounds(pair)>16);rail:SetFrameLevel(pair[1]:GetFrameLevel()+1)
 end
+function N.PanelScroll(parent, viewport, get, set, maximum, step)
+ local pair
+ local function sync()
+  local cap=math.max(0,maximum())
+  W.ScrollRail(pair,get() or 0,cap,cap>0,function(value)
+   if value~=(get() or 0)then set(value)end
+   sync()
+  end)
+  for i,button in ipairs(pair)do
+   button:SetShown(cap>0)
+   button:SetAlpha((i==1 and (get() or 0)<=0 or i==2 and (get() or 0)>=cap)and .4 or 1)
+  end
+ end
+ local function scroll(delta)
+  local value=math.max(0,math.min(maximum(),(get()or 0)+delta))
+  if value~=(get()or 0)then set(value)end
+  sync()
+ end
+ pair=W.MakeScrollPair(parent,function()scroll(-step)end,function()scroll(step)end)
+ for i,button in ipairs(pair)do
+  local edge=i==1 and 'TOP' or 'BOTTOM'
+  button:ClearAllPoints();button:SetSize(19,22);button:SetPoint(edge,viewport,edge..'RIGHT',12,0)
+  button:SetFrameLevel(viewport:GetFrameLevel()+5)
+ end
+ viewport:EnableMouseWheel(true)
+ viewport:SetScript('OnMouseWheel',function(_,delta)scroll(-delta*step)end)
+ return sync
+end
 local scrollState=W.ScrollState
 function W.ScrollState()
  scrollState();local r=N.root;if not W.ready then return end
@@ -3829,9 +3943,17 @@ local function update()
 end
 function F.Plan(kind,item)
  local p=E.CurrentPosition();if not p then return nil,'Outdoor position unavailable.'end
- local candidates={};local rank=F.Skill(kind);if not rank then return nil,'Learn '..kind..' first.'end
+ local candidates={};local rank=kind=='Cloth'and 1 or F.Skill(kind);if not rank then return nil,'Learn '..kind..' first.'end
  for zone,kinds in pairs(ns.ClassicGatheringLocations5 or{})do local info=ns.ForeverData.zones[zone];if info and info.mapID==p.mapID then for _,v in ipairs(kinds[kind]or{})do local meta=F.meta[v[3]];if meta and meta.item==item and meta.skill<=rank then candidates[#candidates+1]={mapID=p.mapID,x=v[1],y=v[2],name=meta.name}end end end end
  for _,site in ipairs(E.materialSites and E.materialSites[item]or{})do if site.mapID==p.mapID then candidates[#candidates+1]=site end end
+ if kind=='Fishing' and item==21113 then
+  for _,visit in ipairs(E.db and E.db.fishingPoolVisits or{})do
+   local at=visit.position
+   if type(visit.name)=='string' and visit.name:lower():find('wreckage',1,true) and at and at.mapID==p.mapID and type(at.x)=='number' and type(at.y)=='number' then
+    candidates[#candidates+1]={mapID=at.mapID,x=at.x,y=at.y,name=visit.name}
+   end
+  end
+ end
  table.sort(candidates,function(a,b)return(E.Distance(a,p)or math.huge)<(E.Distance(b,p)or math.huge)end)
  if #candidates==0 then return nil,'No sourced local route yet; choose a supplied Classic route or record a gathering location.'end
  local out={};for i=1,math.min(12,#candidates)do local v=candidates[i];out[#out+1]={mapID=v.mapID,x=v.x,y=v.y,name=v.name or E.ItemName(item)}end;return out,nil,p
@@ -4089,9 +4211,11 @@ local function material(id,name,kind,skill)
 end
 local materialNames={[2770]="Copper Ore",[2771]="Tin Ore",[2772]="Iron Ore",[2775]="Silver Ore",[2776]="Gold Ore",[3858]="Mithril Ore",[7911]="Truesilver Ore",[10620]="Thorium Ore",[2447]="Peacebloom",[765]="Silverleaf",[2449]="Earthroot",[785]="Mageroyal",[2450]="Briarthorn",[3820]="Stranglekelp",[2453]="Bruiseweed",[3355]="Wild Steelbloom",[3356]="Kingsblood",[3357]="Liferoot",[3818]="Fadeleaf",[3821]="Goldthorn",[3358]="Khadgar's Whisker",[8831]="Purple Lotus",[4625]="Firebloom",[8838]="Sungrass",[8845]="Ghost Mushroom",[8846]="Gromsblood",[13464]="Golden Sansam",[13463]="Dreamfoil",[13465]="Mountain Silversage",[13466]="Plaguebloom"}
 for id,m in pairs(F.meta)do if m.item and(m.kind=='Mining'or m.kind=='Herbalism')then local name=read(GetItemInfo,m.item);material(m.item,materialNames[m.item]or name or F.names[id]or('Item '..m.item),m.kind,m.skill)end end
-for _,m in ipairs({{21071,'Raw Sagefish',75},{21153,'Raw Greater Sagefish',175},{6358,'Oily Blackmouth',1},{6359,'Firefin Snapper',100},{6522,'Deviate Fish',1},{13422,'Stonescale Eel',205}})do material(m[1],m[2],'Fishing',m[3])end
+for _,m in ipairs({{21071,'Sagefish Pool',75},{21153,'Greater Sagefish Pool',175},{6358,'Oily Blackmouth School',1},{6359,'Firefin Snapper School',100},{6522,'Deviate Fish School',1},{13422,'Stonescale Eel Swarm',205},{19807,'School of Tastyfish',1},{21113,'Floating Wreckage',1}})do material(m[1],m[2],'Fishing',m[3])end
 for _,m in ipairs({{2318,'Light Leather',1},{2319,'Medium Leather',75},{4234,'Heavy Leather',155},{4304,'Thick Leather',205},{8170,'Rugged Leather',260}})do material(m[1],m[2],'Skinning',m[3])end
-material(2589,'Linen Cloth','Cloth',0)
+for _,cloth in ipairs({{2589,'Linen Cloth'},{2592,'Wool Cloth'},{4306,'Silk Cloth'},{4338,'Mageweave Cloth'},{14047,'Runecloth'},{14256,'Felcloth'}})do
+ material(cloth[1],cloth[2],'Cloth',0)
+end
 local zoneMaps={["Durotar"]=1411,["Mulgore"]=1412,["Tirisfal Glades"]=1420,["Elwynn Forest"]=1429,["Teldrassil"]=1438,["Dun Morogh"]=1426,["The Barrens"]=1413,["Silverpine Forest"]=1421,["Loch Modan"]=1432,["Darkshore"]=1439,["Hillsbrad Foothills"]=1424,["Wetlands"]=1437,["Stonetalon Mountains"]=1442,["Stranglethorn Vale"]=1434,["Arathi Highlands"]=1417,["Tanaris"]=1446,["Searing Gorge"]=1427,["The Hinterlands"]=1425,["Felwood"]=1448,["Desolace"]=1443,["Thousand Needles"]=1441,["Un'Goro Crater"]=1449,["Blasted Lands"]=1419,["Eastern Plaguelands"]=1423,["Winterspring"]=1452,["Burning Steppes"]=1428,["Feralas"]=1444}
 -- Bind baseline gathering zones only when this client confirms the map name.
  for zone,id in pairs(zoneMaps)do
@@ -4284,9 +4408,24 @@ end
 function K.FlagKey(record,loc)return tostring(record.spellID or record.learnableItemID or record.itemID or record.id or record.name)..':'..tostring(loc.mapID)..':'..tostring(loc.x)..':'..tostring(loc.y)end
 function K.Flag(record,loc)
  if not world(loc)then return false end;local key=K.FlagKey(record,loc)
- if K.pins[key]then K.pins[key]=nil;K.age=1;return true end
+ if K.Unpin(key)then return true end
  local n=0;for _ in pairs(K.pins)do n=n+1 end;if n>=6 then ns.Print('Unpin a recipe source before adding another.');return false end
  K.pins[key]={key=key,name=loc.name or record.name,zone=loc.zone,location=loc,icon=AS..'RecipePin',pin=true};K.age=1;return true
+end
+K.questIcon='Interface\\TargetingFrame\\UI-RaidTargetingIcon_3'
+K.manualPinAtlas='Waypoint-MapPin-Tracked'
+function K.Unpin(key)
+ if not key or not K.pins[key] then return false end
+ K.pins[key]=nil
+ if key==K.questPin then K.questPin=nil end
+ if key==K.dungeonPin then K.dungeonPin=nil end
+ if key==K.recipePin then K.recipePin=nil end
+ K.age=1
+ return true
+end
+function K.ClearQuestPin()
+ local key=K.questPin;K.questPin=nil
+ return K.Unpin(key)
 end
 function K.Collect()
  local rows={};local d=read(P.Destination);local row=P.selected
@@ -4311,13 +4450,19 @@ end
 function K.Ensure()
  if K.frame then return end
  local f=CreateFrame('Frame',nil,UIParent);K.frame=f;f:SetSize(744,66);f:SetPoint('TOP',UIParent,'TOP',0,-55);f:SetFrameStrata('HIGH');f:SetClampedToScreen(true);f:EnableMouse(true);f:SetMovable(true);f:RegisterForDrag('LeftButton');f:SetScript('OnDragStart',f.StartMoving);f:SetScript('OnDragStop',f.StopMovingOrSizing)
- local bg=texture(f,'CrestPatinaRail','BACKGROUND');bg:SetAllPoints();bg:SetTexCoord(0,1,.72,1)
- for _,edge in ipairs({'TOP','BOTTOM'})do local t=texture(f,'RidgedRidgeRail','BORDER');t:SetPoint(edge,f,edge);t:SetSize(744,5)end
+ N.PanelChrome(f)
  K.caption=text(f,19);K.caption:SetTextColor(.94,.82,.55);K.caption:SetPoint('TOP',f,'BOTTOM',0,-20);K.caption:SetWidth(650);K.caption:SetJustifyH('CENTER')
- for i=0,47 do local line=f:CreateTexture(nil,'ARTWORK');line:SetColorTexture(.7,.52,.27,1);line:SetSize(1,i%6==0 and 8 or 4);local t=text(f,15,({[0]='N',[6]='NE',[12]='E',[18]='SE',[24]='S',[30]='SW',[36]='W',[42]='NW'})[i]);t:SetTextColor(.94,.81,.54);K.ticks[i]={line=line,label=t,bearing=-i*math.pi/24}end
+ K.headingStatus=text(f,15,'Compass heading unavailable');K.headingStatus:SetPoint('CENTER');K.headingStatus:SetTextColor(.94,.82,.55);K.headingStatus:Hide()
+ for i=0,47 do local line=f:CreateTexture(nil,'ARTWORK');line:SetColorTexture(.9,.68,.36,1);line:SetSize(1.25,i%6==0 and 10 or 5);local t=text(f,15,({[0]='N',[6]='NE',[12]='E',[18]='SE',[24]='S',[30]='SW',[36]='W',[42]='NW'})[i]);t:SetTextColor(.94,.81,.54);K.ticks[i]={line=line,label=t,bearing=-i*math.pi/24}end
  for i=1,15 do local b=CreateFrame('Button',nil,f);b:SetSize(28,28);b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetAllPoints()
   b.arrow=texture(b,'ControlTriangleRight','OVERLAY');b.arrow:SetSize(10,10);b.arrow:SetRotation(math.pi/2);b.arrow:SetPoint('TOP',b,'BOTTOM',0,-1);b.arrow:Hide()
-  b:SetScript('OnEnter',function(self)if self.target then N.ShowInfoTooltip(self,self.target.name..(self.target.zone and'\n'..self.target.zone or'')..(self.target.distance and'\n'..math.floor(self.target.distance+.5)..' yd'or''))end end);b:SetScript('OnLeave',N.HideInfoTooltip);K.markers[i]=b
+  b:RegisterForClicks('RightButtonUp')
+  b:SetScript('OnClick',function(self)
+   if self.target and K.pins[self.target.key]==self.target and K.Unpin(self.target.key) then
+    self.target=nil;self:Hide();N.HideInfoTooltip()
+   end
+  end)
+  b:SetScript('OnEnter',function(self)if self.target then N.ShowInfoTooltip(self,self.target.name..(self.target.zone and'\n'..self.target.zone or'')..(self.target.distance and'\n'..math.floor(self.target.distance+.5)..' yd'or'')..(K.pins[self.target.key]==self.target and '\nRight-click to unpin' or ''))end end);b:SetScript('OnLeave',N.HideInfoTooltip);K.markers[i]=b
  end
  f:SetScript('OnUpdate',function(_,elapsed)K.Update(elapsed)end);K.Sync()
 end
@@ -4325,14 +4470,31 @@ function K.Update(elapsed)
  if not K.Enabled()then K.frame:Hide();return end
  if N.arrowFrame and K.Mode()=='Compass'then N.arrowFrame:Hide()end
  K.age=K.age+(elapsed or 0);if K.age>=.25 then K.age=0;K.Collect()end
- local facing=read(C.Facing);if type(facing)~='number'then for _,b in ipairs(K.markers)do b:Hide()end;K.caption:SetText('');return end
+ local facing=read(C.Facing)
+ if not ns.Forever.Public(facing) or type(facing)~='number' or facing~=facing or math.abs(facing)==math.huge then
+  if not K.headingUnavailable then
+   K.headingUnavailable=true;K.lastFacing=nil;K.captionText=nil
+   for _,b in ipairs(K.markers)do b:Hide()end
+   for _,tick in pairs(K.ticks)do tick.line:Hide();tick.label:Hide()end
+   K.caption:SetText('');K.headingStatus:Show()
+  end
+  return
+ end
+ if K.headingUnavailable then K.headingUnavailable=nil;K.headingStatus:Hide()end
  if K.lastFacing==facing and K.lastRevision==K.revision then return end;K.lastFacing=facing;K.lastRevision=K.revision
  local width=708;local span=math.pi
  for _,t in pairs(K.ticks)do local a=wrap(t.bearing-facing);local show=math.abs(a)<=span/2;local x=-a/span*width;t.line:SetShown(show);t.label:SetShown(show);if show then t.line:ClearAllPoints();t.line:SetPoint('BOTTOM',K.frame,'BOTTOM',x,6);t.label:ClearAllPoints();t.label:SetPoint('TOP',K.frame,'TOP',x,-5)end end
  local focus
  for i,b in ipairs(K.markers)do local r=K.targets[i]
   if r and r.bearing then local a=wrap(r.bearing-facing);local clipped=math.max(-span/2,math.min(span/2,a));local x=-clipped/span*width
-   b.target=r;b.icon:SetTexture(r.icon);b.icon:SetTexCoord(0,1,0,r.pin and .75 or 1);b:SetSize(r.pin and 24 or r.active and 32 or 28,r.pin and 36 or r.active and 32 or 28);b:ClearAllPoints();b:SetPoint('CENTER',K.frame,'CENTER',x,0);b.arrow:SetShown(r.active==true);b:Show();if r.active then focus=r end
+   b.target=r
+   local manualPin=K.pins[r.key]==r
+   local atlas=manualPin and b.icon.SetAtlas and pcall(b.icon.SetAtlas,b.icon,K.manualPinAtlas)
+   local nativePin=atlas and (not b.icon.GetAtlas or b.icon:GetAtlas()==K.manualPinAtlas)
+   if not nativePin then
+    b.icon:SetTexture(r.icon);b.icon:SetTexCoord(0,1,0,r.pin and .75 or 1)
+   end
+   b:SetSize(nativePin and 28 or r.pin and 24 or r.active and 32 or 28,nativePin and 28 or r.pin and 36 or r.active and 32 or 28);b:ClearAllPoints();b:SetPoint('CENTER',K.frame,'CENTER',x,0);b.arrow:SetShown(r.active==true);b:Show();if r.active then focus=r end
   else b:Hide()end
  end
  local caption=focus and(focus.name..'\n'..(focus.zone and focus.zone..' - 'or'')..math.floor(focus.distance+.5)..' yd')or''
@@ -4359,7 +4521,7 @@ function K.Settings()
  if not K.rule then K.rule=f:CreateTexture(nil,'ARTWORK');K.rule:SetColorTexture(.45,.31,.12,1);K.rule:SetSize(294,1);K.rule:SetPoint('TOPLEFT',f,'TOPLEFT',18,-248)end
  K.Sync()
 end
-local function materialName(m)return m.id==21071 and'Sagefish Pool'or m.name end
+local function materialName(m)return m.name end
 function R.ToggleMaterial(m)
  if not m then return end
  if K.selected[m.id]then K.selected[m.id]=nil else local n=0;for _ in pairs(K.selected)do n=n+1 end;if n>=8 then ns.Print('Select up to eight resources.');return end;K.selected[m.id]=true end
@@ -4393,6 +4555,14 @@ function R.StartSelection()
   if m.kind=='Skinning' and (read(C_Item and C_Item.GetItemCount or GetItemCount,7005,false) or 0)<1 then return false,'Carry a Skinning Knife.' end
  end
  local choice,why=R.RecommendSelection(materials,ranks,K.scope)
+ if not choice and #materials==1 then
+  local m=materials[1]
+  local ok,err=F.Start(m.kind,m.id,math.huge)
+  if not ok then return false,err end
+  if R.menu then R.menu:Hide()end
+  K.age=1;K.SyncFooter()
+  return true
+ end
  if not choice then return false,why or (K.scope=='current' and 'No mapped trail for the selected resources in your current zone.' or 'No mapped trail for the selected resources on this continent.') end
  if #choice.materials<#materials then
   return false,'No single trail covers all selected resources. Select resources that share a trail.'
@@ -4521,12 +4691,6 @@ K.Settings=function(...)local v=settings(...);if N.recordStatus then N.recordSta
 local sync=K.Sync
 K.Sync=function(...)local v=sync(...);for _,b in ipairs(N.root and N.root.recipeRows or{})do if b.compassFlag then b.compassFlag:SetAlpha(K.PinAvailable()and 1 or .45)end end;return v end
 -- Explicit solid paper base prevents transparent source gutters/backdrop layers obscuring labels.
-local function paper(f)
- local base=f:CreateTexture(nil,'BACKGROUND',nil,-8);base:SetAllPoints();base:SetColorTexture(.12,.065,.025,1)
- local t=tex(f,'BaseParchment','BACKGROUND');t:SetPoint('TOPLEFT',8,-8);t:SetPoint('BOTTOMRIGHT',-8,8);t:SetTexCoord(0,1254/2048,0,1254/2048)
- for _,edge in ipairs({'TOP','BOTTOM'})do local rail=tex(f,'RidgedRidgeRail','BORDER');rail:SetPoint('LEFT',f,'LEFT',0,0);rail:ClearAllPoints();rail:SetPoint(edge..'LEFT',f,edge..'LEFT');rail:SetPoint(edge..'RIGHT',f,edge..'RIGHT');rail:SetHeight(4)end
- for _,edge in ipairs({'LEFT','RIGHT'})do local rail=f:CreateTexture(nil,'BORDER');rail:SetColorTexture(.63,.43,.18,1);rail:SetPoint('TOP'..edge,f,'TOP'..edge);rail:SetPoint('BOTTOM'..edge,f,'BOTTOM'..edge);rail:SetWidth(3)end
-end
 function R.Fill()
  if not R.body then return end
  local list={};for _,m in ipairs(R.materials)do list[#list+1]=m end;table.sort(list,function(a,b)return a.name<b.name end)
@@ -4549,31 +4713,21 @@ function R.Open()
  if not N.root then return end
  if not K.gridMenu then
   if K.resourceMenu then K.resourceMenu:Hide()end
-  local f=CreateFrame('Frame',nil,UIParent);K.gridMenu=f;K.resourceMenu=f;R.menu=f;f:SetSize(680,640);f:SetPoint('CENTER',UIParent,'CENTER');f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+260);f:EnableMouse(true);f:SetClampedToScreen(true);paper(f)
-  local title=text(f,24,'Plan Farming Route');title:SetPoint('TOPLEFT',26,-24)
-  f:SetMovable(true)
-  local drag=CreateFrame('Frame',nil,f)
-  drag:SetPoint('TOPLEFT',f,'TOPLEFT',20,-12)
-  drag:SetSize(310,42)
-  drag:EnableMouse(true)
-  drag:RegisterForDrag('LeftButton')
-  drag:SetScript('OnDragStart',function()f:StartMoving()end)
-  drag:SetScript('OnDragStop',function()f:StopMovingOrSizing()end)
+  local f=CreateFrame('Frame',nil,UIParent);K.gridMenu=f;K.resourceMenu=f;R.menu=f;f:SetSize(680,640);f:SetPoint('CENTER',UIParent,'CENTER');f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+260);f:EnableMouse(true);f:SetClampedToScreen(true)
   local scope=N.MakeButton(f,'Recommended',180,function(self)
    K.scope=K.scope=='current' and 'recommended' or 'current'
    local label=K.scope=='current' and 'Current Zone' or 'Recommended'
    if self.label then self.label:SetText(label) else self:SetText(label) end
   end)
-  scope:SetPoint('TOPRIGHT',f,'TOPRIGHT',-24,-18)
-  local sf=CreateFrame('ScrollFrame',nil,f);K.resourceScroll=sf;K.gridHeight=450;sf:SetPoint('TOPLEFT',26,-68);sf:SetSize(620,K.gridHeight);sf:EnableMouseWheel(true)
+  scope:SetPoint('TOPRIGHT',f,'TOPRIGHT',-24,-49)
+  local sf=CreateFrame('ScrollFrame',nil,f);K.resourceScroll=sf;K.gridHeight=450;sf:SetPoint('TOPLEFT',26,-88);sf:SetPoint('BOTTOMRIGHT',-33,105);sf:EnableMouseWheel(true)
   R.body=CreateFrame('Frame',nil,sf);R.body:SetSize(620,1);sf:SetScrollChild(R.body);R.buttons={};R.search=nil
-  local function scroll(delta)sf:SetVerticalScroll(math.max(0,math.min(R.body:GetHeight()-K.gridHeight,(sf:GetVerticalScroll()or 0)+delta)))end
-  sf:SetScript('OnMouseWheel',function(_,delta)scroll(-delta*100)end)
-  local rail=CreateFrame('Frame',nil,f);K.resourceBar=rail;rail:SetSize(7,K.gridHeight);rail:SetPoint('TOPRIGHT',f,'TOPRIGHT',-17,-68);local t=tex(rail,'RidgedRidgeRail');t:SetAllPoints()
-  for _,up in ipairs({true,false})do local b=CreateFrame('Button',nil,rail);b:SetSize(15,15);b:SetPoint(up and'TOP'or'BOTTOM',rail,up and'TOP'or'BOTTOM');local a=tex(b,'ControlTriangleRight');a:SetAllPoints();a:SetRotation(up and-math.pi/2 or math.pi/2);b:SetScript('OnClick',function()scroll(up and-100 or 100)end)end
+  R.syncScroll=N.PanelScroll(f,sf,function()return sf:GetVerticalScroll()end,function(v)sf:SetVerticalScroll(v)end,
+   function()return math.max(0,R.body:GetHeight()-K.gridHeight)end,85)
   K.count=text(f,16);K.count:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',26,84)
   K.start=N.MakeButton(f,'Start Route',180,function()local ok,why=R.StartSelection();if not ok then ns.Print(why or'Route unavailable.')end end);K.start:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',26,26)
   local cancel=N.MakeButton(f,'Cancel',180,function()f:Hide()end);cancel:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-26,26)
+  N.PanelChrome(f,'Plan Farming Route',490,460,function()R.Fill()end)
  end
  R.menu=K.gridMenu;local h=UIParent:GetHeight();if type(h)=='number'and h>0 then R.menu:SetScale(math.min(1,math.max(.5,(h-32)/640)))end;R.menu:Show();R.Fill()
 end
@@ -4812,15 +4966,22 @@ if M then local update=M.Update;M.Update=function(...)local v=update(...);local 
 R.collapsed100=R.collapsed100 or{};local category={{'Mining','Mining'},{'Herbalism','Herbalism'},{'Skinning','Skinning'},{'Fishing','Fishing'},{'Cloth','Cloth'}}
 function R.Fill()
  if not R.body then return end;if not R.grid100 then for _,b in ipairs(R.buttons or{})do b:Hide()end;R.buttons={};R.grid100=true end;R.headers100=R.headers100 or{};local y,index=0,0
- for _,cat in ipairs(category)do local title,kind=cat[1],cat[2];local list={};for _,m in ipairs(R.materials)do if(m.kind==kind or kind=='Cloth'and(m.id==2589 or(m.name or''):find('Cloth',1,true)))and not(kind~='Cloth'and(m.name or''):find('Cloth',1,true))then list[#list+1]=m end end;table.sort(list,function(a,b)local ar,br=a.skill or 0,b.skill or 0;if ar~=br then return ar<br end;return a.name<b.name end)
+ K.gridHeight=math.max(1,R.menu:GetHeight()-193)
+ R.body:SetWidth(math.max(1,R.menu:GetWidth()-59))
+ local columns=math.max(1,math.floor(R.body:GetWidth()/66))
+ local clothOrder={[2589]=1,[2592]=2,[4306]=3,[4338]=4,[14047]=5,[14256]=6}
+ for _,cat in ipairs(category)do local title,kind=cat[1],cat[2];local list={};for _,m in ipairs(R.materials)do if m.kind==kind then list[#list+1]=m end end;table.sort(list,function(a,b)local ar,br=clothOrder[a.id] or a.skill or 0,clothOrder[b.id] or b.skill or 0;if ar~=br then return ar<br end;return a.name<b.name end)
   local h=R.headers100[title];if not h then h=CreateFrame('Button',nil,R.body);h.label=h:CreateFontString(nil,'OVERLAY');h.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',18);h.label:SetTextColor(.16,.09,.03);h.label:SetPoint('LEFT',24,0);h.arrow=h:CreateTexture(nil,'ARTWORK');h.arrow:SetTexture(AS..'ControlTriangleRight');h.arrow:SetSize(12,12);h.arrow:SetPoint('LEFT',4,0);h:SetScript('OnClick',function()R.collapsed100[title]=not R.collapsed100[title];R.Fill()end);R.headers100[title]=h end
-  h:ClearAllPoints();h:SetPoint('TOPLEFT',R.body,'TOPLEFT',0,-y);h:SetSize(600,30);h.label:SetText(title);h.arrow:SetRotation(R.collapsed100[title]and 0 or-math.pi/2);h:Show();y=y+34
+  h:ClearAllPoints();h:SetPoint('TOPLEFT',R.body,'TOPLEFT',0,-y);h:SetSize(R.body:GetWidth(),30);h.label:SetText(title);h.arrow:SetRotation(R.collapsed100[title]and 0 or-math.pi/2);h:Show();y=y+34
   if not R.collapsed100[title]then for j,m in ipairs(list)do index=index+1;local b=R.buttons[index]
    if not b then b=CreateFrame('Button',nil,R.body);b.icon=b:CreateTexture(nil,'ARTWORK');b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',12);b.label:SetTextColor(.16,.09,.03);b.check=CreateFrame('Button',nil,b);b.box=b.check:CreateTexture(nil,'ARTWORK');b.box:SetAllPoints();b.box:SetTexture(AS..'ControlButtonNormal');b.tick=b.check:CreateTexture(nil,'OVERLAY');b.tick:SetAllPoints();b.tick:SetTexture('Interface\\Buttons\\UI-CheckBox-Check');b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.15);R.buttons[index]=b end
-   b.material=m;b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((j-1)%6)*98,-y-math.floor((j-1)/6)*66);b:SetSize(94,64);b.icon:ClearAllPoints();b.icon:SetSize(36,36);b.icon:SetPoint('TOP',b,'TOP',-5,-3);b.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,m.id));b.label:ClearAllPoints();b.label:SetPoint('TOPLEFT',b,'TOPLEFT',1,-44);b.label:SetWidth(92);b.label:SetHeight(22);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true);b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:ClearAllPoints();b.check:SetSize(19,19);b.check:SetPoint('TOPLEFT',b,'TOPLEFT',56,-26);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);b:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);if b.check.SetChecked then b.check:SetChecked(K.selected[m.id]==true)end;if b.tick then b.tick:SetShown(K.selected[m.id]==true)end;b.wash:SetShown(K.selected[m.id]==true);b:Show()
-  end;y=y+math.ceil(#list/6)*66 end
+   b.material=m;b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((j-1)%columns)*66,-y-math.floor((j-1)/columns)*61);b:SetSize(64,61);b.icon:ClearAllPoints();b.icon:SetSize(32,32);b.icon:SetPoint('TOP',b,'TOP',0,-3);b.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,m.id));b.label:ClearAllPoints();b.label:SetPoint('TOPLEFT',b,'TOPLEFT',1,-37);b.label:SetWidth(62);b.label:SetHeight(24);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true);b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:ClearAllPoints();b.check:SetSize(13,13);b.check:SetPoint('BOTTOMRIGHT',b.icon,'BOTTOMRIGHT',1,-1);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);b:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);if b.check.SetChecked then b.check:SetChecked(K.selected[m.id]==true)end;if b.tick then b.tick:SetShown(K.selected[m.id]==true)end;b.wash:SetShown(K.selected[m.id]==true);b:Show()
+  end;y=y+math.ceil(#list/columns)*61 end
  end
  for i=index+1,#R.buttons do R.buttons[i]:Hide()end;R.body:SetHeight(math.max(1,y));local n=0;for _ in pairs(K.selected)do n=n+1 end;K.count:SetText(n..' Resources Selected');if K.resourceBar then K.resourceBar:SetShown(y>K.gridHeight)end
+ local scroll=K.resourceScroll
+ if scroll then scroll:SetVerticalScroll(math.min(scroll:GetVerticalScroll()or 0,math.max(0,y-K.gridHeight)))end
+ if R.syncScroll then R.syncScroll()end
 end
 -- Automatically track the single selected recipe source; clicking again clears it.
 local refresh=N.RefreshRecipes
@@ -4829,9 +4990,9 @@ N.RefreshRecipes=function(...)
   if b.compassFlag then b.compassFlag:Hide()end
   if b:IsShown()and b.record then local old=b:GetScript('OnClick');local record=b.record;local key=record.workflowKey or record.id or record.spellID or record.name
    b:SetScript('OnClick',function(self,...)
-    if W.recipeSelection100==key then W.recipeSelection100=nil;W.activeSource=nil;W.expandedRecipe=nil;W.selection=nil;W.mapLocation=nil;N.selectedRecipe=nil;K.pins={};N.RefreshRecipes();N.UpdateMapView();return end
-    W.recipeSelection100=key;K.pins={};W.sourceSelection100=true;if old then old(self,...)end;W.sourceSelection100=nil
-    local loc=record.location or record.locations and record.locations[1];if loc and loc.mapID and loc.x and loc.y then local id=K.FlagKey(record,loc);K.pins[id]={key=id,name=loc.name or record.name,zone=loc.zone,location=loc,icon=AS..'RecipePin',pin=true};K.age=1 end
+    if W.recipeSelection100==key and K.recipePin then W.recipeSelection100=nil;W.activeSource=nil;W.expandedRecipe=nil;W.selection=nil;W.mapLocation=nil;N.selectedRecipe=nil;K.Unpin(K.recipePin);N.RefreshRecipes();N.UpdateMapView();return end
+    W.recipeSelection100=key;K.Unpin(K.recipePin);W.sourceSelection100=true;if old then old(self,...)end;W.sourceSelection100=nil
+    local loc=record.location or record.locations and record.locations[1];if loc and loc.mapID and loc.x and loc.y then local id=K.FlagKey(record,loc);K.recipePin=id;K.pins[id]={key=id,name=loc.name or record.name,zone=loc.zone,location=loc,icon=AS..'RecipePin',pin=true};K.age=1 end
    end)
   end
  end end;return v

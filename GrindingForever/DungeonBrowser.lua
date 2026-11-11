@@ -132,6 +132,31 @@ local function setWaypoint(loc)
     return marked and ("Pinned on Map: " .. name) or "This location could not be pinned"
 end
 
+local function questWaypoint(loc)
+    local compass = ns.NavigationCompass
+    if not compass or not loc then return "No coordinates recorded" end
+    local name = loc.name or loc.zone or "Quest"
+    local key = compass.FlagKey({name = "Quest: " .. name}, loc)
+    if compass.questPin == key then
+        compass.ClearQuestPin()
+        return "Quest pin cleared"
+    end
+    if not compass.Enabled() then return "Enable GPS to pin quests" end
+    compass.ClearQuestPin()
+    compass.questPin = key
+    compass.pins[key] = {key = key, name = name, zone = loc.zone, location = loc, icon = compass.questIcon}
+    compass.age = 1
+    return "Pinned on Compass: " .. name
+end
+
+local function questPinLabel(loc)
+    local compass = ns.NavigationCompass
+    if not compass or not loc then return "Pin" end
+    local name = loc.name or loc.zone or "Quest"
+    local key = compass.FlagKey({name = "Quest: " .. name}, loc)
+    return compass.questPin == key and "Unpin" or "Pin"
+end
+
 local function recordFor(instance, name)
     if not instance then return end
     local key = ns.DungeonNameKey(name)
@@ -153,28 +178,7 @@ function ns.ToggleDungeonBrowser()
     window:SetClampedToScreen(true)
     window:SetMovable(true)
     window:EnableMouse(true)
-    local theme = ns.VisualPhaseB.Theme
-    local components = ns.VisualPhaseB.Components
-    local leather = window:CreateTexture(nil, "BACKGROUND")
-    leather:SetPoint("TOPLEFT", 5, -5)
-    leather:SetPoint("BOTTOMRIGHT", -5, 5)
-    leather:SetTexture(theme.textures.leather)
-    leather:SetTexCoord(unpack(theme.leather))
-    leather:SetVertexColor(.45, .39, .32)
-    components.LayoutBorder(window, 28)
-
-    local header = CreateFrame("Frame", nil, window)
-    header:SetPoint("TOPLEFT")
-    header:SetPoint("TOPRIGHT", -35, 0)
-    header:SetHeight(42)
-    header:EnableMouse(true)
-    header:RegisterForDrag("LeftButton")
-    header:SetScript("OnDragStart", function() window:StartMoving() end)
-    header:SetScript("OnDragStop", function() window:StopMovingOrSizing() end)
-    local title = N.MakeText(header, 17)
-    title:SetPoint("LEFT", 16, 0)
-    components.Close(window, function() window:Hide() end)
-
+    local title
     local search = CreateFrame("EditBox", nil, window, "InputBoxTemplate")
     search:SetSize(280, 26)
     search:SetPoint("TOPLEFT", 22, -45)
@@ -182,7 +186,7 @@ function ns.ToggleDungeonBrowser()
     search:SetFont("Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf", 14, "")
     search:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     local status = N.MakeText(window, 12)
-    status:SetTextColor(.76, .64, .45)
+    status:SetTextColor(.26, .14, .07)
     status:SetPoint("BOTTOMLEFT", 18, 14)
     status:SetPoint("BOTTOMRIGHT", -18, 14)
 
@@ -191,15 +195,19 @@ function ns.ToggleDungeonBrowser()
     local art = map:CreateTexture(nil, "BACKGROUND")
     art:SetAllPoints()
     local pins = {}
-    local list = CreateFrame("ScrollFrame", nil, window, "UIPanelScrollFrameTemplate")
+    local list = CreateFrame("ScrollFrame", nil, window)
     local content = CreateFrame("Frame", nil, list)
-    content:SetSize(620, 1)
+    content:SetSize(window:GetWidth() - 52, 1)
     list:SetScrollChild(content)
+    local syncScroll = N.PanelScroll(window, list, function() return list:GetVerticalScroll() end,
+        function(value) list:SetVerticalScroll(value) end,
+        function() return math.max(0, content:GetHeight() - list:GetHeight()) end, 114)
     local rows, pendingItems = {}, {}
     local rowHeight = 38
     local selected, floor, tab = nil, 1, "bosses"
     local selectedBoss, selectedQuest, questLandmark
     local draw
+    title = N.PanelChrome(window, "Dungeons & Raids", 600, 490, function() draw(true) end)
 
     local function button(parent, label, width, action)
         local b = N.MakeButton(parent, label, width, action)
@@ -219,11 +227,18 @@ function ns.ToggleDungeonBrowser()
         status:SetText(setWaypoint(ns.DungeonEntrance(selected)))
     end)
     entrance:SetPoint("LEFT", back, "RIGHT", 8, 0)
+    local clearQuest = button(window, "Clear Quest Pin", 134, function()
+        if ns.NavigationCompass.ClearQuestPin() then
+            draw()
+            status:SetText("Quest pin cleared")
+        end
+    end)
+    clearQuest:SetPoint("LEFT", entrance, "RIGHT", 8, 0)
 
     local function makeTab(label, key, width)
         local control = CreateFrame("Button", nil, window)
         control:SetSize(width, 29)
-        control.label = N.MakeText(control, 15, label)
+        control.label = N.MakeText(control, 15, label, true)
         control.label:SetPoint("LEFT", 8, 0)
         control.line = control:CreateTexture(nil, "ARTWORK")
         control.line:SetColorTexture(.77, .54, .27, 1)
@@ -293,11 +308,11 @@ function ns.ToggleDungeonBrowser()
             row.label:SetWordWrap(false)
             row.detail = N.MakeText(row, 11)
             row.detail:SetWordWrap(false)
-            row.detail:SetTextColor(.75, .65, .48)
+            row.detail:SetTextColor(.28, .16, .065)
             row.command = N.MakeText(row, 12)
             row.command:SetJustifyH("RIGHT")
             row.command:SetWordWrap(false)
-            row.command:SetTextColor(.45, .85, .77)
+            row.command:SetTextColor(.02, .27, .22)
             row.command:SetPoint("RIGHT", -8, 0)
             row:SetScript("OnEnter", function(self)
                 if not self.itemID or not GameTooltip then return end
@@ -330,8 +345,8 @@ function ns.ToggleDungeonBrowser()
         row.detail:SetPoint("TOPRIGHT", right, -21)
         row.detail:SetText(detail or "")
         row.command:SetText(actionLabel or "")
-        if heading then row.label:SetTextColor(.78, .57, .31)
-        else row.label:SetTextColor(.97, .82, .56) end
+        if heading then row.label:SetTextColor(.37, .19, .06)
+        else row.label:SetTextColor(.16, .09, .03) end
         if itemID then paintItem(row) else row.label:SetText(label) end
         row:SetScript("OnClick", action)
         row:EnableMouse(action ~= nil or itemID ~= nil)
@@ -381,7 +396,7 @@ function ns.ToggleDungeonBrowser()
     end
 
     local function drawMap(image, bosses, allowedNames)
-        local height = math.min(340, 630 / image.aspect)
+        local height = math.min(window:GetHeight() - 280, window:GetHeight() * .50, (window:GetWidth() - 50) / image.aspect)
         map:SetSize(height * image.aspect, height)
         art:SetTexture(assets .. image.file)
         art:SetTexCoord(image.u0, image.u1, image.v0, image.v1)
@@ -430,7 +445,7 @@ function ns.ToggleDungeonBrowser()
                 landmark(position.name, position.x, position.y, "boss")
             end
         end
-        local points = recordFor(ns.DungeonLandmarks, selected.name)
+        local points = image.legacyLandmarks ~= false and recordFor(ns.DungeonLandmarks, selected.name)
         for _, point in ipairs(points or {}) do
             if (point[6] or 1) == floor then landmark(point[1], point[2], point[3], point[4] or "boss", point[5]) end
         end
@@ -544,7 +559,7 @@ function ns.ToggleDungeonBrowser()
                     addRow(title, nil, nil, "Conflicting Coordinates")
                 else
                     local location = string.format("%s (%.1f, %.1f)", point.zone or "Zone Map", point.x, point.y)
-                    addRow(title, function() status:SetText(setWaypoint(point)) end, nil, location, "Pin")
+                    addRow(title, function() local result=questWaypoint(point); draw(); status:SetText(result) end, nil, location, questPinLabel(point))
                 end
             end
             if #groups == 0 then addRow(label .. "  /  " .. (hint or "Location Unavailable")) end
@@ -561,8 +576,8 @@ function ns.ToggleDungeonBrowser()
                 local name = p[2] or (previous and previous.title) or ("Quest " .. p[1])
                 local loc = ns.DungeonLocation(p[3], name)
                 local action
-                if localEndpoint(loc) then action = function() status:SetText(setWaypoint(loc)) end end
-                if name ~= q.name then addRow(name, action, nil, "Prerequisite", action and "Pin") end
+                if localEndpoint(loc) then action = function() local result=questWaypoint(loc); draw(); status:SetText(result) end end
+                if name ~= q.name then addRow(name, action, nil, "Prerequisite", action and questPinLabel(loc)) end
                 seen[p[1]] = true
             end
             for _, p in ipairs(record.prerequisites or {}) do
@@ -606,7 +621,9 @@ function ns.ToggleDungeonBrowser()
         end
     end
 
-    draw = function()
+    draw = function(keepScroll)
+        local previousScroll = keepScroll == true and list:GetVerticalScroll() or 0
+        content:SetWidth(window:GetWidth() - 52)
         for _, row in ipairs(rows) do row:Hide() end
         for _, pin in ipairs(pins) do pin:Hide() end
         content.visibleRows = 0
@@ -617,18 +634,20 @@ function ns.ToggleDungeonBrowser()
         questTab:SetShown(selected ~= nil)
         local loc = selected and ns.DungeonEntrance(selected)
         entrance:SetShown(loc ~= nil)
+        clearQuest:SetShown(ns.NavigationCompass and ns.NavigationCompass.questPin ~= nil)
         local floors = selected and selected.gfMaps
         local image = floors and floors[floor]
         floorButton:SetShown(floors and #floors > 1 or false)
         if image then floorButton.label:SetText("Floor " .. floor .. " / " .. #floors) end
         map:SetShown(image ~= nil)
         list:ClearAllPoints()
-        list:SetPoint("TOPLEFT", 18, selected and (image and -466 or -119) or -82)
+        local mapBottom = image and (82 + math.min(window:GetHeight() - 280, window:GetHeight() * .50, (window:GetWidth() - 50) / image.aspect))
+        list:SetPoint("TOPLEFT", 18, selected and (mapBottom and -mapBottom - 44 or -119) or -82)
         list:SetPoint("BOTTOMRIGHT", -34, 42)
         if selected then
             title:SetText(selected.name)
             bossTab:ClearAllPoints()
-            bossTab:SetPoint("TOPLEFT", 18, image and -432 or -85)
+            bossTab:SetPoint("TOPLEFT", 18, mapBottom and -mapBottom - 10 or -85)
             questTab:ClearAllPoints()
             questTab:SetPoint("LEFT", bossTab, "RIGHT", 8, 0)
             bossTab.line:SetShown(tab == "bosses")
@@ -767,6 +786,8 @@ function ns.ToggleDungeonBrowser()
         end
         content:SetHeight(math.max(1, content.visibleRows * rowHeight))
         list:UpdateScrollChildRect()
+        if previousScroll > 0 then list:SetVerticalScroll(math.min(previousScroll, math.max(0, content:GetHeight() - list:GetHeight()))) end
+        syncScroll()
     end
 
     search:SetScript("OnTextChanged", draw)
