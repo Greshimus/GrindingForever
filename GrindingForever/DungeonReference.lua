@@ -17,6 +17,7 @@ ns.DungeonReference = {
         art = "Blackfathom Deeps",
         entrance = {1440,14.5,14.2,"Blackfathom Deeps Entrance"},
         encounters = {
+            {["name"]="Baron Aquanis",["npcID"]=12876,["loot"]={}},
             {["name"]="Ghamoo-ra",["npcID"]=4887,["loot"]={{6907,"Tortoise Armor"},{6908,"Ghamoo-ra's Bind"},{273839,"Spiked Shell Band"},{251382,"Plans: Protector's Silvered Chain Helm","Recipe"},{252801,"Pattern: Totemic Leather Hood","Recipe"},{253940,"Pattern: Filigreed Silky Leggings","Recipe"},{253942,"Pattern: Filigreed Flame Leggings","Recipe"}}},
             {["name"]="Lady Sarevess",["npcID"]=4831,["loot"]={{888,"Naga Battle Gloves"},{3078,"Naga Heartpiercer"},{11121,"Darkwater Talwar"},{252798,"Pattern: Brawler's Leather Hood","Recipe"},{251382,"Plans: Protector's Silvered Chain Helm","Recipe"},{251383,"Plans: Acolyte's Silvered Chain Helm","Recipe"},{253944,"Pattern: Filigreed Shadow Leggings","Recipe"}}},
             {["name"]="Gelihast",["npcID"]=6243,["loot"]={{6906,"Algae Fists"},{6905,"Reef Axe"},{1470,"Murloc Skin Bag"},{273840,"Cursed Murloc Eye"},{251375,"Plans: Veteran's Silvered Chain Leggings","Recipe"},{251377,"Plans: Protector's Silvered Chain Leggings","Recipe"},{252820,"Pattern: Brawler's Leather Legguards","Recipe"},{252821,"Pattern: Trapper's Leather Legguards","Recipe"},{252825,"Pattern: Wisdom's Leather Leggings","Recipe"},{253978,"Pattern: Filigreed Silky Circlet","Recipe"},{253980,"Pattern: Filigreed Flame Circlet","Recipe"},{273141,"Blueprint: Fishing Rack"}}},
@@ -871,6 +872,13 @@ ns.DungeonReference = {
     },
 }
 ns.DungeonReferencePins = {
+    ["AtlasRagefire.tga"] = {
+        {"Entrance",0.7355,0.18762,"entrance"},
+        {"Oggleflint",0.61388,0.46006,"boss"},
+        {"Taragaman the Hungerer",0.32535,0.63857,"boss"},
+        {"Jergosh the Invoker",0.17214,0.88111,"boss"},
+        {"Bazzalan",0.33582,0.89591,"boss"},
+    },
     ["213.blp"] = {
         {"Oggleflint",0.561,0.378,"boss"},
         {"Taragaman the Hungerer",0.405,0.57,"boss"},
@@ -890,6 +898,18 @@ ns.DungeonReferencePins = {
         {"Ruuzlu",0.432,0.342,"boss"},
         {"Chief Ukorz Sandscalp",0.422,0.329,"boss"},
         {"Entrance",0.552,0.88,"entrance"},
+    },
+    -- Reproject the journal markers by room onto the Classic main-floor artwork.
+    ["AtlasSunken2.tga"] = {
+        {"Atal'alarion",0.500,0.444,"boss"},
+        {"Avatar of Hakkar",0.141,0.447,"boss"},
+        {"Jammal'an the Prophet",0.859,0.384,"boss"},
+        {"Ogom the Wretched",0.882,0.407,"boss"},
+        {"Dreamscythe",0.422,0.853,"boss"},
+        {"Weaver",0.494,0.819,"boss"},
+        {"Morphaz",0.470,0.836,"boss"},
+        {"Hazzas",0.450,0.843,"boss"},
+        {"Shade of Eranikus",0.742,0.858,"boss"},
     },
     ["220.blp"] = {
         {"Avatar of Hakkar",0.243,0.459,"boss"},
@@ -950,6 +970,7 @@ ns.DungeonReferencePins = {
         {"Continue to Floor 4",0.37,0.72,"floor",4},
     },
     ["229.blp"] = {
+        {"Dark Iron Ambassador",0.360,0.669,"boss"},
         {"Mekgineer Thermaplugg",0.315,0.299,"boss"},
         {"Continue to Floor 3",0.44,0.726,"floor",3},
         {"Thermaplugg's Safe",0.354,0.177,"quest","Rig Wars"},
@@ -1052,12 +1073,12 @@ ns.DungeonReferencePins = {
         {"Dark Coffer",0.632,0.732,"quest","The Spectral Chalice"},
         {"Monument of Franclorn Forgewright",0.615,0.95,"quest","Dark Iron Legacy"},
     },
-    ["279.blp"] = {
+    ["ClassicWailingCaverns.tga"] = {
         {"Lady Anacondra",0.31,0.43,"boss"},
         {"Kresh",0.385,0.35,"boss"},
         {"Lord Cobrahn",0.155,0.57,"boss"},
-        {"Lord Pythas",0.62,0.657,"boss"},
-        {"Skum",0.622,0.734,"boss"},
+        {"Lord Pythas",0.856,0.289,"boss"},
+        {"Skum",0.927,0.792,"boss"},
         {"Deviate Faerie Dragon",0.58,0.6,"boss"},
         {"Lord Serpentis",0.615,0.535,"boss"},
         {"Verdan the Everliving",0.545,0.46,"boss"},
@@ -1231,3 +1252,5 @@ ns.DungeonReferencePins = {
         {"Daewyn Songblade",0.074,0.497,"quest","Songblade Search, Fallen in the Fen"},
     },
 }
+
+ns.DungeonReferencePins["BlizzardRagefire.tga"] = ns.DungeonReferencePins["213.blp"]

@@ -1,4 +1,4 @@
--- Grinding Forever: Forever tester build 36.
+-- Grinding Forever: Forever tester build 37.
 local ADDON,GF=...
 -- GF_MODULE_BEGIN Engine
 ;(function(...)
@@ -141,8 +141,13 @@ function E.ReadBook()
   local profession=call(GetTradeSkillLine)
   for i=1,call(GetNumTradeSkills)or 0 do local name,kind=call(GetTradeSkillInfo,i);if kind~='header'then
    local link=call(GetTradeSkillRecipeLink,i);local id=type(link)=='string'and tonumber(link:match('enchant:(%d+)')or link:match('spell:(%d+)'));local reagents={}
-   for k=1,call(GetTradeSkillNumReagents,i)or 0 do local material=idFromLink(call(GetTradeSkillReagentItemLink,i,k));local _,_,quantity=call(GetTradeSkillReagentInfo,i,k);if material and quantity then reagents[material]=quantity end end
+   local slots=call(GetTradeSkillNumReagents,i) or 0;local complete=slots>0
+   for k=1,slots do local material=idFromLink(call(GetTradeSkillReagentItemLink,i,k));local _,_,quantity=call(GetTradeSkillReagentInfo,i,k);if material and quantity then reagents[material]=(reagents[material] or 0)+quantity else complete=false end end
    add(id,name,true,idFromLink(call(GetTradeSkillItemLink,i)),reagents,profession)
+   local yield=call(GetTradeSkillNumMade,i)
+   if complete and id and E.recipes[id] and type(yield)=='number' and yield>0 then
+    E.recipes[id].fulfillment={reagents=reagents,yield=yield}
+   end
   end end
  end
  -- Enchanting uses the legacy craft book on some Forever builds.
@@ -186,9 +191,9 @@ end
 function E.Travel(destination,state)
  state=state or E.state or E.Snapshot();local distance=E.Distance(state.position,destination);local speed=math.max(1,(public(state.speed)and tonumber(state.speed))or 7);if speed<1.1 then speed=7 end
  local best=distance and{cost=0,seconds=distance/speed,kind='ground',estimate=true}or nil;local flight
- for _,edge in ipairs(E.flights)do if edge.known and edge.from and edge.to and type(edge.cost)=='number'then
+ for _,edge in ipairs(E.flights)do if edge.known and edge.from and edge.to and type(edge.cost)=='number' and type(edge.seconds)=='number' and edge.seconds>0 and (not state.money or edge.cost<=state.money) then
   local a,b=E.Distance(state.position,edge.from),E.Distance(edge.to,destination)
-  if a and b and edge.seconds and(not state.money or edge.cost<=state.money)then local candidate={cost=edge.cost,seconds=(a+b)/speed+edge.seconds,kind='flight',estimate=true};if not flight or candidate.cost<flight.cost or candidate.cost==flight.cost and candidate.seconds<flight.seconds then flight=candidate end end
+  if a and b then local candidate={cost=edge.cost,seconds=(a+b)/speed+edge.seconds,kind='flight',estimate=true};if not flight or candidate.seconds<flight.seconds or candidate.seconds==flight.seconds and candidate.cost<flight.cost then flight=candidate end end
  end end
  if flight and(not best or flight.seconds<best.seconds)then flight.groundAlternative=best;return flight end
  if best then best.flightAlternative=flight end
@@ -206,7 +211,8 @@ function E.CampPlan(state)
   if not conflict and(not feature.classes or feature.classes[state.class])then useful[#useful+1]=feature end
  end
  if #useful==0 then return end
- local nearby={};for _,camp in ipairs(E.camps)do local d=E.Distance(state.position,camp);if camp.expires>E.Time()and d and d<=600 then nearby[#nearby+1]=camp end end
+ local campfireNearbyRadius=100 -- Campfire Nearby (spell 1283391).
+ local nearby={};for _,camp in ipairs(E.camps)do local d=E.Distance(state.position,camp);if camp.expires>E.Time()and d and d<=campfireNearbyRadius then nearby[#nearby+1]=camp end end
  local camp=E.Nearest(nearby,state)
  if camp then return{id='camp:visit',kind='camp',category='Questing',title='Refresh camp benefits',destination=camp,body='Visit the observed campsite and sit nearby until Camp Benefits appears. Choose a useful feature that does not duplicate your class buffs. Camp may have expired; actions remain manual.',priority=85}end
  local kit
@@ -788,12 +794,22 @@ function E.Snapshot()
  end;return state
 end
 -- Camps can only be recommended from observed camp influence or a client-labelled camp POI.
+local campPOIMap,campPOITime
 function E.ReadCampPOIs()
  local p=E.CurrentPosition();if not p then return end
+ local now=E.Time()
+ if campPOIMap==p.mapID and now-campPOITime<10 then return end
+ campPOIMap,campPOITime=p.mapID,now
+ for i=#E.camps,1,-1 do
+  local camp=E.camps[i]
+  if camp.expires<=now or camp.mapID==p.mapID and camp.evidence=='client-explicit-camp-poi' then
+   table.remove(E.camps,i)
+  end
+ end
  for _,id in ipairs(call(C_AreaPoiInfo and C_AreaPoiInfo.GetAreaPOIForMap,p.mapID)or{})do
   local info=call(C_AreaPoiInfo and C_AreaPoiInfo.GetAreaPOIInfo,p.mapID,id)
   if info and info.isCamp==true and info.position then local x,y=call(info.position.GetXY,info.position);if x and y then
-   local row={mapID=p.mapID,x=x*100,y=y*100,name=info.name or'Client campsite',expires=E.Time()+30,evidence='client-explicit-camp-poi'};E.camps[#E.camps+1]=row;if #E.camps>24 then table.remove(E.camps,1)end
+   local row={mapID=p.mapID,x=x*100,y=y*100,name=info.name or'Client campsite',expires=now+30,evidence='client-explicit-camp-poi'};E.camps[#E.camps+1]=row;if #E.camps>24 then table.remove(E.camps,1)end
   end end
  end
 end
@@ -846,12 +862,12 @@ end)(ADDON,GF)
 local _,ns=...
 local E=ns.Forever;local call=E.Call
 function E.ObserveTaxi()
- local map=call(C_TaxiMap and C_TaxiMap.GetTaxiMapID)
+ E.taxiChoices={}
+ local map=call(GetTaxiMapID)
  local nodes=map and call(C_TaxiMap and C_TaxiMap.GetAllTaxiNodes,map);local states=Enum and Enum.FlightPathState
  if type(nodes)~='table'or not states then return end
  local current;for _,node in ipairs(nodes)do if node.state==states.Current then current=node end end
  if not current then return end
- E.taxiChoices={}
  local function position(node)local p=node.position;local x,y;if p and p.GetXY then x,y=call(p.GetXY,p)elseif p then x,y=p.x,p.y end;if x and y then return{mapID=map,x=x*100,y=y*100,name=node.name}end end
  local from=position(current);if not from then return end
  for _,node in ipairs(nodes)do if node.state==states.Reachable and node.slotIndex then
@@ -867,7 +883,7 @@ function E.CheckFlight()
  local pending=E.flightPending;if not pending then return end
  if call(UnitOnTaxi,'player')then pending.departed=true
  elseif pending.departed then
-  pending.edge.seconds=E.Time()-pending.start;E.flights[#E.flights+1]=pending.edge;if #E.flights>120 then table.remove(E.flights,1)end
+  pending.edge.seconds=E.Time()-pending.start
   if E.db.collect then E.db.flightDurations=E.db.flightDurations or{};E.db.flightDurations[pending.edge.id]=pending.edge.seconds end
   E.Record('flight-measured',{seconds=pending.edge.seconds,cost=pending.edge.cost});E.flightPending=nil
  elseif E.Time()-pending.start>20 then E.flightPending=nil end
@@ -1040,15 +1056,24 @@ local GuideView={}
 function GuideView.New()
  local self={steps={},goals={Questing=true,Dungeons=true,Gathering=true,Crafting=true},view="All"}
  function self:Visible()
-  self.steps=ns.FarmingPlanner and ns.FarmingPlanner.route and ns.FarmingPlanner.route.steps or P.steps;local out={}
+  self.steps=P.steps
+  local out={}
   for _,node in ipairs(self.steps)do
    if not node.complete and not node.deferred and node.category~="Gear Rewards" and self.goals[node.category] and (self.view=="All" or self.view==node.category or self.view=="Questing" and node.category=="Dungeons")then out[#out+1]=node end
   end
   return out
  end
- function self:Current()for _,node in ipairs(self:Visible())do if node.id==self.index then return node end end end
- function self:Reconcile()
-  if not self:Current() or (self:Current().complete and not self.browsing)then local visible=self:Visible();self.index=nil;for _,n in ipairs(visible)do if not n.complete then self.index=n.id;break end end;self.index=self.index or (visible[#visible]and visible[#visible].id) end
+ function self:Current(visible)
+  for _,node in ipairs(visible or self:Visible())do if node.id==self.index then return node end end
+ end
+ function self:Reconcile(visible)
+  visible=visible or self:Visible()
+  local current=self:Current(visible)
+  if not current or current.complete and not self.browsing then
+   self.index=nil
+   for _,node in ipairs(visible)do if not node.complete then self.index=node.id;break end end
+   self.index=self.index or (visible[#visible] and visible[#visible].id)
+  end
  end
  function self:Resync()P.Refresh();self.index=P.firstPending;self:Reconcile()end
  function self:SetGoal(category,value)self.goals[category]=not not value;self:Reconcile()end
@@ -1085,11 +1110,16 @@ local DECOR="Interface\\AddOns\\GrindingForever\\Media\\Junction"
  local WINGLESS="Interface\\AddOns\\GrindingForever\\Media\\Crest"
  local EXPLORER="Interface\\AddOns\\GrindingForever\\Media\\"
  -- Repeat the physical motif at a constant aspect; rotate sampling for uprights.
+ local function snapArt(frame,size)
+  local scale=frame:GetEffectiveScale()
+  if not scale or scale<=0 then return size end
+  return math.max(1,math.floor(size*UIParent:GetEffectiveScale()+.5))/scale
+ end
  local function rail(texture,kind)
   local vertical=kind=="LEFT" or kind=="RIGHT"
   local length=vertical and texture:GetHeight() or texture:GetWidth()
-  local depth=vertical and texture:GetWidth() or texture:GetHeight()
-  local repeatCount=length/math.max(1,depth*(650/54))
+
+  local repeatCount=length*texture:GetParent():GetEffectiveScale()/(96*UIParent:GetEffectiveScale())
   texture:SetTexture(WINGLESS.."PatinaRail","REPEAT","REPEAT")
   if vertical then texture:SetTexCoord(0,1,repeatCount,1,0,0,repeatCount,0)
   else texture:SetTexCoord(0,repeatCount,0,1) end
@@ -1245,22 +1275,17 @@ end
 function N.Offset(x,y) local step=session:Current();return x+(step and step.dx or 0),y+(step and step.dy or 0) end
 function N.Bearing(dx,dy) return math.atan2(dy,dx) end
 function N.ArrowAsset() return "Interface\\AddOns\\GrindingForever\\Media\\ForeverArrow" end
--- Projected 3D yaw: pre-rendered original-art views, never screen-plane texture rotation.
-local YAW={count=256,columns=16,rows=16,cell=256,width=4096,height=4096}
-function N.ProjectedArrowAsset()return "Interface\\AddOns\\GrindingForever\\Media\\ForeverYaw"end
-function N.YawSample(angle)
- local phase=(angle/(2*math.pi)%1)*YAW.count
- local lower=math.floor(phase);return lower,(lower+1)%YAW.count,phase-lower
-end
-local function yawUV(t,index)
- local x=index%YAW.columns*YAW.cell;local y=math.floor(index/YAW.columns)*YAW.cell
- t:SetTexCoord((x+.5)/YAW.width,(x+YAW.cell-.5)/YAW.width,(y+.5)/YAW.height,(y+YAW.cell-.5)/YAW.height)
+function N.ProjectedArrowAsset()return "Interface\\AddOns\\GrindingForever\\Media\\ForeverArrow"end
+function N.PaintProjectedArrow(texture,angle)
+ if texture.gfYawIndex~=angle then
+  texture:SetRotation(angle)
+  texture.gfYawIndex=angle
+ end
+ return angle
 end
 function N.RenderArrow()
  if not arrowTex or N.angle==nil then return end
- local low,high,mix=N.YawSample(N.angle)
- local index=mix>=.5 and high or low
- if arrowTex.gfYawIndex~=index then yawUV(arrowTex,index);arrowTex.gfYawIndex=index end
+ local index=N.PaintProjectedArrow(arrowTex,N.angle)
  -- One silhouette at a time: no displaced afterimage at the rear points.
  if N.arrowBlend then N.arrowBlend:SetAlpha(0)end
  N.yawFrame=index;N.yawMix=0
@@ -1457,7 +1482,8 @@ local function layout()
    strip:SetWidth(panel:GetWidth()-12)
   end
  end
- local junction=15;N.junctionSize=junction
+ local junction=snapArt(root,15);N.junctionSize=junction
+ if N.close then N.close.phaseBClose.texture:SetSize(junction,junction) end
  local junctionX={9,p[1]:GetWidth()+8,p[1]:GetWidth()+p[2]:GetWidth()+8,w-9}
  local index=1
  for row=1,2 do for column=1,4 do
@@ -1494,10 +1520,11 @@ local function layout()
  local function strip(name,x,y,width,height)
   local t=outer[name];t:ClearAllPoints();t:SetPoint("TOPLEFT",root,"TOPLEFT",x,y);t:SetSize(width,height);rail(t,name)
  end
- strip("TOP",9,-top-1.325625,w-18,9.34875)
- strip("BOTTOM",9,-h+13.674375,w-18,9.34875)
- strip("LEFT",4.325625,-top-6,9.34875,h-top-15)
- strip("RIGHT",w-13.674375,-top-6,9.34875,h-top-15)
+ local depth=snapArt(root,6)
+ strip("TOP",9,-top-6+depth/2,w-18,depth)
+ strip("BOTTOM",9,-h+9+depth/2,w-18,depth)
+ strip("LEFT",9-depth/2,-top-6,depth,h-top-15)
+ strip("RIGHT",w-9-depth/2,-top-6,depth,h-top-15)
  for _,divider in ipairs(root.dividers) do rail(divider.rail,"LEFT") end
  -- Source alpha/proportions preserved: complete sculptures sit above the rail.
  local cw=N.mode=="compact"and 160 or 194;local capHeight=cw*282/482
@@ -1530,20 +1557,20 @@ local function layout()
  root.titleLeft:ClearAllPoints();root.titleLeft:SetPoint("RIGHT",root.headerEmblem,"LEFT",-8,0);root.titleLeft:SetJustifyH("RIGHT")
  root.titleRight:ClearAllPoints();root.titleRight:SetPoint("LEFT",root.headerEmblem,"RIGHT",8,0)
  N.headerHeight=headerHeight;root.headerDrag:ClearAllPoints();root.headerDrag:SetHeight(headerHeight);root.headerDrag:SetAllPoints(root.wood)
- root.backdrop:ClearAllPoints();root.backdrop:SetPoint("TOPLEFT",root,"TOPLEFT",13.5,-top-10.5)
- root.backdrop:SetPoint("BOTTOMRIGHT",root,"BOTTOMRIGHT",-13.5,13.5)
+ root.backdrop:ClearAllPoints();root.backdrop:SetPoint("TOPLEFT",root,"TOPLEFT",9,-top-6)
+ root.backdrop:SetPoint("BOTTOMRIGHT",root,"BOTTOMRIGHT",-9,9)
  -- Keep the supplied fine grain near native pixel scale across one shared material field.
- local bw,bh=w-27,h-top-24;local tileW,tileH=534,534*1028/1528;local tileIndex=0
- local u0,u1=.5/2048,1528.5/2048;local v0,v1=.5/2048,1028.5/2048
+ local bw,bh=w-18,h-top-15;local tileW,tileH=534,534;local tileIndex=0
+ local u0,u1=48/2048,1206/2048;local v0,v1=48/2048,1206/2048
  root.leatherTiles=root.leatherTiles or {}
  for row=0,math.ceil(bh/tileH)-1 do for column=0,math.ceil(bw/tileW)-1 do
   tileIndex=tileIndex+1;local piece=root.leatherTiles[tileIndex]
-  if not piece then piece=tex(root,"Interface\\AddOns\\GrindingForever\\Media\\MatteLeather","BACKGROUND");piece:SetDrawLayer("BACKGROUND",1);root.leatherTiles[tileIndex]=piece end
+  if not piece then piece=tex(root,"Interface\\AddOns\\GrindingForever\\Media\\BaseParchment","BACKGROUND");piece:SetDrawLayer("BACKGROUND",1);root.leatherTiles[tileIndex]=piece end
   local width,height=math.min(tileW,bw-column*tileW),math.min(tileH,bh-row*tileH)
   local us=column%2==0 and u0 or u1;local vs=row%2==0 and v0 or v1
   local ue=us+(column%2==0 and 1 or -1)*(u1-u0)*width/tileW
   local ve=vs+(row%2==0 and 1 or -1)*(v1-v0)*height/tileH
-  piece:ClearAllPoints();piece:SetPoint("TOPLEFT",root,"TOPLEFT",13.5+column*tileW,-top-10.5-row*tileH);piece:SetSize(width,height)
+  piece:ClearAllPoints();piece:SetPoint("TOPLEFT",root,"TOPLEFT",9+column*tileW,-top-6-row*tileH);piece:SetSize(width,height)
   piece:SetTexCoord(us,ue,vs,ve);piece:SetVertexColor(.88,.76,.85,1);piece:Show()
  end end
  for i=tileIndex+1,#root.leatherTiles do root.leatherTiles[i]:Hide() end
@@ -1626,8 +1653,7 @@ end
 function N.Refresh(skipTick)
  if not root or refreshing then return end
  refreshing=true
- session:Reconcile()
- local visible=session:Visible();N.visible=visible;N.step=session.index or 0
+ local visible=session:Visible();session:Reconcile(visible);N.visible=visible;N.step=session.index or 0
  local selected=1
  for i,s in ipairs(visible) do if s.id==session.index then selected=i end end
  local count=N.rowCount or 8
@@ -1640,7 +1666,7 @@ function N.Refresh(skipTick)
  root.compactNext:SetText(nextNode and("Next: "..liveObjective(nextNode).title)or "No next step in this view")
 
  for i,b in ipairs(root.filterButtons)do b.selected=i==N.view;b:SetEnamelTint()end
- local node=session:Current();P.selected=node;node=liveObjective(node)
+ local node=session:Current(visible);P.selected=node;node=liveObjective(node)
  if P.active or ns.FarmingPlanner and ns.FarmingPlanner.route then
   root.listNote:SetText((ns.FarmingPlanner and ns.FarmingPlanner.route and "Farming circuit - "or "")..#visible.." remaining steps")
   stepLabel:SetText("Forever - level "..tostring(P.character.level).." - "..(node and node.kind or "route"))
@@ -1959,7 +1985,18 @@ end
 function N.ScrollZones(delta)
  N.zoneStart=math.max(1,math.min((N.zoneStart or 1)+delta,#zoneNames-9));N.RefreshZoneMenu()
 end
-function N.Resync()session.browsing=false;session:Resync();N.rowStart=1;N.Refresh()end
+function N.Resync()
+ session.browsing=false
+ session:Resync()
+ local first=session:Visible()[1]
+ if first and first.localQuestPickup then
+  session.index=first.id
+  local workflow=ns.WindowWorkflow
+  if workflow then workflow.selection='step' end
+ end
+ N.rowStart=1
+ N.Refresh()
+end
 function N.Step(value)
  local visible=session:Visible();local at=math.max(1,math.min(#visible,math.floor(value)))
  session.index=visible[at] and visible[at].id or nil;activate();N.Refresh()
@@ -1970,6 +2007,9 @@ function N.SetView(value)
 end
 function N.SetGoal(name,value)
  session:SetGoal(name,value);N.goals=session.goals;N.rowStart=1;activate();N.Refresh()
+end
+function N.RecoverQuestWindow()
+ N.dimensions=nil;layout();centerRoot();defaultArrowPosition()
 end
 function N.Reset()
  N.dimensions=nil;layout()
@@ -1993,7 +2033,7 @@ end
 local function ensure()
  if root then return end
  host=CreateFrame("Frame","GrindingForeverFrame",UIParent)
- host:SetFrameStrata("TOOLTIP");host:SetFrameLevel(1000);host:SetToplevel(true);host:SetClampedToScreen(true);host:SetMovable(true);host:SetResizable(true);host:EnableMouse(true)
+ N.ApplyWindowLayer(host,"steps");host:SetToplevel(true);host:SetClampedToScreen(true);host:SetMovable(true);host:SetResizable(true);host:EnableMouse(true)
  root=CreateFrame("Frame",nil,host);N.root=root;root:SetPoint("TOPLEFT",host,"TOPLEFT",0,0);root:EnableMouse(false)
  centerRoot();C.Outer(root)
  local backdrop=root:CreateTexture(nil,"BACKGROUND");backdrop:SetPoint("TOPLEFT",root,"TOPLEFT",10,-60)
@@ -2030,12 +2070,12 @@ local function ensure()
  local close=C.Close(root,function() host:Hide() end)
  close:ClearAllPoints();close:SetPoint("TOPRIGHT",root,"TOPRIGHT",-3,-128);close:SetSize(47,47)
  close.phaseBClose.texture:SetSize(15,15);close:SetFrameLevel(root:GetFrameLevel()+12);N.close=close
- local left=inset(root,OLD.."GrindingForeverSidebar")
- left.fill:SetTexCoord(32/512,480/512,32/512,480/512)
+ local left=inset(root,AS.."Parchment")
+ left.fill:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048)
  local middle=inset(root,AS.."Parchment")
  middle.fill:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048)
- local right=inset(root,OLD.."GrindingForeverSidebar")
- right.fill:SetTexCoord(32/512,480/512,32/512,480/512)
+ local right=inset(root,AS.."Parchment")
+ right.fill:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048)
  for _,panel in ipairs({left,right}) do local lift=tex(panel,nil,"BACKGROUND",1);lift:SetDrawLayer("ARTWORK",1);panel.fill:SetDrawLayer("ARTWORK",0);lift:SetAllPoints(panel.fill);color(lift,.60,.40,.25,.12);panel.leatherLift=lift end
  left.fill:Hide();right.fill:Hide();left.leatherLift:Hide();right.leatherLift:Hide() -- One shared chestnut surface continues beneath the parchment alpha.
  if N.sideMaterial=="parchment" then for _,panel in ipairs({left,right}) do panel.fill:SetTexture(AS.."Parchment");panel.fill:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048);panel.fill:SetVertexColor(1,1,1,1);panel.fill:Show() end end
@@ -2124,23 +2164,9 @@ local function ensure()
  settings:SetPoint("BOTTOMRIGHT",root.settings,"TOPRIGHT",0,8);settings:SetFrameStrata("TOOLTIP");settings:SetFrameLevel(host:GetFrameLevel()+40)
  menuSkin(settings)
  local sh=text(settings,20,"Settings");sh:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-14)
- N.arrowToggle=checkbox(btn(settings,"Show arrow",308,function() N.SetArrow(not arrowEnabled) end),arrowEnabled)
- N.arrowToggle:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-48);N.arrowToggle:SetWidth(settings:GetWidth()-32)
  for _,v in ipairs({{'autoFlightToggle','Automatically Take Guide Flights','autoFlights'},{'autoAcceptToggle','Automatically Accept Quests','autoAcceptQuests'},{'autoTurninToggle','Automatically Turn In Quests','autoTurnInQuests'}})do
   local key=v[3];local b=checkbox(btn(settings,v[2],308,function()local d=ns.Forever.db;d[key]=not d[key];N[v[1]]:SetCheckedVisual(d[key]==true)end),ns.Forever.db and ns.Forever.db[key]==true);N[v[1]]=b
  end
- local sl=text(settings,15,"GPS Size");N.gpsSizeLabel=sl;sl:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-92)
- sizeValue=text(settings,15,"");sizeValue:SetPoint("TOPRIGHT",settings,"TOPRIGHT",-16,-92)
- sizeSlider=CreateFrame("Slider",nil,settings);sizeSlider:SetSize(308,22);sizeSlider:SetPoint("TOPLEFT",settings,"TOPLEFT",16,-116)
- sizeSlider:EnableMouse(true);sizeSlider:SetOrientation("HORIZONTAL");sizeSlider:SetMinMaxValues(11,66);sizeSlider:SetValueStep(1);sizeSlider:SetObeyStepOnDrag(true)
- local track=tex(sizeSlider,THEME.."EnamelButton","BACKGROUND");track:SetPoint("LEFT",sizeSlider,"LEFT",0,0);track:SetPoint("RIGHT",sizeSlider,"RIGHT",0,0);track:SetHeight(10)
- track:SetTexCoord(UIART.button.x[1]/UIART.button.width,UIART.button.x[4]/UIART.button.width,UIART.button.top/UIART.button.height,UIART.button.bottom/UIART.button.height)
- local thumb=tex(sizeSlider,WORKING.."FacetedHex","OVERLAY");thumb:SetSize(18,18);thumb:SetTexCoord(0,1,0,1)
- sizeSlider:SetThumbTexture(thumb)
- sizeSlider:SetValue(84)
- sizeSlider:SetScript("OnValueChanged",function(_,value) if not syncingSlider then N.SetArrowSize(value) end end)
- local low=text(settings,12,"Small");low:SetPoint("TOPLEFT",sizeSlider,"BOTTOMLEFT",0,-4)
- local high=text(settings,12,"Large");high:SetPoint("TOPRIGHT",sizeSlider,"BOTTOMRIGHT",0,-4)
  local farming=btn(settings,"Plan farming route",308,function()local f=ns.FarmingPlanner;if f then if f.route then f.Stop("Quest guide resumed.")else local ok,why=f.StartCurrent();if not ok then ns.Print(why)end end end end)
  farming:SetPoint("BOTTOMLEFT",settings,"BOTTOMLEFT",16,58);N.farmButton=farming
  settings:Hide();N.settingsFrame=settings;N.sizeSlider=sizeSlider
@@ -2238,7 +2264,7 @@ local function ensure()
  end
  for _,side in ipairs({"BOTTOMLEFT","BOTTOMRIGHT"}) do
   local grip=CreateFrame("Button",nil,host);grip:SetSize(42,42);grip:SetPoint(side,host,side,0,0)
-  grip:SetFrameStrata("TOOLTIP");grip:SetFrameLevel(host:GetFrameLevel()+90);grip:EnableMouse(true);grip:RegisterForDrag("LeftButton")
+  grip:SetFrameStrata(host:GetFrameStrata());grip:SetFrameLevel(host:GetFrameLevel()+15);grip:EnableMouse(true);grip:RegisterForDrag("LeftButton")
   if N.fieldGuideMinimumHeight then
    local handle=grip:CreateTexture(nil,"ARTWORK")
    handle:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up");handle:SetSize(16,16)
@@ -2401,17 +2427,17 @@ ns.RegisterMessage("GF_LOADED",updateMini)
 
 local professionEvents=CreateFrame("Frame")
 local professionDirty=true;local professionElapsed=0
-for _,event in ipairs({"SKILL_LINES_CHANGED","TRADE_SKILL_LIST_UPDATE","TRADE_SKILL_DATA_SOURCE_CHANGED","NEW_RECIPE_LEARNED","BAG_UPDATE_DELAYED","PLAYER_LEVEL_UP","PLAYER_ENTERING_WORLD","PLAYER_LOGOUT"})do pcall(professionEvents.RegisterEvent,professionEvents,event)end
-professionEvents:SetScript("OnEvent",function(_,event)
- if event=="PLAYER_LOGOUT"then return end
- professionDirty=true
-end)
+for _,event in ipairs({"TRADE_SKILL_DATA_SOURCE_CHANGED","NEW_RECIPE_LEARNED"})do pcall(professionEvents.RegisterEvent,professionEvents,event)end
+professionEvents:SetScript("OnEvent",function()professionDirty=true end)
 local navigationElapsed=0
 professionEvents:SetScript("OnUpdate",function(_,delta)
  if not ns.Retail.ready then return end
- N.UpdateHeading()
+ local compass=ns.NavigationCompass
+ local compassMode=compass and compass.Mode()=='Compass'
+ if not compassMode then N.UpdateHeading()end
+ local interval=compassMode and .15 or .05
  navigationElapsed=navigationElapsed+delta
- if navigationElapsed>=.05 then navigationElapsed=navigationElapsed%.05;N.Tick()end
+ if navigationElapsed>=interval then navigationElapsed=navigationElapsed%interval;N.Tick()end
  professionElapsed=professionElapsed+delta
  if professionElapsed<.5 then return end
  elapsed=elapsed+professionElapsed;professionElapsed=0
@@ -2425,69 +2451,172 @@ ns.RegisterMessage("GF_LOGIN",function()P.Refresh();session:Reconcile();N.Refres
 ns.RegisterMessage("GF_LOGIN",function()ns.BindForeverRecipes(N);N.RefreshRecipes()end)
 local recipeRetry=CreateFrame('Frame');local recipeElapsed=0
 recipeRetry:SetScript('OnUpdate',function(_,dt)
- if N.foreverBound then return end
+ if N.foreverBound then recipeRetry:SetScript('OnUpdate',nil);return end
  recipeElapsed=recipeElapsed+dt;if recipeElapsed<5 then return end;recipeElapsed=0
  ns.BindForeverRecipes(N);if N.root then N.RefreshRecipes()end
 end)
 
 
 N.MakeButton=btn;N.MakeText=text;N.PlainOption=plainMenuOption;N.MakeCheckbox=checkbox
+function N.ControlArrow(parent,direction,side)
+ local glyph=tex(parent,"Interface\\AddOns\\GrindingForever\\Media\\ControlTriangleRight","OVERLAY")
+ glyph:SetSize(11,11)
+ glyph:SetPoint(side or "RIGHT",parent,side or "RIGHT",side=="LEFT" and 10 or -10,0)
+ glyph:SetVertexColor(.96,.83,.54)
+ glyph:SetRotation(direction=="left" and math.pi or direction=="down" and -math.pi/2 or 0)
+ return glyph
+end
+function N.ButtonArrow(button,direction,side)
+ local arrow=N.ControlArrow(button,direction,side)
+ button.label:ClearAllPoints()
+ button.label:SetPoint("LEFT",button,"LEFT",side=="LEFT" and 23 or 7,0)
+ button.label:SetPoint("RIGHT",button,"RIGHT",side=="LEFT" and -7 or -23,0)
+ return arrow
+end
 
+local panelDefaults={}
+function N.RecoverPanels()
+ if ns.db then ns.db.normalFramePoint=nil;ns.db.normalFrameSize=nil;ns.db.normalArrowPoint=nil end
+ N.RecoverQuestWindow()
+ for panel,defaults in pairs(panelDefaults) do
+  panel:StopMovingOrSizing()
+  panel:ClearAllPoints()
+  if defaults.compass then panel:SetPoint("TOP",UIParent,"TOP",0,-55)
+  else panel:SetPoint("CENTER",UIParent,"CENTER") end
+  panel:SetSize(math.min(defaults.width,UIParent:GetWidth()-32),math.min(defaults.height,UIParent:GetHeight()-60))
+  if defaults.resize then defaults.resize() end
+ end
+end
+local windowLevels={dungeons=20,farming=40,recipes=60,steps=80}
+function N.ApplyWindowLayer(frame,role)
+ frame:SetFrameStrata("DIALOG")
+ frame:SetFrameLevel(windowLevels[role])
+end
+function N.LiveLayout(frame, callback)
+ local pending=false
+ frame:HookScript("OnSizeChanged",function()
+  if pending or not frame:IsShown() then return end
+  if C_Timer and C_Timer.After then
+   pending=true
+   C_Timer.After(0,function()
+    pending=false
+    if frame:IsShown() then callback() end
+   end)
+  else callback() end
+ end)
+end
+function N.BronzeRectangle(parent)
+ local trim=CreateFrame("Frame",nil,parent)
+ trim:SetAllPoints(parent)
+ trim:SetFrameLevel(parent:GetFrameLevel()+1)
+ trim:EnableMouse(false)
+ for _,side in ipairs({"TOP","BOTTOM","LEFT","RIGHT"}) do
+  local edge=trim:CreateTexture(nil,"OVERLAY")
+  local horizontal=side=="TOP" or side=="BOTTOM"
+  if horizontal then
+   edge:SetPoint(side.."LEFT");edge:SetPoint(side.."RIGHT");edge:SetHeight(2)
+  else
+   edge:SetPoint("TOP"..side,trim,"TOP"..side,0,-2)
+   edge:SetPoint("BOTTOM"..side,trim,"BOTTOM"..side,0,2)
+   edge:SetWidth(2)
+  end
+  local light=side=="TOP" or side=="LEFT"
+  edge:SetColorTexture(light and .83 or .53,light and .60 or .32,light and .33 or .14,1)
+ end
+ return trim
+end
 function N.PanelChrome(frame, title, minimumWidth, minimumHeight, resize)
+ if minimumWidth then panelDefaults[frame]={width=frame:GetWidth(),height=frame:GetHeight(),resize=resize,compass=not title} end
  local compass=not title
  if compass then
   local fill=frame:CreateTexture(nil,"BACKGROUND",nil,-1)
-  fill:SetAllPoints();fill:SetColorTexture(.18,.095,.05,1)
+  fill:SetPoint("TOPLEFT",5,-5);fill:SetPoint("BOTTOMRIGHT",-5,5);fill:SetColorTexture(.18,.095,.05,.25)
  end
- local base=tex(frame,EXPLORER.."MatteLeather","BACKGROUND")
- base:SetAllPoints()
- if compass then base:SetTexCoord(60/2048,1194/2048,60/2048,1194/2048)else base:SetTexCoord(0,1254/2048,0,1254/2048)end
- base:SetVertexColor(.57,.43,.32)
+ local base=tex(frame,EXPLORER..(compass and "BaseWood" or "BaseParchment"),"BACKGROUND")
+ if compass then base:SetPoint("TOPLEFT",5,-5);base:SetPoint("BOTTOMRIGHT",-5,5) else base:SetPoint("TOPLEFT",0,-39);base:SetPoint("BOTTOMRIGHT",0,0)end
+ if compass then base:SetTexCoord(0,1254/2048,0,1254/2048)else base:SetTexCoord(0,1254/2048,0,1254/2048)end
+ if compass then base:SetAlpha(.82) else base:SetVertexColor(.57,.43,.32) end
  local layer=CreateFrame("Frame",nil,frame)
  layer:SetAllPoints();layer:SetFrameLevel(frame:GetFrameLevel()+2);layer:EnableMouse(false)
- local edges={}
- for _,side in ipairs({"TOP","BOTTOM","LEFT","RIGHT"})do
-  local t=tex(layer,nil,"ARTWORK");edges[side]=t
-  if side=="TOP" or side=="BOTTOM" then
-   t:SetPoint(side.."LEFT",frame,side.."LEFT",5,0)
-   t:SetPoint(side.."RIGHT",frame,side.."RIGHT",-5,0)
-  else
-   t:SetPoint("TOP"..side,frame,"TOP"..side,0,-5)
-   t:SetPoint("BOTTOM"..side,frame,"BOTTOM"..side,0,5)
-  end
- end
- local hexagons={}
+ local edges,hexagons={},{}
+ local topInset=compass and 5 or 39
  for _,corner in ipairs({"TOPLEFT","TOPRIGHT","BOTTOMLEFT","BOTTOMRIGHT"})do
   local t=tex(layer,WORKING.."FacetedHex","OVERLAY")
-  t:SetPoint("CENTER",frame,corner,corner:find("LEFT") and 5 or -5,corner:find("TOP") and -5 or 5)
+  t:SetPoint("CENTER",frame,corner,corner:find("LEFT") and 5 or -5,corner:find("TOP") and -topInset or 5)
   hexagons[#hexagons+1]=t
  end
+ for _,side in ipairs({"TOP","BOTTOM","LEFT","RIGHT"})do
+  local t=tex(layer,nil,"ARTWORK")
+  edges[side]=t
+  if side=="TOP" then
+   t:SetPoint("LEFT",hexagons[1],"CENTER");t:SetPoint("RIGHT",hexagons[2],"CENTER")
+  elseif side=="BOTTOM" then
+   t:SetPoint("LEFT",hexagons[3],"CENTER");t:SetPoint("RIGHT",hexagons[4],"CENTER")
+  elseif side=="LEFT" then
+   t:SetPoint("TOP",hexagons[1],"CENTER");t:SetPoint("BOTTOM",hexagons[3],"CENTER")
+  else
+   t:SetPoint("TOP",hexagons[2],"CENTER");t:SetPoint("BOTTOM",hexagons[4],"CENTER")
+  end
+ end
  local function trim()
-  local width,height=frame:GetWidth(),frame:GetHeight()
-  local hex=compass and math.max(10,math.min(14,height/5)) or math.max(13,math.min(20,math.min(width,height)*.029))
-  local depth=compass and 5 or hex*.58
+  local hex=snapArt(frame,15)
+  local depth=snapArt(frame,6)
+  for _,t in ipairs(hexagons)do t:SetSize(hex,hex)end
   for side,t in pairs(edges)do
    if side=="TOP" or side=="BOTTOM" then t:SetHeight(depth)else t:SetWidth(depth)end
    rail(t,side)
   end
-  for _,t in ipairs(hexagons)do t:SetSize(hex,hex)end
  end
  frame:HookScript("OnSizeChanged",trim);trim()
- if compass then return end
+ if compass then
+  if not minimumWidth then return end
+  frame:SetResizable(true)
+  if frame.SetResizeBounds then frame:SetResizeBounds(minimumWidth,minimumHeight,math.max(minimumWidth,UIParent:GetWidth()-48),104) end
+  local grip=CreateFrame("Button",nil,frame)
+  grip:SetSize(18,18);grip:SetFrameLevel(layer:GetFrameLevel()+1);grip:SetPoint("CENTER",hexagons[4],"CENTER")
+  grip:SetScript("OnMouseDown",function(_,button)if button=="LeftButton" then frame:StartSizing("BOTTOMRIGHT") end end)
+  grip:SetScript("OnMouseUp",function()frame:StopMovingOrSizing() end)
+  grip:SetScript("OnHide",function()frame:StopMovingOrSizing() end)
+  return
+ end
 
  -- Keep the full text area on the light surface, inside the metal rails.
  local under=frame:CreateTexture(nil,"BACKGROUND",nil,1)
- under:SetPoint("TOPLEFT",12,-42);under:SetPoint("BOTTOMRIGHT",-12,11)
+ under:SetPoint("TOPLEFT",5,-39);under:SetPoint("BOTTOMRIGHT",-5,5)
  under:SetColorTexture(.92,.75,.50,1)
  local paper=frame:CreateTexture(nil,"BACKGROUND",nil,2)
  paper:SetAllPoints(under);paper:SetTexture(AS.."Parchment")
  paper:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048)
  local header=CreateFrame("Frame",nil,frame)
- header:SetPoint("TOPLEFT",7,-6);header:SetPoint("TOPRIGHT",-7,-6);header:SetHeight(34)
- local wood=tex(header,AS.."Wood","BACKGROUND");wood:SetAllPoints()
- wood:SetTexCoord(0,1254/2048,0,.10)
- local titleText=text(header,18,title);titleText:SetPoint("LEFT",9,0);titleText:SetPoint("RIGHT",-40,0)
- titleText:SetTextColor(1,.85,.30);titleText:SetWordWrap(false)
+ header:SetPoint("TOPLEFT",7,0);header:SetPoint("TOPRIGHT",-7,0);header:SetHeight(39)
+ local wood=tex(header,AS.."Wood","BACKGROUND")
+ wood:SetPoint("TOPLEFT",header,"TOPLEFT",56,0);wood:SetPoint("BOTTOMRIGHT",header,"BOTTOMRIGHT",-56,0)
+ local crown=tex(header,nil,"BORDER")
+ crown:SetPoint("TOPLEFT",wood,"TOPLEFT",0,0);crown:SetPoint("TOPRIGHT",wood,"TOPRIGHT",0,0)
+ local function trimCrown() crown:SetHeight(snapArt(frame,6));rail(crown,"TOP") end
+ frame:HookScript("OnSizeChanged",trimCrown);trimCrown()
+ wood:SetTexCoord(0,1254/2048,0,1254/2048)
+ for index, asset in ipairs({"AllianceGryphon","HordeWyvern"}) do
+  local left=index==1
+  local cap=tex(header,THEME..asset,"OVERLAY")
+  local side=left and "BOTTOMLEFT" or "BOTTOMRIGHT"
+  cap:SetPoint(side,header,side,0,0)
+  cap:SetSize(148,148*282/482)
+  cap:SetTexCoord(left and 0 or 482/512,left and 482/512 or 0,0,282/512)
+ end
+ local titleText=text(header,20,type(title)=="table" and "" or title)
+ titleText:SetPoint("LEFT",92,0);titleText:SetPoint("RIGHT",-92,0)
+ titleText:SetJustifyH("CENTER");titleText:SetTextColor(.93,.73,.37);titleText:SetWordWrap(false)
+ if type(title)=="table" then
+  local emblem=tex(header,KIT.."ForeverEmblem","OVERLAY")
+  emblem:SetPoint("CENTER",header,"CENTER");emblem:SetSize(32,32)
+  for index, label in ipairs(title) do
+   local part=text(header,20,label)
+   part:SetTextColor(.93,.73,.37)
+   if index==1 then part:SetPoint("RIGHT",emblem,"LEFT",-8,0)
+   else part:SetPoint("LEFT",emblem,"RIGHT",8,0) end
+  end
+ end
  header:EnableMouse(true);header:RegisterForDrag("LeftButton")
  frame:SetMovable(true);frame:SetResizable(true);frame:SetClampedToScreen(true)
  header:SetScript("OnDragStart",function()frame:StartMoving()end)
@@ -2500,7 +2629,7 @@ function N.PanelChrome(frame, title, minimumWidth, minimumHeight, resize)
  end
  local handle=CreateFrame("Button",nil,frame)
  handle:SetSize(22,22);handle:SetPoint("BOTTOMRIGHT",0,0);handle:SetFrameLevel(frame:GetFrameLevel()+10)
- local grip=tex(handle,WORKING.."FacetedHex","OVERLAY");grip:SetSize(13,13);grip:SetPoint("CENTER",2,-2)
+ handle:ClearAllPoints();handle:SetPoint("CENTER",hexagons[4],"CENTER")
  handle:SetScript("OnMouseDown",function(_,button)
   if button=="LeftButton"then frame:StartSizing("BOTTOMRIGHT")end
  end)
@@ -2510,12 +2639,13 @@ function N.PanelChrome(frame, title, minimumWidth, minimumHeight, resize)
  handle:SetScript("OnHide",function()frame:StopMovingOrSizing()end)
  local close=C.Close(frame,function()frame:Hide()end)
  close:ClearAllPoints();close:SetPoint("CENTER",hexagons[2],"CENTER");close:SetSize(22,22)
+ hexagons[2]:Hide()
  local function sizeClose()
   local size=hexagons[2]:GetWidth()
   close.phaseBClose.texture:SetSize(size,size)
  end
  frame:HookScript("OnSizeChanged",sizeClose);sizeClose()
- return titleText
+ return titleText, header
 end
 N.WorkflowBody=function()return body,bodyScroll,stepLabel,bodyContent,status end
 N.WorkflowLive=liveObjective
@@ -2684,11 +2814,13 @@ end)(ADDON,GF)
 -- Forever bootstrap and bounded, event-driven local observations.
 local _,ns=...
 local E,F=ns.Forever,ns.ForeverFacts;local call=E.Call
-local frame=CreateFrame('Frame');local dirty=true;local waited=0;local started=false
+local frame=CreateFrame('Frame');local dirty=true;local waited=0;local started=false;local refreshTrigger='startup'
 local function refresh()
  if not started then return end
- E.Snapshot();E.ObserveCamp();E.ReadCampPOIs();ns.ProfessionGuide.dirty=true
- if ns.NormalUI and ns.NormalUI.root then ns.NormalUI.Resync()end
+ E.ObserveCamp();E.ReadCampPOIs()
+ if ns.NormalUI and ns.NormalUI.root then
+  ns.ProfessionGuide.dirty=false;ns.NormalUI.Resync()
+ else ns.ProfessionGuide.dirty=true end
 end
 ns.GatheringObserver={ready=true,enabled=false,Initialize=function()end,Update=function()end}
 local function initialize()
@@ -2703,7 +2835,7 @@ local function initialize()
  for _,r in pairs(copy(d.recipes or{},0))do E.IndexRecipe(r)end
  E.ReadZones();E.RefreshCatalog();E.Snapshot();started=true;ns.Retail.ready=true;ns.Retail.storageWritable=true
  ns.UI.Showcase.Login();ns.SendMessage('GF_LOADED');ns.SendMessage('GF_LOGIN');if ns.ForeverUI then ns.ForeverUI.Layout();ns.ForeverUI.SetPane(d.pane or'Recipes')end
- ns.Print('Forever tester build 36 loaded.')
+ ns.Print('Forever tester build 37 loaded.')
  E.Record('login',{client=version,build=build})
 end
 local function save()
@@ -2753,13 +2885,14 @@ frame:SetScript('OnEvent',function(_,event,...)
  elseif event=='TRADE_SKILL_SHOW'or event=='TRADE_SKILL_LIST_UPDATE'or event=='CRAFT_SHOW'or event=='CRAFT_UPDATE'then E.ReadBook()
  elseif event=='QUEST_ACCEPTED'then local a,b=...;E.Record('quest-accepted',{questID=b or a})
  elseif event=='QUEST_TURNED_IN'then local id=...;E.Record('quest-turned-in',{questID=id})
- elseif event=='TAXIMAP_OPENED'then E.ObserveTaxi()
+ elseif event=='TAXIMAP_OPENED'then E.ObserveTaxi();if E.AutoGuideFlight then E.AutoGuideFlight()end
  elseif event=='CHAT_MSG_LOOT'then local message=...;local id=E.ItemID(message);local gathering=E.lastGather and E.Time()-E.lastGather.time<20;E.Record(gathering and'gathered-item'or'loot-message',{itemID=id,profession=gathering and E.lastGather.profession or nil,quantity=type(message)=='string'and tonumber(message:match('x(%d+)'))or nil})
  elseif event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;local profession=({[7620]='Fishing',[2575]='Mining',[2366]='Herbalism',[8613]='Skinning'})[id];if profession then E.lastGather={time=E.Time(),profession=profession};E.Record('gather-success',{spellID=id,profession=profession})elseif E.known[id]then E.Record('craft-completed',{spellID=id})end
  end
- if event=='CHAT_MSG_LOOT'or event=='UNIT_AURA'then return end
+ -- Loot observations are recorded above. Inventory changes queue their own refresh.
+ if event=='LOOT_OPENED'or event=='CHAT_MSG_LOOT'or event=='UNIT_AURA'then return end
  if event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;if not E.known[id]and not({[7620]=true,[2575]=true,[2366]=true,[8613]=true})[id]then return end end
- dirty=true
+ dirty=true;refreshTrigger=event
 end)
 frame:SetScript('OnUpdate',function(_,dt)
  if started and E.flightPending then E.CheckFlight()end
@@ -2768,7 +2901,8 @@ frame:SetScript('OnUpdate',function(_,dt)
 end)
 SLASH_GRINDINGFOREVERLIVE1='/gfp';SlashCmdList.GRINDINGFOREVERLIVE=function(message)
  message=(message or''):lower()
- if message=='diagnose'then local count=0;for _ in pairs(E.recipes)do count=count+1 end;ns.Print('Forever build 2 | recipes '..count..' | route '..#E.route..' | journal '..tostring(E.journal~=nil));for key,value in pairs(E.issues)do ns.Print(tostring(key)..': '..tostring(value))end
+ if message=='recover windows'then if ns.NormalUI and ns.NormalUI.RecoverPanels then ns.NormalUI.RecoverPanels();ns.Print('GF windows recovered.')end
+ elseif message=='diagnose'then local count=0;for _ in pairs(E.recipes)do count=count+1 end;ns.Print('Forever build 2 | recipes '..count..' | route '..#E.route..' | journal '..tostring(E.journal~=nil));for key,value in pairs(E.issues)do ns.Print(tostring(key)..': '..tostring(value))end
  else ns.UI.Showcase.Command(message)end
 end
 E.Initialize=initialize;E.Save=save
@@ -2844,6 +2978,7 @@ function Q.Eligible(id,s)
  if live.inLog==true then return true end
  local profession=Q.professionQuests[id]
  if profession then local skill=s.skills and s.skills[profession];if not skill or not E.Public(skill.rank)or type(skill.rank)~='number'or skill.rank<=0 or not offeredNow(id)then return false end end
+ if (id==76156 or id==76160 or id==76240) and s.class~='ROGUE' and not offeredNow(id) then return false end
  if not mask(q.classes,classBits[s.class])then return false end
  local rb=raceBits[s.race]
  if rb then if not mask(q.races,rb)then return false end
@@ -2942,6 +3077,23 @@ function Q.Anchor(s)
  if not zone(anchor)and zone(current)then anchor=current;if E.db then E.db.questAnchor=current end end
  return anchor or current
 end
+local ownsExcitableSlime
+local function journalHasExcitableSlime()
+ if ownsExcitableSlime then return true end
+ local api=C_PetJournal
+ if not api then return false end
+ local count=E.Call(api.GetNumPets)
+ if not E.Public(count) or type(count)~='number' then return false end
+ for index=1,count do
+  local _,_,owned,_,_,_,_,name,_,_,creature=E.Call(api.GetPetInfoByIndex,index)
+  if E.Public(owned) and (owned==true or owned==1) and
+   (E.Public(creature) and creature==266735 or E.Public(name) and name=='Excitable Slime') then
+   ownsExcitableSlime=true
+   return true
+  end
+ end
+ return false
+end
 function Q.Build(s)
  local anchor=Q.Anchor(s)
  local current=s.position and s.position.mapID or anchor
@@ -2955,6 +3107,7 @@ function Q.Build(s)
  addZone(current)
  if anchor~=current then addZone(anchor)end
  for id in pairs(s.quests or{})do candidates[id]=true end
+ if current==1458 then candidates[97583]=true end
  local out,keys={},{}
  local function add(id,kind,slot,loc,title,ref)
   local key=id..':'..kind..':'..tostring(slot or 0)
@@ -2973,6 +3126,39 @@ function Q.Build(s)
   out[#out+1]={id='fq:'..key,quest=id,kind=kind,slot=slot,title=title,body=title,category='Questing',destination=loc,zone=loc and loc.zone,mobIDs=mobs,
    level=q.level,minLevel=not live.inLog and q.min_level or nil,routeAction=ref or'database',areaTask=kind=='objective',source='Bundled quest facts',xp=q.xp}
  end
+ local function wriggle(live)
+  local have=E.Call(GetItemCount,278265,false)
+  local ready=Q.Ready(live)
+  local kind=live.inLog and (ready and 'turnin' or 'objective') or 'accept'
+  local loc
+  if not ready and (not E.Public(have) or type(have)~='number' or have<1)then
+   loc={mapID=1458,x=55.4,y=64.1,name='Boyle',npcID=4612,zone='Undercity'}
+  end
+  local title=ready and 'Turn in WRIGGLE.' or loc and 'Get Nutritious Slime Sludge' or 'Dance with an Excitable Slime'
+  add(97583,kind,nil,loc,title)
+  out[#out].body=[[1. Find Boyle on the wooden pier in Undercity (55.4, 64.1). Buy Nutritious Slime Sludge if you have none. Five cost 26 copper before reputation discounts.
+2. Target an Excitable Slime in the canal while standing on solid ground.
+3. Type /dance until the slime wriggles while facing you and the game prompts you to inspect it.
+4. Click the slime to give it the sludge. Keep the sludge in your bags.
+5. Right-click the Excitable Slime reward in your bags to learn it. Open the Pet Journal and click Summon.]]
+ end
+ -- Same-title quests can have different IDs at the same giver. Keep the
+ -- accepted objective in front until it is turned in or abandoned.
+ local activeAtGiver={}
+ for id,live in pairs(s.quests or {})do
+  local q=D.quests[id]
+  if q and live.inLog then
+   for _,start in ipairs(q.starts or {})do
+    activeAtGiver[q.title..':'..start.kind..':'..start.id]=true
+   end
+  end
+ end
+ local function hasActiveAtGiver(q)
+  for _,start in ipairs(q.starts or {})do
+   if activeAtGiver[q.title..':'..start.kind..':'..start.id] then return true end
+  end
+  return false
+ end
  local function emit(id,remote)
   local q=D.quests[id];local live=qs(id,s)
   if not q then
@@ -2980,11 +3166,47 @@ function Q.Build(s)
    return
   end
   if not Q.Eligible(id,s)then return end
+  if id==97583 then
+   local complete=E.Call(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted or IsQuestFlaggedCompleted,id)
+   local reward=E.Call(C_Item and C_Item.GetItemCount or GetItemCount,275682,false)
+   local learned=E.Call(IsPlayerSpell,1297608)
+   local known=E.Call(IsSpellKnown,1297608)
+   if journalHasExcitableSlime() or E.Public(complete) and (complete==true or complete==1)
+    or E.Public(reward) and type(reward)=='number' and reward>0
+    or E.Public(learned) and learned==true or E.Public(known) and known==true then return end
+   if live.inLog or current==1458 then wriggle(live)end
+   return
+  end
   if live.inLog then
    if Q.Ready(live)then
     local loc,ref=actionLocation(id,'turnin',nil,s);loc=loc or Q.NearestSource(q.ends,s)
     add(id,'turnin',nil,loc,'Turn in '..q.title,ref)
    else
+    if id==97485 then
+     local function hasItem(item)
+      local count=E.Call(GetItemCount,item,false)
+      return E.Public(count) and type(count)=='number' and count>0
+     end
+     if not hasItem('Prepared Incense') then
+      for index,step in ipairs({
+       {'Bundle of Herbs','Nida Winterhoof',49.6,39.6},
+       {'Bundle of Cedar Twigs','Nata Dawnstrider',45,38.8},
+       {'Sinew Thread','Mahu',43.8,45.1},
+       {'Ceremonial Flint and Tinder','Naal Mistrunner',51,52.5},
+      })do
+       if not hasItem(step[1])then
+        add(id,'objective',index+100,{mapID=1456,x=step[3],y=step[4],name=step[2],zone='Thunder Bluff'},
+         'Buy '..step[1]..' from '..step[2]..' (0/1)')
+        return
+       end
+      end
+      add(id,'objective',105,nil,'Combine the four components to make Prepared Incense')
+      return
+     end
+     local loc=objectiveLocation(id,1,s)
+     add(id,'objective',106,loc,"Spread the incense at the south-facing cliff of Hunter's Rise")
+     return
+    end
     local slots={};for i in ipairs(live.objectives or{})do slots[i]=true end
     if not next(slots)then
      for _,o in ipairs(q.objectives or{})do if o.n then slots[o.n]=true end end
@@ -3005,7 +3227,7 @@ function Q.Build(s)
      add(id,'objective',nil,loc,'Continue '..q.title,ref)
     end
    end
-  elseif not q.catalogOnly and q.min_level and(q.type or 0)==0 and(q.level or q.min_level)<=s.level+2 then
+  elseif not hasActiveAtGiver(q) and not q.catalogOnly and q.min_level and(q.type or 0)==0 and(q.level or q.min_level)<=s.level+2 then
    local loc,ref=actionLocation(id,'accept',nil,s);loc=loc or Q.NearestSource(q.starts,s)
    if loc and(remote or loc.mapID==current or loc.mapID==anchor)then add(id,'accept',nil,loc,'Accept '..q.title,ref)end
   end
@@ -3030,7 +3252,7 @@ function Q.Build(s)
    local group=byQuest[row.quest]
    if not group then group={};for k,v in pairs(row)do group[k]=v end;group.id='fq:'..row.quest..':objective:all';group.slot=nil;group.objectives={};group.mobIDs={};group.title=(D.quests[row.quest]or{}).title or row.title;group.body='';byQuest[row.quest]=group;grouped[#grouped+1]=group end
    group.objectives[#group.objectives+1]=row
-   group.body=group.body..(group.body~=''and'\n'or'')..row.title
+   group.body=group.body..(group.body~=''and'\n'or'')..(row.quest==97583 and row.body or row.title)
    for _,id in ipairs(row.mobIDs or{})do local found=false;for _,old in ipairs(group.mobIDs)do if old==id then found=true end end;if not found then group.mobIDs[#group.mobIDs+1]=id end end
    local d=row.destination and E.Distance(s.position,row.destination)
    if d and(not group.nearestDistance or d<group.nearestDistance)then group.destination=row.destination;group.nearestDistance=d end
@@ -3072,6 +3294,7 @@ end
 E.Priority=function(row,s)
  if row.urgentBags then return 10000 end
  if row.kind=='train'or row.professionChoice then return 1200 end
+ row.localQuestPickup=nil
  if not row.routeAction then return priority(row,s)end
  if row.questDestination then row.destination=row.questDestination;row.zone=row.destination.zone end
  local loc=row.destination
@@ -3081,6 +3304,13 @@ E.Priority=function(row,s)
  row._questDistance=d
  row._questPriority=loc and priorityQuest(q,s) or false
  row._questCluster=nil
+ row.recommendationReason=nil
+ -- Pick up quests within a short walk before leaving for a class objective.
+ if row.kind=='accept' and localZone and d and d<=120 then
+  row.localQuestPickup=true
+  row.recommendationReason='Pick this up while you are nearby.'
+  return 1180-d/10
+ end
  if row._questPriority then return d and 1150-75*d/(d+250) or 1075 end
  if row.kind=='turnin'and d and d<=60 then return 1050-d/2 end
  if row.kind=='accept'and d and d<=250 then return 1000-d/6 end
@@ -3142,6 +3372,7 @@ local function clusterObjectives(rows,s)
    local score=860+math.min(32,count*8)-a.distance/12
    if score>a.row._priority then
     a.row._questCluster=true;a.row._priority=score;a.row._questDistance=a.distance
+    a.row.recommendationReason='This objective is near other unfinished quests.'
     a.row.destination=a.point;a.row.zone=a.point.zone
    end
   end
@@ -3254,7 +3485,7 @@ local function hideTip()if W.tooltip then W.tooltip:Hide()end end
 local function makeScrollPair(parent,up,down)
  local pair={};for i,label in ipairs({'up','down'})do
   local b=N.MakeButton(parent,'',24,i==1 and up or down);b:SetSize(24,28)
-  local tri=b:CreateTexture(nil,'OVERLAY');tri:SetTexture(N.root.back.glyph:GetTexture());tri:SetSize(14,14);tri:SetPoint('CENTER');tri:SetRotation(i==1 and -math.pi/2 or math.pi/2)
+  local tri=b:CreateTexture(nil,'OVERLAY');tri:SetTexture('Interface\\AddOns\\GrindingForever\\Media\\ControlTriangleRight');tri:SetSize(11,11);tri:SetPoint('CENTER',b,'CENTER',0,0);tri:SetRotation(i==1 and math.pi/2 or -math.pi/2)
   pair[i]=b
  end;return pair
 end
@@ -3319,7 +3550,7 @@ function W.Layout()
  local headerW=compact and stepW*.75 or width*.75
  local headerCenter=compact and 8+stepW/2 or width/2
  r.wood:ClearAllPoints();r.wood:SetPoint('BOTTOM',r,'TOPLEFT',headerCenter,-top-3);r.wood:SetSize(headerW,40)
- for i,cap in ipairs(r.endcaps)do local cw=compact and 160 or 194;cap:SetSize(cw,cw*282/482);cap:ClearAllPoints();cap:SetPoint('BOTTOM',r.wood,i==1 and 'BOTTOMLEFT'or'BOTTOMRIGHT',i==1 and -cw*.25 or cw*.25,0)end
+ for i,cap in ipairs(r.endcaps)do local cw=compact and 160 or 194;cap:SetSize(cw,cw*282/482);cap:ClearAllPoints();cap:SetPoint('BOTTOM',r.wood,i==1 and 'BOTTOMLEFT'or'BOTTOMRIGHT',i==1 and -cw*.08 or cw*.08,0)end
  for _,f in ipairs({r.titleLeft,r.titleRight})do f:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',compact and 23 or 26,'');f:SetWidth(headerW*.38)end
  r.headerEmblem:SetSize(32,32)
  r.workflowGrip:ClearAllPoints();r.workflowGrip:SetPoint('CENTER',collapsed and p[2]or p[1],'LEFT',0,0);r.workflowGrip.glyph:SetTexture((collapsed and r.forward.glyph or r.back.glyph):GetTexture());r.workflowGrip:SetShown(not compact)
@@ -3477,28 +3708,64 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  details:Show()
  return math.max(1,bodyHeight+gap+y)
 end
+local function nearbyOpportunity(step,visible)
+ local counter=step.resourceCounters and step.resourceCounters[1]
+ if counter then return 'Gather nearby',counter.text..'\nGather alongside your current quest.' end
+ for _,row in ipairs(visible)do
+  if row.id~=step.id and (row.kind=='recipe' or row.id=='camp:visit') then
+   return row.kind=='recipe' and 'Recipe vendor nearby' or 'Camp nearby',row.title..'\n'..(row.body or ''),row.id
+  end
+ end
+end
+local function objectiveHeadline(step)
+ if step.kind~='objective' or not step.quest or step.quest==97583 or not step.actionHeadline then return end
+ return step.actionHeadline,step.actionContext,step.actionLine
+end
 function N.LayoutStepRows(visible,start)
  local r=N.root;if not r then return 0 end
  local panel=r.panels[1];local compact=N.mode=='compact';local hidden=W.collapsed and not compact
  local body,bodyScroll,stepLabel,bodyContent,status=N.WorkflowBody()
  bodyScroll:Hide();r.done:Hide();r.skip:Hide();status:Hide();if r.inlineFarm then r.inlineFarm:Hide()end;if r.inlineSearch then r.inlineSearch:Hide()end
+ if r.stepContext then r.stepContext:Hide()end
+ if r.opportunityStrip then r.opportunityStrip:Hide();r.opportunityDetail:Hide()end
  local y=compact and 118 or E.db and E.db.journey=='Completionist'and 105 or 145;local shown=0;local selected=N.model.index;local room=panel:GetHeight()-92;local width=panel:GetWidth()-72
  for _,b in ipairs(r.workflowBodyIndicators or{})do b:Hide()end
  for i,row in ipairs(N.stepRows)do
   local step=visible[start+i-1];row:Hide();row.stepID=nil
   if step and not hidden and y+40<room then
-   step=N.WorkflowLive(step);row.label:SetText(step.title or'');row.label:SetWidth(width-20);row.label:SetHeight(0);row.label:SetWordWrap(true);row.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',20,'');row.category:Hide()
-   local h=math.max(38,row.label:GetStringHeight()+16);local active=step.id==selected
+   step=N.WorkflowLive(step)
+   local active=step.id==selected
+   local headline,context,actionLine
+   if active then headline,context,actionLine=objectiveHeadline(step)end
+   row.label:SetText(headline or step.title or'');row.label:SetWidth(width-20);row.label:SetHeight(0);row.label:SetWordWrap(true);row.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',20,'');row.category:Hide()
+   local h=math.max(38,row.label:GetStringHeight()+16)
    row.selected=active and W.selection~='source';row:SetEnamelTint();row.stepID=step.id;point(row,panel,28,y,width,h);row.label:ClearAllPoints();row.label:SetPoint('TOPLEFT',row,'TOPLEFT',10,-8)
    if active then
+    if context then
+     if not r.stepContext then
+      r.stepContext=text(row,13)
+      r.stepContext:SetTextColor(.35,.22,.10)
+     end
+     r.stepContext:SetParent(row);r.stepContext:SetText(context)
+     point(r.stepContext,row,10,h-2,width-20)
+     r.stepContext:SetHeight(0);r.stepContext:Show()
+     h=h+math.max(16,r.stepContext:GetStringHeight()+3)
+     if actionLine and step.body and step.body:sub(1,#actionLine)==actionLine then
+      step.body=step.body:sub(#actionLine+1):gsub('^%s+','')
+     end
+     if actionLine and step.craftingBody and step.craftingBody:sub(1,#actionLine)==actionLine then
+      step.craftingBody=step.craftingBody:sub(#actionLine+1):gsub('^%s+','')
+     end
+    end
+    local opportunity,opportunityBody,opportunityID=nearbyOpportunity(step,visible)
     local bodyY=h+34
-    local available=math.max(38,math.min(250,room-y-h-96))
+    local available=math.max(1,math.min(250,room-y-bodyY-40-(opportunity and 32 or 0)))
     status:SetParent(row);point(status,row,10,h+4,width-20,26);status:Show()
     bodyScroll:SetParent(row)
     bodyContent:SetWidth(width-20)
     local contentHeight=layoutStepDetails(step,visible,start+i,body,bodyContent,width-38)
     bodyContent:SetHeight(contentHeight)
-    local bh=math.min(available,math.max(25,contentHeight))
+    local bh=math.min(available,math.max(1,contentHeight))
     point(bodyScroll,row,10,bodyY,width-20,bh)
     local scroll=step.id==W.detailStepID and bodyScroll:GetVerticalScroll() or 0
     W.detailStepID=step.id
@@ -3507,10 +3774,53 @@ function N.LayoutStepRows(visible,start)
     if W.ready then for j,b in ipairs(r.workflowBodyIndicators)do b:SetParent(row);point(b,row,width-24,j==1 and bodyY or bodyY+bh-26,20,24);b:SetShown(contentHeight>bh+2)end end
     local manual=step.kind~='profession'and step.kind~='farm'and step.kind~='grind'and step.kind~='objective'and step.kind~='accept'and step.kind~='turnin'
     r.done:SetParent(row);r.skip:SetParent(row);local by=bodyY+bh+8;local farm=W.StepFarmable and W.StepFarmable(step);local search=ns.NPCSearch and ns.NPCSearch.Active(step);local total=(farm or search)and 186 or manual and 164 or 78;local bx=math.max(10,(width-total)/2)
-    point(r.done,row,bx,by,78,30);point(r.skip,row,manual and bx+86 or bx,by,78,30);r.done:SetShown(manual);r.skip:Show()
+    local prep=ns.DungeonPrep
+    local offer=step.kind=='dungeonPrepOffer'
+    local preparing=prep and prep.active~=nil
+    r.done.label:SetText(offer and 'Get Quests for Dungeon' or 'Done')
+    r.skip.label:SetText(preparing and 'Cancel Dungeon Prep' or 'Skip')
+    if offer then
+     bx=math.max(4,(width-310)/2)
+     point(r.done,row,bx,by,220,30);point(r.skip,row,bx+228,by,78,30)
+    elseif preparing then
+     point(r.skip,row,math.max(4,(width-180)/2),by,180,30)
+    else
+     point(r.done,row,bx,by,78,30);point(r.skip,row,manual and bx+86 or bx,by,78,30)
+    end
+    r.done:SetShown(manual and not preparing);r.skip:Show()
     if farm and r.inlineFarm then r.inlineFarm:SetParent(row);point(r.inlineFarm,row,bx+86,by,120,30);r.inlineFarm:Show()end
     if search and r.inlineSearch then r.inlineSearch:SetParent(row);point(r.inlineSearch,row,bx+86,by,100,30);r.inlineSearch:Show()end
-    h=by+38;row:SetHeight(h)
+    h=by+38
+    if opportunity and y+h+28<=room then
+     if not r.opportunityStrip then
+      local strip=N.MakeButton(row,'',width-20)
+      r.opportunityStrip=strip
+      r.opportunityArrow=N.ButtonArrow(strip,'right','RIGHT')
+      r.opportunityDetail=text(row,13)
+      r.opportunityDetail:SetTextColor(.28,.16,.065)
+      strip:SetScript('OnClick',function()
+       if W.openOpportunity==W.currentOpportunity then W.openOpportunity=nil else W.openOpportunity=W.currentOpportunity end
+       N.Refresh(true)
+      end)
+     end
+     local strip,detail=r.opportunityStrip,r.opportunityDetail
+     local key=step.id..':'..(opportunityID or opportunity)
+     W.currentOpportunity=key
+     local expanded=W.openOpportunity==key
+     strip:SetParent(row)
+     strip.label:SetText(opportunity)
+     r.opportunityArrow:SetRotation(expanded and -math.pi/2 or 0)
+     point(strip,row,10,h,width-20,25)
+     strip:Show();h=h+29
+     if expanded and opportunityBody and opportunityBody~='' then
+      detail:SetParent(row);detail:SetText(opportunityBody)
+      point(detail,row,10,h,width-20)
+      detail:SetHeight(0)
+      local height=detail:GetStringHeight()
+      if y+h+height<=room then detail:Show();h=h+height+4 end
+     end
+    end
+    row:SetHeight(h)
    end
    row:Show();shown=shown+1;y=y+h+4
   end
@@ -3659,12 +3969,15 @@ function W.ScrollRail(pair,value,maximum,visible,changed)
  if not pair.rail then
   local rail=CreateFrame('Slider',nil,pair[1]:GetParent());pair.rail=rail
   rail:SetOrientation('VERTICAL');rail:SetValueStep(1);rail:SetMinMaxValues(0,1)
-  rail.track=rail:CreateTexture(nil,'BACKGROUND');rail.track:SetAllPoints();rail.track:SetColorTexture(.25,.13,.045,.9)
-  rail.edge=rail:CreateTexture(nil,'BORDER');rail.edge:SetPoint('TOPLEFT',rail,'TOPLEFT',0,0);rail.edge:SetPoint('BOTTOMLEFT',rail,'BOTTOMLEFT',0,0);rail.edge:SetWidth(1);rail.edge:SetColorTexture(.78,.56,.25,.95)
-  rail:SetThumbTexture('Interface\\AddOns\\GrindingForever\\Media\\RidgedFacetedHex');local thumb=rail:GetThumbTexture();thumb:SetSize(13,19)
+  rail.track=rail:CreateTexture(nil,'BACKGROUND')
+  rail.track:SetPoint('TOP',rail,'TOP',0,0);rail.track:SetPoint('BOTTOM',rail,'BOTTOM',0,0)
+  rail.track:SetWidth(3.5);rail.track:SetColorTexture(.34,.19,.07,1)
+  rail:SetThumbTexture('Interface\\AddOns\\GrindingForever\\Media\\RidgedFacetedHex')
+  rail:GetThumbTexture():SetSize(15,15)
+  rail:EnableMouse(true)
   rail:SetScript('OnValueChanged',function(self,v)if not self.syncing and self.changed then self.changed(v)end end)
  end
- local rail=pair.rail;rail:SetParent(pair[1]:GetParent());rail:ClearAllPoints();rail:SetPoint('TOP',pair[1],'BOTTOM',0,-3);rail:SetPoint('BOTTOM',pair[2],'TOP',0,3);rail:SetWidth(5);rail.changed=changed
+ local rail=pair.rail;rail:SetParent(pair[1]:GetParent());rail:ClearAllPoints();rail:SetPoint('TOP',pair[1],'BOTTOM',0,-3);rail:SetPoint('BOTTOM',pair[2],'TOP',0,3);rail:SetWidth(17);rail.changed=changed
  rail.syncing=true;rail:SetMinMaxValues(0,math.max(1,maximum));rail:SetValue(math.min(maximum,math.max(0,value)));rail.syncing=false
  rail:SetShown(visible and bounds(pair)>16);rail:SetFrameLevel(pair[1]:GetFrameLevel()+1)
 end
@@ -3689,7 +4002,7 @@ function N.PanelScroll(parent, viewport, get, set, maximum, step)
  pair=W.MakeScrollPair(parent,function()scroll(-step)end,function()scroll(step)end)
  for i,button in ipairs(pair)do
   local edge=i==1 and 'TOP' or 'BOTTOM'
-  button:ClearAllPoints();button:SetSize(19,22);button:SetPoint(edge,viewport,edge..'RIGHT',12,0)
+  button:ClearAllPoints();button:SetSize(21,24);button:SetPoint(edge,viewport,edge..'RIGHT',12,i==1 and -3 or 3)
   button:SetFrameLevel(viewport:GetFrameLevel()+5)
  end
  viewport:EnableMouseWheel(true)
@@ -3786,7 +4099,7 @@ function W.Ensure()
  W.foreverReady=true
 end
 local tick=N.Tick
-function N.Tick(...)local result=tick(...);if N.arrowFrame then N.arrowFrame:SetFrameStrata('TOOLTIP');N.arrowFrame:SetFrameLevel(1120)end;return result end
+
 -- Shift-click links target the focused recipe search, without stealing chat links.
 if type(hooksecurefunc)=='function'then hooksecurefunc('ChatEdit_InsertLink',function(link)
  local box=N.root and N.root.recipeSearch;if not box or not box:HasFocus()then return end
@@ -3938,8 +4251,8 @@ end
 
 function F.Skill(kind)local s=E.state or E.Snapshot();local v=s.skills[kind];return v and v.rank,v and v.cap end
 function F.Material(id)return id,E.ItemName(id)end
-local function update()
- local r=F.route;E.farmSteps=r and{r.steps[r.cursor]}or{};P.Refresh();if N.root then N.Resync();if r then N.model.index=r.steps[r.cursor].id;P.selected=r.steps[r.cursor];N.Refresh()end end
+local function refreshRouteButton()
+ if N.root then N.Refresh()end
 end
 function F.Plan(kind,item)
  local p=E.CurrentPosition();if not p then return nil,'Outdoor position unavailable.'end
@@ -3962,15 +4275,18 @@ function F.Start(kind,item,target,targetSkill)
  local nodes,why=F.Plan(kind,item,12);if not nodes then return false,why end
  F.route={nodes=nodes,steps={},cursor=1,item=item,target=target,skill=kind,targetSkill=targetSkill}
  for i,v in ipairs(nodes)do F.route.steps[i]={id='gf-route5:'..i,kind='farm',category='Gathering',title='Farm '..E.ItemName(item)..' - '..i..' / '..#nodes,body='Follow the farming route. Gather manually; Skip bypasses this waypoint.',destination={mapID=v.mapID,x=v.x,y=v.y,name=v.name},priority=10000}end
- update();return true
+ refreshRouteButton();return true
 end
-function F.Stop(message)F.route=nil;update();if message then ns.Print(message)end end
-function F.Advance()if not F.route then return false end;F.route.cursor=F.route.cursor%#F.route.steps+1;update();return true end
-local done,skip=P.Done,P.Skip
-P.Done=function(...)if F.route then return F.Advance()end;return done(...)end
-P.Skip=function(...)if F.route then return F.Advance()end;return skip(...)end
-local destination=P.Destination
-P.Destination=function(...)if F.route then return F.route.steps[F.route.cursor].destination end;return destination(...)end
+function F.Stop(message)F.route=nil;refreshRouteButton();if message then ns.Print(message)end end
+function F.Advance()
+ if not F.route then return false end
+ if F.route.reference and F.route.reference.mode=='open' and F.route.cursor>=#F.route.steps then
+  F.Stop('Farming route complete.');return true
+ end
+ F.route.cursor=F.route.cursor%#F.route.steps+1
+ if ns.NavigationCompass then ns.NavigationCompass.age=1 end
+ return true
+end
 local tick=N.Tick
 N.Tick=function(...)
  local r=F.route;if r and r.item and(E.Call(C_Item and C_Item.GetItemCount or GetItemCount,r.item)or 0)>=r.target then F.Stop('Material target reached; quest guide resumed.')end
@@ -3987,6 +4303,10 @@ local M={pins={},points={},limit=48};ns.KnownNodePins=M
 local function read(fn,...)if type(fn)=='function'then local ok,a,b,c=pcall(fn,...);if ok then return a,b,c end end end
 local function valid(v)return type(v)=='number'and v==v and v>=0 and v<=100 end
 function M.Enabled()return not ns.Forever.db or ns.Forever.db.knownNodePins~=false end
+local outdoorRadii={[0]=233.3333,200,166.6667,133.3333,100,66.6667}
+function M.Range()
+ return outdoorRadii[read(Minimap.GetZoom,Minimap) or 0]
+end
 function M.Project(dx,dy,width,height,radius,facing)
  if not radius or radius<=0 or width<=0 or height<=0 then return end
  local c,s=math.cos(facing or 0),math.sin(facing or 0)
@@ -3995,7 +4315,10 @@ function M.Project(dx,dy,width,height,radius,facing)
  if x*x+y*y>0.85*0.85 then return end
  return x*width/2,y*height/2
 end
-function M.Hide()for _,pin in ipairs(M.pins)do pin:Hide()end end
+function M.Hide()
+ M.lastPaint=nil
+ for _,pin in ipairs(M.pins)do if pin:IsShown()then pin:Hide()end end
+end
 function M.Build(map,px,py,w,h)
  F.LoadKnown()
  local points,seen={},{}
@@ -4041,10 +4364,13 @@ function M.Pin(index)
  pin:SetScript('OnLeave',function()if GameTooltip then GameTooltip:Hide()end end)
  M.pins[index]=pin;return pin
 end
-function M.Update(elapsed)
- M.elapsed=(M.elapsed or 0)+(elapsed or 0);if M.elapsed<0.25 then return end;M.elapsed=0
- M.age=(M.age or 5)+0.25
- if not M.Enabled()or not Minimap:IsShown()or read(IsInInstance)or read(IsIndoors)then M.Hide();return end
+local function updateMinimap(elapsed)
+
+ local showPins=M.Enabled()
+ local compass=ns.NavigationCompass
+ M.rangeAvailable=false
+ if (not showPins and not (compass and compass.Enabled())) or not Minimap:IsShown()
+  or read(IsInInstance)or read(IsIndoors)then M.Hide();return end
  local p=ns.Retail and ns.Retail.Client.PlayerPosition()
  if not p or p.status~='available'or not valid(p.x and p.x*100)or not valid(p.y and p.y*100)then M.Hide();return end
  if M.sizeMap~=p.mapID then
@@ -4058,36 +4384,48 @@ function M.Update(elapsed)
  end
  local w,h=M.width,M.height
  if type(w)~='number'or type(h)~='number'or w<=0 or h<=0 then M.Hide();return end
- if M.map~=p.mapID or M.age>=5 then M.Build(p.mapID,p.x,p.y,w,h);M.age=0 end
+ local moved=M.centerX and ((p.x-M.centerX)*w)^2+((p.y-M.centerY)*h)^2
+ if M.map~=p.mapID or M.dirty or not moved or moved>=80*80 then
+  M.Build(p.mapID,p.x,p.y,w,h)
+  M.centerX,M.centerY,M.dirty=p.x,p.y,nil
+ end
  local zoom=read(Minimap.GetZoom,Minimap)or 0
- local diameter=({[0]=466.6667,400,333.3333,266.6667,200,133.3333})[zoom]
- if not diameter then M.Hide();return end
+ local radius=M.Range()
+ if not radius then M.Hide();return end
+ M.rangeAvailable=true
+ if not showPins then M.Hide();return end
  local facing=read(GetCVar,'rotateMinimap')=='1'and(read(GetPlayerFacing)or 0)or 0
+ local width,height=Minimap:GetWidth(),Minimap:GetHeight()
+ local last=M.lastPaint
+ if last and last.points==M.points and last.x==p.x and last.y==p.y and last.zoom==zoom
+  and last.facing==facing and last.width==width and last.height==height then return end
+ M.lastPaint={points=M.points,x=p.x,y=p.y,zoom=zoom,facing=facing,width=width,height=height}
  local count=0
  for _,n in ipairs(M.points)do
-  local x,y=M.Project((n.x-p.x*100)*w/100,(p.y*100-n.y)*h/100,Minimap:GetWidth(),Minimap:GetHeight(),diameter/2,facing)
+  local x,y=M.Project((n.x-p.x*100)*w/100,(p.y*100-n.y)*h/100,width,height,radius,facing)
   if x then
-   count=count+1;local pin=M.Pin(count);pin.node=n
-   local icon=read(C_Item and C_Item.GetItemIconByID or GetItemIcon,n.item)
-   pin.icon:SetTexture(icon or(n.kind=='Mining'and'Interface/Icons/Trade_Mining'or n.kind=='Fishing'and'Interface/Icons/Trade_Fishing'or'Interface/Icons/Trade_Herbalism'))
+   count=count+1;local pin=M.Pin(count)
+   if pin.node~=n then
+    pin.node=n
+    local icon=read(C_Item and C_Item.GetItemIconByID or GetItemIcon,n.item)
+    pin.icon:SetTexture(icon or(n.kind=='Mining'and'Interface/Icons/Trade_Mining'or n.kind=='Fishing'and'Interface/Icons/Trade_Fishing'or'Interface/Icons/Trade_Herbalism'))
+   end
    pin:ClearAllPoints();pin:SetPoint('CENTER',Minimap,'CENTER',x,y);pin:Show()
   end
  end
  for i=count+1,#M.pins do M.pins[i]:Hide()end
 end
-local frame=CreateFrame('Frame');M.frame=frame
-frame:SetScript('OnUpdate',function(_,elapsed)M.Update(elapsed)end)
-for _,event in ipairs({'PLAYER_ENTERING_WORLD','ZONE_CHANGED_NEW_AREA','SKILL_LINES_CHANGED','LOOT_CLOSED','MINIMAP_UPDATE_ZOOM'})do frame:RegisterEvent(event)end
-frame:SetScript('OnEvent',function()M.age=5 end)
+function M.Update(elapsed)
+ M.elapsed=(M.elapsed or 0)+(elapsed or 0)
+ if M.elapsed<.25 then return end
+ local due=M.elapsed;M.elapsed=0
+ return updateMinimap(due)
+end
 local slash=SlashCmdList.GRINDINGFOREVER
 SlashCmdList.GRINDINGFOREVER=function(message)
  local arg=type(message)=='string'and message:lower():match('^nodes%s*(.-)%s*$')
  if arg then
-  if arg=='on'or arg=='off'then
-   local db=ns.Forever.db;if type(db)=='table'then db.knownNodePins=arg=='on'end
-   M.age=5;if arg=='off'then M.Hide()end
-  end
-  ns.Print('Known herb/ore minimap markers '..(M.Enabled()and'on'or'off')..'. Historical locations only; learned professions. /gf nodes on|off');return
+  ns.Print('Gathering dots use Blizzard minimap tracking.');return
  end
  return slash(message)
 end
@@ -4183,10 +4521,6 @@ W.Layout=function(...)
  return value
 end
 N.WorkflowLayout=W.Layout
-local rail=W.ScrollRail
-W.ScrollRail=function(pair,...)
- local result=rail(pair,...);if pair.rail then pair.rail:SetWidth(7);pair.rail.track:SetColorTexture(.34,.19,.07,1);pair.rail.edge:SetWidth(2);pair.rail.edge:SetColorTexture(.88,.66,.30,1)end;return result
-end
 local scroll=W.ScrollState
 W.ScrollState=function(...)
  local result=scroll(...);local r=N.root
@@ -4209,14 +4543,17 @@ local function material(id,name,kind,skill)
  if R.byID[id]then R.byID[id].skill=math.min(R.byID[id].skill,skill or 1);return end
  local m={id=id,name=name,kind=kind,skill=skill or 1};R.materials[#R.materials+1]=m;R.byID[id]=m
 end
-local materialNames={[2770]="Copper Ore",[2771]="Tin Ore",[2772]="Iron Ore",[2775]="Silver Ore",[2776]="Gold Ore",[3858]="Mithril Ore",[7911]="Truesilver Ore",[10620]="Thorium Ore",[2447]="Peacebloom",[765]="Silverleaf",[2449]="Earthroot",[785]="Mageroyal",[2450]="Briarthorn",[3820]="Stranglekelp",[2453]="Bruiseweed",[3355]="Wild Steelbloom",[3356]="Kingsblood",[3357]="Liferoot",[3818]="Fadeleaf",[3821]="Goldthorn",[3358]="Khadgar's Whisker",[8831]="Purple Lotus",[4625]="Firebloom",[8838]="Sungrass",[8845]="Ghost Mushroom",[8846]="Gromsblood",[13464]="Golden Sansam",[13463]="Dreamfoil",[13465]="Mountain Silversage",[13466]="Plaguebloom"}
+local materialNames={[11370]='Dark Iron Ore',[248815]='Heavy Thorium Ore',[2770]="Copper Ore",[2771]="Tin Ore",[2772]="Iron Ore",[2775]="Silver Ore",[2776]="Gold Ore",[3858]="Mithril Ore",[7911]="Truesilver Ore",[10620]="Thorium Ore",[2447]="Peacebloom",[765]="Silverleaf",[2449]="Earthroot",[785]="Mageroyal",[2450]="Briarthorn",[3820]="Stranglekelp",[2453]="Bruiseweed",[3355]="Wild Steelbloom",[3356]="Kingsblood",[3357]="Liferoot",[3818]="Fadeleaf",[3821]="Goldthorn",[3358]="Khadgar's Whisker",[8831]="Purple Lotus",[4625]="Firebloom",[8838]="Sungrass",[8845]="Ghost Mushroom",[8846]="Gromsblood",[13464]="Golden Sansam",[13463]="Dreamfoil",[13465]="Mountain Silversage",[13466]="Plaguebloom"}
 for id,m in pairs(F.meta)do if m.item and(m.kind=='Mining'or m.kind=='Herbalism')then local name=read(GetItemInfo,m.item);material(m.item,materialNames[m.item]or name or F.names[id]or('Item '..m.item),m.kind,m.skill)end end
+material(11370,'Dark Iron Ore','Mining',230)
+material(248815,'Heavy Thorium Ore','Mining',300)
 for _,m in ipairs({{21071,'Sagefish Pool',75},{21153,'Greater Sagefish Pool',175},{6358,'Oily Blackmouth School',1},{6359,'Firefin Snapper School',100},{6522,'Deviate Fish School',1},{13422,'Stonescale Eel Swarm',205},{19807,'School of Tastyfish',1},{21113,'Floating Wreckage',1}})do material(m[1],m[2],'Fishing',m[3])end
 for _,m in ipairs({{2318,'Light Leather',1},{2319,'Medium Leather',75},{4234,'Heavy Leather',155},{4304,'Thick Leather',205},{8170,'Rugged Leather',260}})do material(m[1],m[2],'Skinning',m[3])end
 for _,cloth in ipairs({{2589,'Linen Cloth'},{2592,'Wool Cloth'},{4306,'Silk Cloth'},{4338,'Mageweave Cloth'},{14047,'Runecloth'},{14256,'Felcloth'}})do
  material(cloth[1],cloth[2],'Cloth',0)
 end
 local zoneMaps={["Durotar"]=1411,["Mulgore"]=1412,["Tirisfal Glades"]=1420,["Elwynn Forest"]=1429,["Teldrassil"]=1438,["Dun Morogh"]=1426,["The Barrens"]=1413,["Silverpine Forest"]=1421,["Loch Modan"]=1432,["Darkshore"]=1439,["Hillsbrad Foothills"]=1424,["Wetlands"]=1437,["Stonetalon Mountains"]=1442,["Stranglethorn Vale"]=1434,["Arathi Highlands"]=1417,["Tanaris"]=1446,["Searing Gorge"]=1427,["The Hinterlands"]=1425,["Felwood"]=1448,["Desolace"]=1443,["Thousand Needles"]=1441,["Un'Goro Crater"]=1449,["Blasted Lands"]=1419,["Eastern Plaguelands"]=1423,["Winterspring"]=1452,["Burning Steppes"]=1428,["Feralas"]=1444}
+for zone,id in pairs(ns.ProfessionKnowledge.maps)do zoneMaps[zone]=id end
 -- Bind baseline gathering zones only when this client confirms the map name.
  for zone,id in pairs(zoneMaps)do
   local info=read(C_Map and C_Map.GetMapInfo,id)
@@ -4224,7 +4561,8 @@ local zoneMaps={["Durotar"]=1411,["Mulgore"]=1412,["Tirisfal Glades"]=1420,["Elw
  end
  local function mapFor(zone)
 
- local z=ns.ForeverData.zones[zone];if z then return z.mapID end
+ local z=ns.ForeverData.zones[zone];if z and z.mapID then return z.mapID end
+ if zone=="Duskwood"then local info=read(C_Map and C_Map.GetMapInfo,1431);if info and info.name==zone then return 1431 end end
 end
 local function pos()local p=C.PlayerPosition();if not p or p.status~='available'then return end;return p end
 local function yards(map,x,y,p)
@@ -4252,28 +4590,369 @@ function R.Recommend(m)
  -- Pool and unsupported material routes use the native local catalog/species planner.
  return nil,'No eligible traced route nearby; use the available local source circuit.'
 end
-function R.RecommendSelection(materials, ranks, scope)
- local p=pos()
- if not p then return nil,'Outdoor position unavailable.' end
- local level=read(UnitLevel,'player') or 1
- local faction=read(UnitFactionGroup,'player')
- local best
- for _,ref in ipairs(R.references) do
-  local matched={}
-  for _,m in ipairs(materials) do
-   if R.Eligible(ref,m,ranks[m.id],level,faction) then matched[#matched+1]=m end
+-- Zone preference follows the published guide order, not player traffic.
+local guideZones={
+ [2770]={'Durotar','Dun Morogh','Elwynn Forest','Tirisfal Glades','Mulgore','Darkshore'},
+ [2771]={'Hillsbrad Foothills','Redridge Mountains','The Barrens','Ashenvale'},
+ [2775]={'Hillsbrad Foothills','Redridge Mountains','The Barrens','Ashenvale'},
+ [2772]={'Arathi Highlands','Desolace','Thousand Needles'},
+ [3821]={'The Hinterlands','Arathi Highlands'},
+ [8846]={'Felwood','Blasted Lands','Desolace'},
+}
+local function guideScore(zone,materials)
+ local score=0
+ for _,m in ipairs(materials)do
+  for index,name in ipairs(guideZones[m.id] or {})do
+   if zone==name then score=score+10-index;break end
   end
-  local map=#matched>0 and mapFor(ref.zone)
-  if map and (scope~="current" or map==p.mapID) then
-   for i,point in ipairs(ref.points) do
-    local d=yards(map,point[1],point[2],p)
-    local cost=d and d+(map==p.mapID and 0 or 4000)
-    if cost and (not best or #matched>#best.materials or (#matched==#best.materials and cost<best.cost)) then
-     best={reference=ref,mapID=map,start=i,materials=matched,cost=cost}
+ end
+ return score
+end
+-- Buffered entrance areas. Node pins remain available for voluntary detours.
+local deadEnds={
+ ['Elwynn Forest']={{36,78,44,87},{58,50,65,58}},
+ Durotar={{48,18,55,27}},
+ ['Silverpine Forest']={{58,14,84,45}},
+}
+local function crossesDeadEnd(a,b,box)
+ local lo,hi=0,1
+ for axis=1,2 do
+  local delta=b[axis]-a[axis]
+  if delta==0 then
+   if a[axis]<box[axis] or a[axis]>box[axis+2]then return false end
+  else
+   local x=(box[axis]-a[axis])/delta
+   local y=(box[axis+2]-a[axis])/delta
+   lo=math.max(lo,math.min(x,y));hi=math.min(hi,math.max(x,y))
+   if lo>hi then return false end
+  end
+ end
+ return true
+end
+local function outsideDeadEnds(a,b,areas)
+ for _,box in ipairs(areas)do if crossesDeadEnd(a,b,box)then return false end end
+ return true
+end
+local function orderZoneLoop(choice)
+ if not choice or not choice.start then return end
+ local ref=choice.reference
+ local first=ref.points[choice.start]
+ local areas=deadEnds[ref.zone] or {}
+ local points,seen={},{}
+ local function length(a,b)
+  return math.sqrt((a[1]-b[1])^2+(a[2]-b[2])^2)
+ end
+ for _,point in ipairs(ref.points)do
+  local key=point[1]..':'..point[2]
+  if not seen[key] and outsideDeadEnds(point,point,areas)then
+   seen[key]=true;points[#points+1]=point
+  end
+ end
+ if #points==0 then ref.points={};choice.start=nil;return end
+ -- Keep hand-traced bends. For node-only routes, leave isolated spawns off the circuit.
+ if not ref.traced and #points>=7 then
+  local gaps,ordered={},{}
+  for i,point in ipairs(points)do
+   local gap=math.huge
+   for j,other in ipairs(points)do if i~=j then gap=math.min(gap,length(point,other))end end
+   gaps[point]=gap;ordered[#ordered+1]=gap
+  end
+  table.sort(ordered)
+  local limit=math.max(9,ordered[math.ceil(#ordered/2)]*3)
+  local cluster={}
+  for _,point in ipairs(points)do if gaps[point]<=limit then cluster[#cluster+1]=point end end
+  if #cluster>=3 then points=cluster end
+ end
+ local function turn(a,b,c)
+  return (b[1]-a[1])*(c[2]-a[2])-(b[2]-a[2])*(c[1]-a[1])
+ end
+ local function crosses(loop)
+  for i=1,#loop-2 do
+   local a,b=loop[i],loop[i+1]
+   for j=i+2,#loop do
+    if i~=1 or j~=#loop then
+     local c,d=loop[j],loop[j%#loop+1]
+     if turn(a,b,c)*turn(a,b,d)<0 and turn(c,d,a)*turn(c,d,b)<0 then return true end
+    end
+   end
+  end
+  return false
+ end
+ if not ref.traced or crosses(points) then
+  local cx,cy=0,0
+  for _,point in ipairs(points)do cx=cx+point[1];cy=cy+point[2] end
+  cx,cy=cx/#points,cy/#points
+  local bearings={}
+  for _,point in ipairs(points)do
+   local x,y=point[1]-cx,point[2]-cy
+   bearings[point]={math.atan2(y,x),x*x+y*y}
+  end
+  table.sort(points,function(a,b)
+   local x,y=bearings[a],bearings[b]
+   if x[1]~=y[1]then return x[1]<y[1]end
+   return x[2]<y[2]
+  end)
+  if #points>=6 then
+   local changed=true
+   while changed and #points>4 do
+    changed=false
+    for i=1,#points do
+     local a,b,c=points[(i-2)%#points+1],points[i],points[i%#points+1]
+     local direct=length(a,c)
+     if direct<=24 and length(a,b)+length(b,c)>direct*1.35+2 then
+      table.remove(points,i)
+      if crosses(points)then table.insert(points,i,b)else changed=true;break end
+     end
     end
    end
   end
  end
+ local area=0
+ for i,a in ipairs(points)do
+  local b=points[i%#points+1]
+  area=area+a[1]*b[2]-b[1]*a[2]
+ end
+ ref.mode=math.abs(area)>.001 and 'loop' or 'open'
+ if ref.mode=='open'then
+  table.sort(points,function(a,b)if a[1]~=b[1]then return a[1]<b[1]end;return a[2]<b[2]end)
+  if #points>1 and (first[1]-points[#points][1])^2+(first[2]-points[#points][2])^2
+      <(first[1]-points[1][1])^2+(first[2]-points[1][2])^2 then
+   for i=1,math.floor(#points/2)do points[i],points[#points-i+1]=points[#points-i+1],points[i]end
+  end
+  choice.start=1
+ else
+  local nearest=math.huge
+  for i,point in ipairs(points)do
+   local distance=length(point,first)
+   if distance<nearest then nearest=distance;choice.start=i end
+  end
+ end
+ if #areas>0 then
+  local routed={}
+  local n=#points
+  local limit=ref.mode=='loop' and n or n-1
+  for i,point in ipairs(points)do
+   routed[#routed+1]=point
+   local nextPoint=points[i%n+1]
+   if i<=limit and not outsideDeadEnds(point,nextPoint,areas)then
+    local corners={}
+    for _,box in ipairs(areas)do
+     if crossesDeadEnd(point,nextPoint,box)then
+      local x,y,u,v=box[1]-.8,box[2]-.8,box[3]+.8,box[4]+.8
+      for _,c in ipairs({{x,y},{x,v},{u,y},{u,v}})do corners[#corners+1]=c end
+     end
+    end
+    local best,cost
+    for _,a in ipairs(corners)do
+     if outsideDeadEnds(point,a,areas)then
+      for _,b in ipairs(corners)do
+       if outsideDeadEnds(a,b,areas) and outsideDeadEnds(b,nextPoint,areas)then
+        local lengthSum=length(point,a)+length(a,b)+length(b,nextPoint)
+        if not cost or lengthSum<cost then best,cost={a,b},lengthSum end
+       end
+      end
+     end
+    end
+    if not best then ref.points={};choice.start=nil;return end
+    routed[#routed+1]=best[1]
+    if best[2]~=best[1]then routed[#routed+1]=best[2]end
+   end
+  end
+  if ref.mode=='loop' and crosses(routed)then ref.points={};choice.start=nil;return end
+  local start=points[choice.start]
+  for i,point in ipairs(routed)do if point==start then choice.start=i;break end end
+  points=routed
+ end
+ ref.points=points
+end
+-- Ground approaches traced from the bundled Forever Silverpine map.
+local silverpineMainland={{50,15},{45,23},{43,33},{45,43},{48,54},{49,64},
+ {44,71},{47,76},{53,76},{59,73},{62,66},{61,60},{54,58},{53,44},{53,30},{54,21}}
+-- Forever camp observations. Coordinates are areas to search, not fixed spawns.
+local foreverCampRoutes={
+ {kind='Cloth',zone='Tirisfal Glades',minSkill=1,minLevel=6,
+  materials={'Linen Cloth'},targets='Balnir Farmstead undead',points={{70,61},{72.8,60.5},{74.5,62},{73,64},{70,63}},mode='loop'},
+ {kind='Cloth',zone='Duskwood',minSkill=1,minLevel=24,
+  materials={'Silk Cloth'},targets='Raven Hill undead',points={{24,41},{27.3,41},{30,43},{28,46},{25,45}},mode='loop'},
+ {kind='Cloth',zone='Silverpine Forest',minSkill=1,minLevel=12,
+  materials={'Wool Cloth','Linen Cloth'},targets='Dalaran mages around Ambermill',points={{55,60},{62,61},{63.5,63.4},{60,66},{55,65}},mode='loop'},
+ {kind='Skinning',zone='Silverpine Forest',minSkill=55,maxSkill=74,minLevel=10,
+  materials={'Light Leather'},points={{47,30},{50,29},{53,32},{52,35},{48,35}},mode='loop'},
+}
+for _,ref in ipairs(foreverCampRoutes)do R.references[#R.references+1]=ref end
+for _,camp in ipairs(ns.ProfessionKnowledge.camps)do
+ R.references[#R.references+1]=camp
+end
+-- Select the best compatible subset without enumerating the power set.
+local function combineFarmSources(zone)
+ local sets=zone.sources
+ if #zone.materials<2 then return end
+ local function overlaps(a,b)
+  if a==b then return true end
+  for _,x in ipairs(a.points)do
+   for _,y in ipairs(b.points)do
+    if (x[1]-y[1])^2+(x[2]-y[2])^2<=12^2 then return true end
+   end
+  end
+  return false
+ end
+ local best,bestWeight
+ for index,seed in ipairs(zone.materials)do
+  local group={seed}
+  local weight=#sets[seed.id].points
+  for offset=1,#zone.materials-1 do
+   local m=zone.materials[(index+offset-1)%#zone.materials+1]
+   local compatible=true
+   for _,other in ipairs(group)do
+    if not overlaps(sets[m.id],sets[other.id]) then compatible=false;break end
+   end
+   if compatible then group[#group+1]=m;weight=weight+#sets[m.id].points end
+  end
+  if not best or #group>#best or (#group==#best and weight>bestWeight)then best,bestWeight=group,weight end
+ end
+ zone.materials=best
+ local paths,points={},{}
+ local traced,count=false,0
+ for _,m in ipairs(best)do
+  local source=sets[m.id]
+  if not paths[source]then
+   paths[source]=true;count=count+1;traced=source.traced
+   for _,point in ipairs(source.points)do if #points<60 then points[#points+1]=point end end
+  end
+ end
+ zone.reference.points=points
+ zone.reference.traced=count==1 and traced
+ zone.reference.targets=count==1 and sets[best[1].id].targets or nil
+end
+function R.RecommendSelection(materials, ranks, scope)
+ local E=ns.Forever
+ local p=pos()
+ if not p then return nil,'Outdoor position unavailable.' end
+ local level=read(UnitLevel,'player') or 1
+ local faction=read(UnitFactionGroup,'player')
+ local zones={}
+ table.sort(materials,function(a,b)return a.id<b.id end)
+ for _,ref in ipairs(R.references)do
+  local matched={}
+  for _,m in ipairs(materials)do
+   if ref.mode~="backtrack" and ranks[m.id] and R.Eligible(ref,m,ranks[m.id],level,faction)then matched[#matched+1]=m end
+  end
+  local map=#matched>0 and mapFor(ref.zone)
+  if map and (scope~='current' or map==p.mapID)then
+   local zone=zones[map]
+   if not zone then
+    zone={materials={},seen={},curated={},sources={},reference={zone=ref.zone,points={},mode=ref.mode},mapID=map}
+    zones[map]=zone
+   end
+   local source={points=ref.zone=="Silverpine Forest" and ref.kind=="Herbalism" and silverpineMainland or ref.points,traced=true,targets=ref.targets}
+   for _,m in ipairs(matched)do
+    if not zone.seen[m.id]then
+     zone.seen[m.id]=true;zone.curated[m.id]=true;zone.sources[m.id]=source
+     zone.materials[#zone.materials+1]=m
+     if #zone.materials==1 then zone.reference.points=source.points;zone.reference.traced=true;zone.reference.targets=source.targets end
+    end
+   end
+  end
+ end
+ F.LoadKnown()
+ local function addMapped(m,map,x,y)
+  if not map or type(x)~='number' or type(y)~='number' or x<0 or x>100 or y<0 or y>100
+   or (scope=='current' and map~=p.mapID)then return end
+  local zone=zones[map]
+  if not zone then
+   local info=read(C_Map and C_Map.GetMapInfo,map)
+   local name=info and info.name
+   if not name then for label,facts in pairs(ns.ForeverData.zones)do if facts.mapID==map then name=label;break end end end
+   if not name or (info and info.mapType and info.mapType~=3)then return end
+   zone={materials={},seen={},sources={},reference={zone=name,points={}},mapID=map}
+   zones[map]=zone
+  end
+  if zone.curated and zone.curated[m.id]then return end
+  if not outsideDeadEnds({x,y},{x,y},deadEnds[zone.reference.zone] or {})then return end
+  if not zone.seen[m.id]then
+   zone.seen[m.id]=true;zone.materials[#zone.materials+1]=m
+   zone.sources[m.id]={points={}}
+   if #zone.materials==1 then zone.reference.points=zone.sources[m.id].points end
+  end
+  local pts=zone.sources[m.id].points
+  if #pts<60 then pts[#pts+1]={x,y}end
+ end
+ local selected,kinds={},{}
+ for _,m in ipairs(materials)do
+  local rank=ranks[m.id]
+  if rank and rank>=(m.skill or 1)then
+   selected[m.id]=m;kinds[m.kind]=true
+  end
+ end
+ for kind in pairs(kinds)do
+  for map,points in pairs(F.known[kind] or {})do
+   if scope~='current' or map==p.mapID then
+    for coord,id in pairs(points)do
+     local meta=F.meta[id]
+     local m=meta and selected[meta.item]
+     if m and m.kind==kind and ranks[m.id]>=(meta.skill or 1)then
+      local x,y=F.Decode(coord);addMapped(m,map,x,y)
+     end
+    end
+   end
+  end
+ end
+ for _,m in ipairs(materials)do
+  if selected[m.id] then
+   for _,site in ipairs(E.materialSites and E.materialSites[m.id] or {})do addMapped(m,site.mapID,site.x,site.y)end
+  end
+ end
+ local observer=ns.GatheringObserver
+ for _,node in pairs(observer and observer.data and observer.data.nodes or {})do
+  local meta=F.meta[node.sourceNodeID];local at=node.position
+  local m=meta and selected[meta.item]
+  if m and m.kind==meta.kind and not node.instanced and at then addMapped(m,at.mapID,at.x,at.y)end
+ end
+ local ranked,here={},nil
+ for _,zone in pairs(zones)do
+  combineFarmSources(zone)
+  for i,point in ipairs(zone.reference.points)do
+   local d=yards(zone.mapID,point[1],point[2],p)
+   local cost=d and d+(zone.mapID==p.mapID and 0 or 4000)
+   if not cost then cost=zone.mapID==p.mapID and math.sqrt((point[1]-p.x*100)^2+(point[2]-p.y*100)^2)*100 or 20000 end
+   if cost and (not zone.cost or cost<zone.cost)then zone.start=i;zone.cost=cost end
+  end
+  if zone.cost then
+   zone.score=guideScore(zone.reference.zone,materials)
+   if zone.mapID==p.mapID then here=zone else ranked[#ranked+1]=zone end
+  end
+ end
+ table.sort(ranked,function(a,b)
+  if #a.materials~=#b.materials then return #a.materials>#b.materials end
+  if a.score~=b.score then return a.score>b.score end
+  if a.cost~=b.cost then return a.cost<b.cost end
+  return a.mapID<b.mapID
+ end)
+ if scope=='cards' then
+  local info=read(C_Map and C_Map.GetMapInfo,p.mapID)
+  here=here or {mapID=p.mapID,reference={zone=info and info.name or 'Current Zone',points={}},materials={}}
+  here.current=true
+  orderZoneLoop(here)
+  local nearby,best
+  for _,zone in ipairs(ranked)do
+   orderZoneLoop(zone)
+   if zone.start then
+    if not best then best=zone end
+    if not nearby or #zone.materials>#nearby.materials or
+     (#zone.materials==#nearby.materials and zone.cost<nearby.cost)then nearby=zone end
+   end
+  end
+  local cards={here}
+  if nearby then nearby.recommendation='Nearby';cards[#cards+1]=nearby end
+  if best==nearby then
+   best=nil
+   for _,zone in ipairs(ranked)do if zone.start and zone~=nearby then best=zone;break end end
+  end
+  if best then best.recommendation='Farming Pick';cards[#cards+1]=best end
+  return cards
+ end
+ local best=ranked[1]
+ if here and (not best or #here.materials>=#best.materials)then return here end
  return best
 end
 local oldPlan=F.Plan
@@ -4281,7 +4960,8 @@ function F.Plan(kind,item,limit)
  local choice=R.request;if not choice then return oldPlan(kind,item,limit)end
  local ref=choice.reference;local nodes={};local pts=ref.points;local ordered={}
  if ref.mode=='backtrack'then for i=choice.start,#pts do ordered[#ordered+1]=i end;for i=#pts-1,1,-1 do ordered[#ordered+1]=i end;for i=2,choice.start-1 do ordered[#ordered+1]=i end
- else for n=0,#pts-1 do ordered[#ordered+1]=(choice.start+n-1)%#pts+1 end end
+ elseif ref.mode=='open'then for i=1,#pts do ordered[#ordered+1]=i end
+ else for n=0,#pts do ordered[#ordered+1]=(choice.start+n-1)%#pts+1 end end
  for _,i in ipairs(ordered)do local v=pts[i];nodes[#nodes+1]={mapID=choice.mapID,x=v[1],y=v[2],name=ref.zone..' '..kind..' Route',profession=kind,item=item,routeWaypoint=true}end
  return nodes,nil,{mapID=choice.mapID}
 end
@@ -4393,16 +5073,16 @@ local function distance(loc,p)
  local a=world(loc);local b=p and world({mapID=p.mapID,x=p.x*100,y=p.y*100})
  if a and b and a[1]==b[1]then local dx,dy=a[2]-b[2],a[3]-b[3];return math.sqrt(dx*dx+dy*dy),math.atan2(dy,dx)end
 end
-function K.Mode()return F and F.route and'Arrow'or'Compass'end
-function K.Enabled()return not ns.db or ns.db.normalArrow~=false end
+function K.Mode()return 'Compass'end
+function K.Enabled()return true end
 function K.SetMode(mode)
  if mode~='Arrow'and mode~='Compass'then return false end
  if ns.db then ns.db.navigationStyle=mode end;K.age=1;K.Sync();return true
 end
 function K.Sync()
- if K.gpsButton then K.gpsButton.label:SetText(K.Enabled()and'GPS: On'or'GPS: Off')end
  if K.thumb then K.thumb:ClearAllPoints();K.thumb:SetPoint(K.Mode()=='Compass'and'RIGHT'or'LEFT',K.switch,K.Mode()=='Compass'and'RIGHT'or'LEFT',K.Mode()=='Compass'and-2 or 2,0)end
- if K.frame then K.frame:SetScale((N.arrowSize or 84)/84);K.frame:SetShown(K.Enabled())end
+ if K.frame then K.frame:Show()end
+ if not K.Enabled() and K.ClearLiveArt then K.ClearLiveArt()end
  if K.Mode()=='Compass'and N.arrowFrame then N.arrowFrame:Hide()end
 end
 function K.FlagKey(record,loc)return tostring(record.spellID or record.learnableItemID or record.itemID or record.id or record.name)..':'..tostring(loc.mapID)..':'..tostring(loc.x)..':'..tostring(loc.y)end
@@ -4427,7 +5107,245 @@ function K.ClearQuestPin()
  local key=K.questPin;K.questPin=nil
  return K.Unpin(key)
 end
+local liveNodes={}
+local lootRefresh=CreateFrame('Frame')
+lootRefresh:SetScript('OnEvent',function()K.age=1 end)
+lootRefresh:RegisterEvent('LOOT_CLOSED')
+local scanCursor=0
+local scanMap
+local scanGrid,gridCursor={},0
+local resourceNames
+local function resourcesByName()
+ if not resourceNames then
+  resourceNames={}
+  for _,meta in pairs(F.meta)do
+   if meta.name and meta.item and (meta.kind=='Mining' or meta.kind=='Herbalism' or meta.kind=='Fishing')then
+    resourceNames[meta.name:lower()]=meta
+   end
+  end
+ end
+ return resourceNames
+end
+local function addGlint(parent,size)
+ local glint=CreateFrame('Frame',nil,parent)
+ glint:SetSize(size,size)
+ for _,horizontal in ipairs({true,false})do
+  local ray=glint:CreateTexture(nil,'OVERLAY')
+  ray:SetColorTexture(1,.86,.42,.9)
+  ray:SetSize(horizontal and size or 2,horizontal and 2 or size)
+  ray:SetPoint('CENTER')
+ end
+ if glint.CreateAnimationGroup then
+  local pulse=glint:CreateAnimationGroup()
+  pulse:SetLooping('BOUNCE')
+  local fade=pulse:CreateAnimation('Alpha')
+  fade:SetFromAlpha(.2);fade:SetToAlpha(1);fade:SetDuration(.65)
+  pulse:Play()
+ end
+ return glint
+end
+local mapSymbols={}
+local function paintLiveNodes(found,p)
+ if not Minimap or not Minimap:IsShown() then found={} end
+ local M=ns.KnownNodePins
+ local radius=read(C_Minimap and C_Minimap.GetViewRadius)
+ if not ns.Forever.Public(radius) or type(radius)~='number' or radius<=0 then radius=M and M.Range() end
+ local facing=read(GetCVar,'rotateMinimap')=='1' and read(C.Facing) or 0
+ local count=0
+ if p and M and M.map==p.mapID and radius and ns.Forever.Public(facing) and type(facing)=='number' then
+  local w,h=Minimap:GetWidth(),Minimap:GetHeight()
+  for _,node in ipairs(found)do
+   local loc=node.location
+   local x,y=M.Project((loc.x-p.x*100)*M.width/100,(p.y*100-loc.y)*M.height/100,w,h,radius,facing)
+   if x and count<10 then
+    count=count+1
+    local symbol=mapSymbols[count]
+    if not symbol then
+     symbol=CreateFrame('Frame',nil,Minimap)
+     symbol:SetSize(16,16)
+     symbol:SetFrameLevel(Minimap:GetFrameLevel()+4)
+     symbol.icon=symbol:CreateTexture(nil,'ARTWORK')
+     symbol.icon:SetAllPoints()
+     symbol.glint=addGlint(symbol,8)
+     symbol.glint:SetPoint('TOPRIGHT',2,2)
+     mapSymbols[count]=symbol
+    end
+    if symbol.texture~=node.icon then symbol.texture=node.icon;symbol.icon:SetTexture(node.icon)end
+    symbol:ClearAllPoints();symbol:SetPoint('CENTER',Minimap,'CENTER',x,y);symbol:Show()
+   end
+  end
+ end
+ for i=count+1,#mapSymbols do mapSymbols[i]:Hide() end
+end
+local worldGlint
+function K.ClearLiveArt()
+ paintLiveNodes({})
+ if worldGlint then worldGlint:Hide()end
+end
+local function refreshWorldGlint()
+ if worldGlint then worldGlint:Hide()end
+ if not K.Enabled() or read(InCombatLockdown) then return end
+ local name=read(UnitName,'softinteract')
+ if not ns.Forever.Public(name) or type(name)~='string' or not resourcesByName()[name:lower()]then return end
+ local plate=read(C_NamePlate and C_NamePlate.GetNamePlateForUnit,'softinteract')
+ if not ns.Forever.Public(plate) or not plate then return end
+ if not worldGlint then worldGlint=addGlint(UIParent,19) end
+ worldGlint:ClearAllPoints()
+ if pcall(worldGlint.SetPoint,worldGlint,'CENTER',plate,'CENTER')then worldGlint:Show()end
+end
+local sparkleEvents=CreateFrame('Frame')
+sparkleEvents:SetScript('OnEvent',function(_,event,unit)
+ if event=='NAME_PLATE_UNIT_ADDED' or event=='NAME_PLATE_UNIT_REMOVED' then
+  if not (ns.Forever.Public(unit) and type(unit)=='string' and
+   (unit=='softinteract' or read(UnitIsUnit,unit,'softinteract'))) then return end
+ end
+ refreshWorldGlint()
+end)
+for _,event in ipairs({'PLAYER_SOFT_INTERACT_CHANGED','NAME_PLATE_UNIT_ADDED','NAME_PLATE_UNIT_REMOVED','PLAYER_REGEN_DISABLED','PLAYER_REGEN_ENABLED','PLAYER_ENTERING_WORLD'})do
+ pcall(sparkleEvents.RegisterEvent,sparkleEvents,event)
+end
+local function probeNodes(p)
+ local E=ns.Forever
+ local M=ns.KnownNodePins
+ local tooltip=C_TooltipInfo and C_TooltipInfo.GetMinimapMouseover
+ if not p or not M or not Minimap or not Minimap:IsShown()
+  or not Minimap.UpdateMouseoverAtPoint or not Minimap.SetUsingSoftCursor
+  or type(tooltip)~='function' or read(InCombatLockdown) or read(UnitOnTaxi,'player')
+  or read(IsInInstance) or read(IsIndoors) or read(Minimap.IsMouseOver,Minimap) then
+  return {}
+ end
+ if scanMap~=p.mapID then scanMap=p.mapID;liveNodes={};scanCursor=0;gridCursor=0 end
+ M.Update(1)
+ if not M.rangeAvailable or M.map~=p.mapID then return {} end
+ local radius=read(C_Minimap and C_Minimap.GetViewRadius)
+ if not E.Public(radius) or type(radius)~='number' or radius<=0 then radius=M.Range()end
+ local left,bottom=read(Minimap.GetLeft,Minimap),read(Minimap.GetBottom,Minimap)
+ local scale=read(Minimap.GetEffectiveScale,Minimap)
+ local w,h=Minimap:GetWidth(),Minimap:GetHeight()
+ if not radius or not left or not bottom or not scale or w<=0 or h<=0 then return {} end
+ local facing=read(GetCVar,'rotateMinimap')=='1' and read(C.Facing) or 0
+ if not E.Public(facing) or type(facing)~='number' then return {} end
+ local now=read(GetTime) or 0
+ local started=read(debugprofilestop)
+ local names=resourcesByName()
+ if #scanGrid==0 then
+  for y=-11,11 do for x=-11,11 do
+   if x*x+y*y<=121 then scanGrid[#scanGrid+1]={x/11,y/11,x*x+y*y} end
+  end end
+  table.sort(scanGrid,function(a,b)
+   if a[3]~=b[3] then return a[3]<b[3] end
+   if a[2]~=b[2] then return a[2]<b[2] end
+   return a[1]<b[1]
+  end)
+ end
+ local function readProbe(x,y)
+  Minimap:UpdateMouseoverAtPoint((left+w/2+x)*scale,(bottom+h/2+y)*scale)
+  local data=tooltip()
+  local lines=E.Public(data) and type(data)=='table' and data.lines
+  if not E.Public(lines) or type(lines)~='table' then return end
+  local found
+  for _,line in ipairs(lines)do
+   local text=line.leftText
+   if E.Public(text) and type(text)=='string' then
+    local name=text:gsub('|c%x%x%x%x%x%x%x%x',''):gsub('|r',''):match('^%s*(.-)%s*$')
+    local meta=names[name:lower()]
+    if meta then
+     if found and found~=meta then return end
+     found=meta
+    end
+   end
+  end
+  return found
+ end
+ local function probe(x,y)
+  local candidate=readProbe(x,y)
+  if not candidate then return end
+  -- A stale tooltip can follow the probe outside the minimap.
+  if readProbe(-w,-h) then return end
+  local confirmed=readProbe(x,y)
+  if confirmed==candidate then return confirmed end
+ end
+
+ local function remember(node)
+  for key,entry in pairs(liveNodes)do
+   if entry.node.item==node.item then
+    local dx=(entry.node.x-node.x)*M.width/100
+    local dy=(entry.node.y-node.y)*M.height/100
+    if dx*dx+dy*dy<=12*12 then liveNodes[key]=nil end
+   end
+  end
+  local key=node.kind..':'..node.x..':'..node.y
+  liveNodes[key]={node=node,expires=now+8}
+ end
+ local function sweep()
+  Minimap:SetUsingSoftCursor(true)
+  local function overBudget()
+   return started and (read(debugprofilestop) or started)-started>=1
+  end
+  local c,s=math.cos(facing),math.sin(facing)
+  -- Old hits cannot survive a refresh unless Blizzard still reports the dot.
+  local previous=liveNodes
+  liveNodes={}
+  local verified=0
+  for _,entry in pairs(previous)do
+   local node=entry.node
+   local x,y=M.Project((node.x-p.x*100)*M.width/100,(p.y*100-node.y)*M.height/100,w,h,radius,facing)
+   if x then
+    local meta=probe(x,y)
+    if meta and meta.item==node.item then remember(node)end
+    verified=verified+1
+    if verified>=10 or overBudget()then break end
+   end
+  end
+  if overBudget()then return end
+  for _=1,20 do
+   gridCursor=gridCursor%#scanGrid+1
+   local point=scanGrid[gridCursor]
+   local x,y=point[1]*w/2,point[2]*h/2
+   local meta=probe(x,y)
+   if meta then
+    local right,up=point[1]*radius,point[2]*radius
+    local east,north=right*c-up*s,right*s+up*c
+    remember({name=meta.name,item=meta.item,kind=meta.kind,
+     x=p.x*100+100*east/M.width,y=p.y*100-100*north/M.height})
+   end
+   if overBudget()then return end
+  end
+  local attempts=0
+  for _=1,#M.points do
+   scanCursor=scanCursor%#M.points+1
+   local node=M.points[scanCursor]
+   local x,y=M.Project((node.x-p.x*100)*M.width/100,(p.y*100-node.y)*M.height/100,w,h,radius,facing)
+   if x and node.item then
+    local meta=probe(x,y)
+    local key=node.kind..':'..node.x..':'..node.y
+    liveNodes[key]=nil
+    if meta and meta.item==node.item then remember(node) end
+    attempts=attempts+1
+    if attempts>=4 or overBudget()then return end
+   end
+  end
+ end
+ local ok=pcall(sweep)
+ pcall(Minimap.SetUsingSoftCursor,Minimap,false)
+ if not ok then liveNodes={};return {} end
+ local found={}
+ for key,entry in pairs(liveNodes)do
+  if entry.expires<=now then liveNodes[key]=nil
+  else
+   local node=entry.node
+   local loc={mapID=p.mapID,x=node.x,y=node.y}
+   local yards,bearing=distance(loc,p)
+   if yards and yards<=radius and bearing then
+    found[#found+1]={key='live:'..key,name=node.name,location=loc,distance=yards,bearing=bearing,
+     icon=icon(node.item),resource=true,liveNode=true}
+   end
+  end
+ end
+ return found
+end
 function K.Collect()
+ local E=ns.Forever
  local rows={};local d=read(P.Destination);local row=P.selected
  if d and not N.gpsSuppressed and not N.areaNavigation then
   local id=d.materialID or F.route and F.route.item or row and(row.materialID or row.itemID)
@@ -4445,17 +5363,66 @@ function K.Collect()
   end end
  end
  for _,pin in pairs(K.pins)do rows[#rows+1]=pin end
- for _,r in ipairs(rows)do r.distance,r.bearing=distance(r.location,p)end;K.targets=rows;K.revision=(K.revision or 0)+1
+ local live=probeNodes(p)
+ paintLiveNodes(live,p)
+ if p and p.mapID then
+  local nearby=live
+  if route then
+   for _,m in ipairs(ns.MaterialRoutes and ns.MaterialRoutes.materials or {})do
+    if (m.kind=='Skinning' or m.kind=='Cloth') and (m.id==route.item or K.selected and K.selected[m.id])then
+     local best,yards
+     for _,site in ipairs(E.materialSites and E.materialSites[m.id] or {})do
+      local d=site.mapID==p.mapID and distance(site,p)
+      if d and d<=400 and (not yards or d<yards)then best,yards=site,d end
+     end
+     if best then nearby[#nearby+1]={key='farm-target:'..m.id,name=best.name or m.name,
+      location=best,icon=icon(m.id),distance=yards,resource=true}end
+    end
+   end
+  end
+  table.sort(nearby,function(a,b)if a.distance~=b.distance then return a.distance<b.distance end;return a.key<b.key end)
+  for i=1,math.min(10,#nearby,15-#rows)do
+   local marker=nearby[i]
+   rows[#rows+1]=marker
+  end
+ end
+ for _,r in ipairs(rows)do if not r.resource or not r.bearing then r.distance,r.bearing=distance(r.location,p)end end;K.targets=rows;K.revision=(K.revision or 0)+1
+end
+function K.ShowRouteMap()
+ local route=F.route
+ local step=route and route.steps and route.steps[1]
+ local mapID=step and step.destination and step.destination.mapID
+ local frame=WorldMapFrame
+ if not (mapID and frame and frame.SetMapID) then return end
+ if not frame:IsShown() then
+  if ShowUIPanel then ShowUIPanel(frame) else frame:Show() end
+ end
+ frame:SetMapID(mapID)
 end
 function K.Ensure()
  if K.frame then return end
  local f=CreateFrame('Frame',nil,UIParent);K.frame=f;f:SetSize(744,66);f:SetPoint('TOP',UIParent,'TOP',0,-55);f:SetFrameStrata('HIGH');f:SetClampedToScreen(true);f:EnableMouse(true);f:SetMovable(true);f:RegisterForDrag('LeftButton');f:SetScript('OnDragStart',f.StartMoving);f:SetScript('OnDragStop',f.StopMovingOrSizing)
- N.PanelChrome(f)
- K.caption=text(f,19);K.caption:SetTextColor(.94,.82,.55);K.caption:SetPoint('TOP',f,'BOTTOM',0,-20);K.caption:SetWidth(650);K.caption:SetJustifyH('CENTER')
+ N.PanelChrome(f,nil,320,52)
+ f:HookScript('OnSizeChanged',function()K.lastFacing=nil end)
+ local routeButton=CreateFrame('Button',nil,f)
+ routeButton:SetSize(32,32);routeButton:SetPoint('CENTER',f,'CENTER');routeButton:Hide()
+ routeButton:SetScript('OnClick',K.ShowRouteMap)
+ routeButton:SetScript('OnEnter',function(self)
+  local route=F.route
+  local zone=route and route.reference and route.reference.zone
+  local mapView=ns.MapControls99
+  local report=mapView and mapView.routeReport
+  N.ShowInfoTooltip(self,(zone or 'Farming route')..(route and (' · '..#route.steps..' waypoints') or '')..'\nClick to show the route on the world map'..(report and ('\n'..report) or ''))
+ end)
+ routeButton:SetScript('OnLeave',N.HideInfoTooltip)
+ K.routeButton=routeButton
+ K.routeArrow=routeButton:CreateTexture(nil,'OVERLAY')
+ K.routeArrow:SetTexture(N.ProjectedArrowAsset());K.routeArrow:SetAllPoints()
+ K.caption=text(f,19);K.caption:SetTextColor(.94,.82,.55);K.caption:SetPoint('TOP',f,'BOTTOM',0,-20);K.caption:SetPoint('LEFT',f,'LEFT',18,0);K.caption:SetPoint('RIGHT',f,'RIGHT',-18,0);K.caption:SetJustifyH('CENTER')
  K.headingStatus=text(f,15,'Compass heading unavailable');K.headingStatus:SetPoint('CENTER');K.headingStatus:SetTextColor(.94,.82,.55);K.headingStatus:Hide()
  for i=0,47 do local line=f:CreateTexture(nil,'ARTWORK');line:SetColorTexture(.9,.68,.36,1);line:SetSize(1.25,i%6==0 and 10 or 5);local t=text(f,15,({[0]='N',[6]='NE',[12]='E',[18]='SE',[24]='S',[30]='SW',[36]='W',[42]='NW'})[i]);t:SetTextColor(.94,.81,.54);K.ticks[i]={line=line,label=t,bearing=-i*math.pi/24}end
  for i=1,15 do local b=CreateFrame('Button',nil,f);b:SetSize(28,28);b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetAllPoints()
-  b.arrow=texture(b,'ControlTriangleRight','OVERLAY');b.arrow:SetSize(10,10);b.arrow:SetRotation(math.pi/2);b.arrow:SetPoint('TOP',b,'BOTTOM',0,-1);b.arrow:Hide()
+  b.arrow=texture(b,'ControlTriangleRight','OVERLAY');b.arrow:SetSize(7,7);b.arrow:SetRotation(math.pi/2);b.arrow:SetPoint('BOTTOM',b,'CENTER',0,-15);b.arrow:Hide()
   b:RegisterForClicks('RightButtonUp')
   b:SetScript('OnClick',function(self)
    if self.target and K.pins[self.target.key]==self.target and K.Unpin(self.target.key) then
@@ -4467,34 +5434,49 @@ function K.Ensure()
  f:SetScript('OnUpdate',function(_,elapsed)K.Update(elapsed)end);K.Sync()
 end
 function K.Update(elapsed)
- if not K.Enabled()then K.frame:Hide();return end
+ if not K.Enabled()then K.frame:Hide();paintLiveNodes({});return end
  if N.arrowFrame and K.Mode()=='Compass'then N.arrowFrame:Hide()end
- K.age=K.age+(elapsed or 0);if K.age>=.25 then K.age=0;K.Collect()end
+ K.age=K.age+(elapsed or 0);if K.age>=1 then K.age=0;K.Collect()end
+ K.paintAge=(K.paintAge or 0)+(elapsed or 0)
+ if K.paintAge<1/30 then return end
+ K.paintAge=0
  local facing=read(C.Facing)
  if not ns.Forever.Public(facing) or type(facing)~='number' or facing~=facing or math.abs(facing)==math.huge then
   if not K.headingUnavailable then
-   K.headingUnavailable=true;K.lastFacing=nil;K.captionText=nil
+   K.headingUnavailable=true;K.lastFacing=nil;K.captionText=nil;K.arrowRevision=nil
    for _,b in ipairs(K.markers)do b:Hide()end
    for _,tick in pairs(K.ticks)do tick.line:Hide();tick.label:Hide()end
-   K.caption:SetText('');K.headingStatus:Show()
+   K.caption:SetText('');K.headingStatus:Show();K.routeButton:Hide()
   end
   return
  end
+ local route=F.route
+ local step=route and route.steps[route.cursor or 1]
+ if K.arrowStep~=step or K.arrowRevision~=K.revision then
+  K.arrowStep,K.arrowRevision=step,K.revision
+  local _,bearing
+  if step then _,bearing=distance(step.destination,position())end
+  K.routeBearing=bearing
+  K.routeButton:SetShown(bearing~=nil)
+ end
+ if K.routeBearing and (K.lastFacing~=facing or K.lastRevision~=K.revision)then
+  N.PaintProjectedArrow(K.routeArrow,wrap(K.routeBearing-facing))
+ end
  if K.headingUnavailable then K.headingUnavailable=nil;K.headingStatus:Hide()end
  if K.lastFacing==facing and K.lastRevision==K.revision then return end;K.lastFacing=facing;K.lastRevision=K.revision
- local width=708;local span=math.pi
- for _,t in pairs(K.ticks)do local a=wrap(t.bearing-facing);local show=math.abs(a)<=span/2;local x=-a/span*width;t.line:SetShown(show);t.label:SetShown(show);if show then t.line:ClearAllPoints();t.line:SetPoint('BOTTOM',K.frame,'BOTTOM',x,6);t.label:ClearAllPoints();t.label:SetPoint('TOP',K.frame,'TOP',x,-5)end end
+ local width=math.max(1,K.frame:GetWidth()-36);local span=math.pi
+ for _,t in pairs(K.ticks)do local a=wrap(t.bearing-facing);local show=math.abs(a)<=span/2;local x=-a/span*width;t.line:SetShown(show);t.label:SetShown(show);if show then t.line:ClearAllPoints();t.line:SetPoint('BOTTOM',K.frame,'BOTTOM',x,9);t.label:ClearAllPoints();t.label:SetPoint('TOP',K.frame,'TOP',x,-10)end end
  local focus
  for i,b in ipairs(K.markers)do local r=K.targets[i]
   if r and r.bearing then local a=wrap(r.bearing-facing);local clipped=math.max(-span/2,math.min(span/2,a));local x=-clipped/span*width
    b.target=r
-   local manualPin=K.pins[r.key]==r
+   local manualPin=K.pins[r.key]==r and not r.customIcon
    local atlas=manualPin and b.icon.SetAtlas and pcall(b.icon.SetAtlas,b.icon,K.manualPinAtlas)
    local nativePin=atlas and (not b.icon.GetAtlas or b.icon:GetAtlas()==K.manualPinAtlas)
    if not nativePin then
-    b.icon:SetTexture(r.icon);b.icon:SetTexCoord(0,1,0,r.pin and .75 or 1)
+    b.icon:SetTexture(r.icon);b.icon:SetTexCoord(0,1,r.professionButton and 23/64 or 0,r.pin and .75 or 1)
    end
-   b:SetSize(nativePin and 28 or r.pin and 24 or r.active and 32 or 28,nativePin and 28 or r.pin and 36 or r.active and 32 or 28);b:ClearAllPoints();b:SetPoint('CENTER',K.frame,'CENTER',x,0);b.arrow:SetShown(r.active==true);b:Show();if r.active then focus=r end
+   b:SetSize(nativePin and 28 or r.pin and 24 or r.active and 32 or 28,nativePin and 28 or r.professionButton and 34 or r.pin and 36 or r.active and 32 or 28);b:ClearAllPoints();b:SetPoint('CENTER',K.frame,'CENTER',x,0);b.arrow:SetShown(r.active==true);b:SetAlpha(r.resource and (.25+.75*math.min(1,r.distance/40)) or 1);b:Show();if r.active then focus=r end
   else b:Hide()end
  end
  local caption=focus and(focus.name..'\n'..(focus.zone and focus.zone..' - 'or'')..math.floor(focus.distance+.5)..' yd')or''
@@ -4509,16 +5491,9 @@ N.SetArrowSize=function(...)local result=size(...);K.Sync();return result end
 function K.Settings()
  local f=N.settingsFrame;if not f then return end
  if N.arrowToggle then N.arrowToggle:Hide()end
- if not K.gpsButton then
-  K.gpsButton=N.MakeButton(f,'GPS: On',294,function()N.SetArrow(not K.Enabled())end);K.gpsButton:SetPoint('TOPLEFT',f,'TOPLEFT',18,-48);K.gpsButton:SetSize(294,39)
-
- end
- f:SetWidth(332);f:SetHeight(592);f:EnableMouse(true);f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+200)
- K.gpsButton:SetWidth(294)
- if N.gpsSizeLabel then N.gpsSizeLabel:SetText('GPS Size');N.gpsSizeLabel:ClearAllPoints();N.gpsSizeLabel:SetPoint('TOPLEFT',f,'TOPLEFT',18,-162)end
- if N.sizeSlider then N.sizeSlider:ClearAllPoints();N.sizeSlider:SetPoint('TOPLEFT',f,'TOPLEFT',18,-191);N.sizeSlider:SetWidth(294)end
- for i,b in ipairs({N.autoFlightToggle,N.autoAcceptToggle,N.autoTurninToggle})do b:SetCheckedVisual(ns.Forever.db[({'autoFlights','autoAcceptQuests','autoTurnInQuests'})[i]]==true);b:ClearAllPoints();b:SetPoint('TOPLEFT',f,'TOPLEFT',18,-268-(i-1)*40);b:SetWidth(294)end
- if not K.rule then K.rule=f:CreateTexture(nil,'ARTWORK');K.rule:SetColorTexture(.45,.31,.12,1);K.rule:SetSize(294,1);K.rule:SetPoint('TOPLEFT',f,'TOPLEFT',18,-248)end
+ f:SetWidth(332);f:SetHeight(382);f:EnableMouse(true);f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+200)
+ for i,b in ipairs({N.autoFlightToggle,N.autoAcceptToggle,N.autoTurninToggle})do b:SetCheckedVisual(ns.Forever.db[({'autoFlights','autoAcceptQuests','autoTurnInQuests'})[i]]==true);b:ClearAllPoints();b:SetPoint('TOPLEFT',f,'TOPLEFT',18,-64-(i-1)*40);b:SetWidth(294)end
+ if not K.rule then K.rule=f:CreateTexture(nil,'ARTWORK');K.rule:SetColorTexture(.45,.31,.12,1);K.rule:SetSize(294,1);K.rule:SetPoint('TOPLEFT',f,'TOPLEFT',18,-48)end
  K.Sync()
 end
 local function materialName(m)return m.name end
@@ -4542,8 +5517,10 @@ function R.Fill()
  if K.resourceBar then K.resourceBar:SetShown(y>316)end
 end
 function R.StartSelection()
+ local selectedCard=K.confirmed
  local materials={};for _,m in ipairs(R.materials)do if K.selected[m.id]then materials[#materials+1]=m end end
  table.sort(materials,function(a,b)return a.id<b.id end)
+ if selectedCard then materials=selectedCard.materials end
  if #materials==0 then return false,'Select at least one resource.'end
  if read(IsInInstance)then return false,'Use an outdoor farming route.'end
  local ranks={}
@@ -4554,7 +5531,9 @@ function R.StartSelection()
   if m.kind=='Mining' and (read(C_Item and C_Item.GetItemCount or GetItemCount,2901,false) or 0)<1 then return false,'Carry a Mining Pick.' end
   if m.kind=='Skinning' and (read(C_Item and C_Item.GetItemCount or GetItemCount,7005,false) or 0)<1 then return false,'Carry a Skinning Knife.' end
  end
- local choice,why=R.RecommendSelection(materials,ranks,K.scope)
+ local choice,why=K.confirmed
+ K.confirmed=nil
+ if not choice then choice,why=R.RecommendSelection(materials,ranks,K.scope)end
  if not choice and #materials==1 then
   local m=materials[1]
   local ok,err=F.Start(m.kind,m.id,math.huge)
@@ -4564,7 +5543,7 @@ function R.StartSelection()
   return true
  end
  if not choice then return false,why or (K.scope=='current' and 'No mapped trail for the selected resources in your current zone.' or 'No mapped trail for the selected resources on this continent.') end
- if #choice.materials<#materials then
+ if #choice.materials<#materials and not choice.selectedCard then
   return false,'No single trail covers all selected resources. Select resources that share a trail.'
  end
  local first=choice.materials[1]
@@ -4582,11 +5561,11 @@ function R.StartSelection()
  for _,m in ipairs(choice.materials) do names[#names+1]=m.name end
  for i,step in ipairs(route.steps) do
   step.title=choice.reference.zone..' Farming Route'
-  step.body='Gather '..table.concat(names,', ')..' along the trail.'
+  step.body=choice.reference.targets and ((first.kind=='Skinning' and 'Skin ' or 'Farm ')..choice.reference.targets..' for '..table.concat(names,', ')..'.')
+   or 'Gather '..table.concat(names,', ')..' along the trail.'
   step.destination.name='Trail Waypoint '..i..' / '..#route.steps
  end
  R.lastAdvance=read(GetTime) or 0
- N.rowStart=1
  K.age=1
  N.Refresh()
  if F.DrawPins then F.DrawPins() end
@@ -4600,13 +5579,13 @@ function R.Open()
  if not N.root then return end
  if not K.resourceMenu then
   local f=CreateFrame('Frame',nil,N.root,'BackdropTemplate');K.resourceMenu=f;R.menu=f;f:SetSize(396,592);f:SetPoint('CENTER',N.root,'CENTER');f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+120);f:EnableMouse(true);f:SetClampedToScreen(true)
-  f:SetBackdrop({bgFile=AS..'MatteLeather',edgeFile=AS..'RidgedRidgeRail',edgeSize=4});f:SetBackdropColor(.45,.30,.20,1)
+  N.PanelChrome(f)
   local paper=texture(f,'BaseParchment','BACKGROUND');paper:SetPoint('TOPLEFT',10,-10);paper:SetPoint('BOTTOMRIGHT',-10,10);paper:SetTexCoord(0,1254/2048,0,1254/2048)
   local title=text(f,23,'Plan Farming Route');title:SetPoint('TOPLEFT',24,-30)
   local search=CreateFrame('EditBox',nil,f,'InputBoxTemplate');R.search=search;search:SetSize(340,28);search:SetPoint('TOPLEFT',28,-80);search:SetAutoFocus(false);search:SetTextColor(.14,.09,.03);search:SetScript('OnTextChanged',R.Fill)
   local sf=CreateFrame('ScrollFrame',nil,f);K.resourceScroll=sf;sf:SetPoint('TOPLEFT',26,-124);sf:SetSize(340,316);sf:EnableMouseWheel(true)
   local body=CreateFrame('Frame',nil,sf);body:SetSize(340,1);sf:SetScrollChild(body);R.body=body;R.buttons={}
-  local bar=CreateFrame('Frame',nil,f);K.resourceBar=bar;bar:SetSize(7,316);bar:SetPoint('TOPRIGHT',f,'TOPRIGHT',-16,-124);local line=texture(bar,'RidgedRidgeRail');line:SetAllPoints()
+  local bar=CreateFrame('Frame',nil,f);K.resourceBar=bar;bar:SetSize(7,316);bar:SetPoint('TOPRIGHT',f,'TOPRIGHT',-16,-124);local line=bar:CreateTexture(nil,'BACKGROUND');line:SetPoint('TOP',bar,'TOP',0,-8);line:SetPoint('BOTTOM',bar,'BOTTOM',0,8);line:SetWidth(2);line:SetColorTexture(.43,.27,.12,1)
   local function scroll(by)local max=math.max(0,R.body:GetHeight()-316);sf:SetVerticalScroll(math.max(0,math.min(max,(sf:GetVerticalScroll()or 0)+by)))end
   sf:SetScript('OnMouseWheel',function(_,delta)scroll(-delta*51)end)
   for _,up in ipairs({true,false})do local b=CreateFrame('Button',nil,bar);b:SetSize(14,14);b:SetPoint(up and'TOP'or'BOTTOM',bar,up and'TOP'or'BOTTOM');local arrow=texture(b,'ControlTriangleRight');arrow:SetAllPoints();arrow:SetRotation(up and-math.pi/2 or math.pi/2);b:SetScript('OnClick',function()scroll(up and-51 or 51)end)end
@@ -4623,7 +5602,6 @@ P.Destination=function(...)
  if F.route then
   local route=F.route;local current=N.model and N.model.Current and N.model:Current()
   for _,step in ipairs(route.steps)do if current and step.id==current.id then return step.destination end end
-  local step=route.steps[route.cursor or 1];return step and step.destination
  end
  return destination(...)
 end
@@ -4709,25 +5687,150 @@ function R.Fill()
  if K.resourceBar then K.resourceBar:SetShown(R.body:GetHeight()>K.gridHeight)end
 end
 function R.Open()
- if F.route then F.Stop('Quest guide resumed.');K.SyncFooter();return end
  if not N.root then return end
  if not K.gridMenu then
   if K.resourceMenu then K.resourceMenu:Hide()end
-  local f=CreateFrame('Frame',nil,UIParent);K.gridMenu=f;K.resourceMenu=f;R.menu=f;f:SetSize(680,640);f:SetPoint('CENTER',UIParent,'CENTER');f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+260);f:EnableMouse(true);f:SetClampedToScreen(true)
-  local scope=N.MakeButton(f,'Recommended',180,function(self)
-   K.scope=K.scope=='current' and 'recommended' or 'current'
-   local label=K.scope=='current' and 'Current Zone' or 'Recommended'
-   if self.label then self.label:SetText(label) else self:SetText(label) end
+  local f=CreateFrame('Frame',nil,UIParent);K.gridMenu=f;K.resourceMenu=f;R.menu=f;f:SetSize(680,640);f:SetPoint('CENTER',UIParent,'CENTER');N.ApplyWindowLayer(f,'farming');f:EnableMouse(true);f:SetClampedToScreen(true)
+  local cards=CreateFrame('Frame',nil,f)
+  cards:SetPoint('TOPLEFT',f,'TOPLEFT',23,-55);cards:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-23,106)
+  cards:SetFrameLevel(f:GetFrameLevel()+12);cards:EnableMouse(true);cards:Hide()
+  cards:SetScript('OnShow',function()K.resourceScroll:Hide();R.syncScroll()end)
+  cards:SetScript('OnHide',function()if K.resourceScroll then K.resourceScroll:Show();R.syncScroll()end end)
+  local options={}
+  local function openRoute(choice)
+   choice.selectedCard=true
+   K.confirmed=choice
+   local ok,why=R.StartSelection()
+   K.confirmed=nil
+   if not ok then K.count:SetText(why or 'Route unavailable.');return end
+   cards:Hide()
+   K.ShowRouteMap()
+  end
+  for i=1,3 do
+   local card=CreateFrame('Button',nil,cards)
+   N.BronzeRectangle(card)
+   local highlight=card:CreateTexture(nil,'HIGHLIGHT');highlight:SetAllPoints();highlight:SetColorTexture(.93,.73,.37,.15)
+
+   card.plot=CreateFrame('Frame',nil,card)
+   card.plot:SetPoint('TOP',card,'TOP',0,-2)
+   card.map=card.plot:CreateTexture(nil,'BACKGROUND');card.map:SetAllPoints()
+   local plotFill=card.plot:CreateTexture(nil,'BACKGROUND',nil,-1);plotFill:SetAllPoints();plotFill:SetColorTexture(.29,.20,.12,1)
+   card.band=card.plot:CreateTexture(nil,'OVERLAY',nil,-1)
+   card.band:SetPoint('BOTTOMLEFT');card.band:SetPoint('BOTTOMRIGHT');card.band:SetColorTexture(0,0,0,.5)
+   card.title=text(card.plot,12);card.title:SetPoint('TOP',card.band,'TOP',0,-2)
+   card.detail=text(card.plot,9);card.detail:SetPoint('BOTTOM',card.band,'BOTTOM',0,2);card.detail:SetTextColor(.95,.72,.43);card.detail:SetWordWrap(false)
+   card.title:SetJustifyH('CENTER');card.title:SetTextColor(.98,.77,.48);card.title:SetWordWrap(false)
+   card.lines={}
+   card:SetScript('OnClick',function()if card.choice and card.choice.start then openRoute(card.choice)end end)
+   options[i]=card
+  end
+  local function showCards(choices,total)
+   cards.choices,cards.total=choices,total
+   local width=(f:GetWidth()-66)/3
+   for i,card in ipairs(options)do
+    local choice=choices[i]
+    card.choice=choice
+    card:ClearAllPoints();card:SetPoint('TOPLEFT',cards,'TOPLEFT',(i-1)*(width+10),-4)
+    local mapWidth=width-4
+    local mapHeight=mapWidth*683/1024
+    card:SetSize(width,mapHeight+4);card.plot:SetSize(mapWidth,mapHeight)
+    card.title:SetWidth(width-12);card.detail:SetWidth(width-12)
+    local art=choice and ns.ForeverFacts.maps[choice.reference.zone]
+    card.map:SetShown(art~=nil)
+    if art then card.map:SetTexture(art.path);card.map:SetTexCoord(0,art.u,0,art.v)end
+    local badge=choice and (choice.current and 'Current Zone' or choice.recommendation)
+    card.title:SetText(choice and choice.reference.zone or 'No mapped alternative')
+    local detail='No mapped route'
+    if choice and choice.start then
+     local path=choice.reference.mode=='loop' and 'Loop' or #choice.reference.points==1 and 'Camp pin' or 'Open route'
+     detail=path..' · '..(choice.reference.targets or (#choice.materials..' / '..total..' resources'))
+     if #choice.materials<total then
+      local names={}
+      for _,m in ipairs(choice.materials)do names[#names+1]=m.name end
+      detail=detail..' · '..table.concat(names,', ')
+     end
+    end
+    card.detail:SetText((badge and badge.." · " or "")..detail)
+    for _,label in ipairs({card.title,card.detail}) do
+     local font,size,flags=label:GetFont()
+     local maximum=label==card.title and 12 or 9
+     label:SetWidth(0)
+     for candidate=maximum,8,-1 do
+      label:SetFont(font,candidate,flags)
+      if label:GetStringWidth()<=width-12 then break end
+     end
+     label:SetWidth(width-12)
+    end
+    card.band:SetHeight((mapHeight+4)*.175)
+    card.map:SetAlpha(choice and choice.start and 1 or .65)
+    card:EnableMouse(choice and choice.start~=nil or false)
+    for _,line in ipairs(card.lines)do line:Hide()end
+    local points=choice and choice.reference.points or {}
+    local count=choice and choice.reference.mode~='loop' and math.max(0,#points-1) or #points
+    if #points==1 then
+     if not card.campDot then
+      card.campDot=card.plot:CreateTexture(nil,'OVERLAY')
+      card.campDot:SetColorTexture(.18,.06,.03,1)
+      card.campDot:SetSize(6,6)
+     end
+     card.campDot:ClearAllPoints()
+     card.campDot:SetPoint('CENTER',card.plot,'TOPLEFT',points[1][1]*mapWidth/100,-points[1][2]*mapHeight/100)
+     card.campDot:Show()
+    elseif card.campDot then card.campDot:Hide() end
+    for j=1,count do
+     local line=card.lines[j]
+     if not line then
+      line=card.plot.CreateLine and card.plot:CreateLine(nil,'ARTWORK') or card.plot:CreateTexture(nil,'ARTWORK')
+      line:SetColorTexture(.035,.025,.018,.86)
+      if line.SetThickness then line:SetThickness(2)end
+      card.lines[j]=line
+     end
+     local a,b=points[j],points[j%#points+1]
+     local x,y,u,v=a[1]*mapWidth/100,-a[2]*mapHeight/100,b[1]*mapWidth/100,-b[2]*mapHeight/100
+     if line.SetStartPoint then
+      line:SetStartPoint('TOPLEFT',card.plot,x,y);line:SetEndPoint('TOPLEFT',card.plot,u,v);line:Show()
+     elseif line.SetRotation then
+      line:ClearAllPoints();line:SetPoint('CENTER',card.plot,'TOPLEFT',(x+u)/2,(y+v)/2)
+      line:SetSize(math.max(1,math.sqrt((u-x)^2+(v-y)^2)),2);line:SetRotation(math.atan2(v-y,u-x));line:Show()
+     end
+    end
+   end
+   cards:Show()
+  end
+  local scope=N.MakeButton(f,'Recommend a Zone',157,function()
+   if cards:IsShown()then cards:Hide();return end
+   local materials,ranks={},{}
+   for _,m in ipairs(R.materials)do
+    if K.selected[m.id]then
+     materials[#materials+1]=m;ranks[m.id]=m.kind=='Cloth' and 1 or F.Skill(m.kind)
+    end
+   end
+   if #materials==0 then K.count:SetText('Select at least one resource.');return end
+   local choices,why=R.RecommendSelection(materials,ranks,'cards')
+   if not choices then K.count:SetText(why or 'No mapped zone for this selection.');return end
+   showCards(choices,#materials)
+   K.count:SetText('Choose a zone card to start its route.')
   end)
-  scope:SetPoint('TOPRIGHT',f,'TOPRIGHT',-24,-49)
-  local sf=CreateFrame('ScrollFrame',nil,f);K.resourceScroll=sf;K.gridHeight=450;sf:SetPoint('TOPLEFT',26,-88);sf:SetPoint('BOTTOMRIGHT',-33,105);sf:EnableMouseWheel(true)
+  f:HookScript('OnHide',function()cards:Hide();K.confirmed=nil;K.recommended=nil end)
+  N.LiveLayout(f,function()
+   if cards:IsShown() and cards.choices then showCards(cards.choices,cards.total) end
+   R.Fill()
+  end)
+  K.recommendButton=scope
+  scope:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',26,26)
+  local sf=CreateFrame('ScrollFrame',nil,f);K.resourceScroll=sf;K.gridHeight=450;sf:SetPoint('TOPLEFT',26,-50);sf:SetPoint('BOTTOMRIGHT',-33,105);sf:EnableMouseWheel(true)
   R.body=CreateFrame('Frame',nil,sf);R.body:SetSize(620,1);sf:SetScrollChild(R.body);R.buttons={};R.search=nil
   R.syncScroll=N.PanelScroll(f,sf,function()return sf:GetVerticalScroll()end,function(v)sf:SetVerticalScroll(v)end,
-   function()return math.max(0,R.body:GetHeight()-K.gridHeight)end,85)
-  K.count=text(f,16);K.count:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',26,84)
-  K.start=N.MakeButton(f,'Start Route',180,function()local ok,why=R.StartSelection();if not ok then ns.Print(why or'Route unavailable.')end end);K.start:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',26,26)
-  local cancel=N.MakeButton(f,'Cancel',180,function()f:Hide()end);cancel:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-26,26)
-  N.PanelChrome(f,'Plan Farming Route',490,460,function()R.Fill()end)
+   function()return cards:IsShown() and 0 or math.max(0,R.body:GetHeight()-K.gridHeight)end,85)
+  K.count=text(f,16);K.count:SetPoint('TOPLEFT',f,'BOTTOMLEFT',26,94);K.count:SetPoint('TOPRIGHT',f,'BOTTOMRIGHT',-26,94)
+
+  local stop=N.MakeButton(f,'Stop Route',116,function()
+   K.confirmed=nil;K.recommended=nil;R.request=nil
+   cards:Hide()
+   if F.route then F.Stop('Farming route stopped.')end
+   K.SyncFooter();R.Fill()
+  end);stop:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-26,26)
+  N.PanelChrome(f,{'Farming','Routes'},490,460,function()R.Fill()end)
  end
  R.menu=K.gridMenu;local h=UIParent:GetHeight();if type(h)=='number'and h>0 then R.menu:SetScale(math.min(1,math.max(.5,(h-32)/640)))end;R.menu:Show();R.Fill()
 end
@@ -4751,69 +5854,81 @@ local AS='Interface\\AddOns\\GrindingForever\\Media\\'
 local function read(fn,...)if type(fn)=='function'then local ok,a,b,c,d,e,f,g,h,i,j,k,l,m=pcall(fn,...);if ok then return a,b,c,d,e,f,g,h,i,j,k,l,m end end end
 local function text(p,size,value)local t=p:CreateFontString(nil,'OVERLAY');t:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',size);t:SetTextColor(.15,.09,.035);t:SetText(value or'');return t end
 local function db()return ns.Forever and ns.Forever.db or GrindingForeverAnniversaryCharacterDB or ns.db end
-local V={pins={},modeNames={'World Map','Minimap','Both','Off'},boss=nil,class='All Classes'};ns.MapControls99=V
-function V.Mode()local d=db();return d and d.nodeDisplay or(d and d.knownNodePins==false and'Off'or'Both')end
-function V.SetMode(mode)
- local valid=false;for _,v in ipairs(V.modeNames)do if v==mode then valid=true end end;if not valid then return false end
- local d=db();if d then d.nodeDisplay=mode;d.knownNodePins=mode=='Both'or mode=='Minimap'end
- V.map=nil;V.pending=nil;if M then M.age=5;M.Hide();if M.button then M.button.label:SetText('Nodes: '..mode)end end
- if mode=='Off'or mode=='Minimap'then for _,p in ipairs(V.pins)do p:Hide()end end;return true
+local V={pins={},boss=nil,class='All Classes'};ns.MapControls99=V
+function V.Mode()
+ local d=db()
+ return d and d.nodeDisplay=='Off' and 'Off' or 'World Map'
 end
-function V.Cycle()for i,v in ipairs(V.modeNames)do if v==V.Mode()then return V.SetMode(V.modeNames[i%4+1])end end;return V.SetMode('Both')end
+function V.SetMode(mode)
+ if mode~='Off' and mode~='World Map' then return false end
+ local d=db();if d then d.nodeDisplay=mode end
+ V.map=nil;V.pending=nil
+ if mode=='Off' then for _,pin in ipairs(V.pins)do pin:Hide()end end
+ return true
+end
+function V.Cycle()return false end
 if M then
- M.Enabled=function()return V.Mode()=='Both'or V.Mode()=='Minimap'end
- M.SetEnabled=function(v)return V.SetMode(v and'Both'or'Off')end
+ M.Enabled=function()return false end
+ M.SetEnabled=function(enabled)return not enabled end
 end
 function V.DrawRoute(canvas,map)
  local route=F.route
- local overlay=V.routeOverlay
- if V.routeLinesUnavailable or not canvas or not route or not route.traced or not route.steps[1] or route.steps[1].destination.mapID~=map then
-  if overlay then overlay:Hide()end
+ local steps=route and route.steps
+ local pool=V.routeSegments or {}
+ V.routeSegments=pool
+ if not canvas or not steps or #steps<2 or steps[1].destination.mapID~=map then
+  for _,segment in ipairs(pool) do segment:Hide() end
+  V.routeLayout=nil
+  V.routeReport=nil
   return
  end
  local width,height=canvas:GetWidth(),canvas:GetHeight()
- if width<=0 or height<=0 then
-  if overlay then overlay:Hide()end
-  return
- end
- if not overlay then
-  overlay=CreateFrame('Frame',nil,canvas)
-  if not overlay.CreateLine then V.routeLinesUnavailable=true;overlay:Hide();return end
-  overlay.lines={}
-  V.routeOverlay=overlay
- end
- if overlay:GetParent()~=canvas then overlay:SetParent(canvas)end
- if overlay.route~=route or overlay.map~=map or overlay.canvas~=canvas or overlay.width~=width or overlay.height~=height then
-  overlay:ClearAllPoints()
-  overlay:SetAllPoints(canvas)
-  overlay:SetFrameLevel(canvas:GetFrameLevel()+1)
-  local count=0
-  for index=2,#route.steps do
-   local from,to=route.steps[index-1].destination,route.steps[index].destination
-   if from.mapID==map and to.mapID==map then
-    count=count+1
-    local line=overlay.lines[count]
-    if not line then
-     line=overlay:CreateLine(nil,'OVERLAY')
-     line:SetThickness(3)
-     line:SetColorTexture(.96,.72,.24,.9)
-     overlay.lines[count]=line
+ if width<=0 or height<=0 then return end
+ local strata=canvas:GetFrameStrata()
+ local layout=V.routeLayout
+ if layout and layout.route==route and layout.canvas==canvas and layout.width==width and layout.height==height and layout.strata==strata then return end
+ local count=0
+ for index=2,#steps do
+  local from,to=steps[index-1].destination,steps[index].destination
+  if from.mapID==map and to.mapID==map and (from.x~=to.x or from.y~=to.y) then
+   count=count+1
+   local segment=pool[count]
+   if not segment then
+    segment=CreateFrame('Frame',nil,canvas)
+    if not segment.CreateLine then
+     V.routeReport='Native map lines unavailable on this client'
+     return
     end
-    line:SetStartPoint('TOPLEFT',overlay,from.x*width/100,-from.y*height/100)
-    line:SetEndPoint('TOPLEFT',overlay,to.x*width/100,-to.y*height/100)
-    line:Show()
+    segment.line=segment:CreateLine(nil,'OVERLAY')
+    segment.line:SetTexture('Interface\\Buttons\\WHITE8X8')
+    segment.line:SetVertexColor(.12,.055,.018,.85)
+    segment.line:SetThickness(4)
+    pool[count]=segment
    end
+   local x1,y1=from.x*width/100,-from.y*height/100
+   local x2,y2=to.x*width/100,-to.y*height/100
+   local left,top=math.min(x1,x2)-4,math.max(y1,y2)+4
+   segment:SetParent(canvas)
+   segment:SetFrameStrata(strata)
+   segment:SetFrameLevel(2010)
+   segment:ClearAllPoints()
+   segment:SetPoint('TOPLEFT',canvas,'TOPLEFT',left,top)
+   segment:SetSize(math.abs(x2-x1)+8,math.abs(y2-y1)+8)
+   segment.line:SetStartPoint('TOPLEFT',segment,x1-left,y1-top)
+   segment.line:SetEndPoint('TOPLEFT',segment,x2-left,y2-top)
+   segment.line:Show()
+   segment:Show()
   end
-  for index=count+1,#overlay.lines do overlay.lines[index]:Hide()end
-  overlay.route,overlay.map,overlay.canvas,overlay.width,overlay.height=route,map,canvas,width,height
  end
- overlay:Show()
+ for index=count+1,#pool do pool[index]:Hide() end
+ V.routeLayout={route=route,canvas=canvas,width=width,height=height,strata=strata}
+ V.routeReport=string.format('Map %d: %d native segments',map,count)
 end
 function V.UpdateWorld(elapsed)
  V.elapsed=(V.elapsed or 0)+(elapsed or 0);if V.elapsed<.5 then return end;V.elapsed=0
  local frame=WorldMapFrame;local mode=V.Mode()
  local nodesEnabled=mode=='World Map'or mode=='Both'
- local routeEnabled=F.route and F.route.traced
+ local routeEnabled=F.route and F.route.steps and #F.route.steps>1
  local canvas,map
  if frame and frame:IsShown()and(nodesEnabled or routeEnabled)then
   canvas=read(frame.GetCanvas,frame)or(frame.ScrollContainer and(read(frame.ScrollContainer.GetScrollChild,frame.ScrollContainer)or frame.ScrollContainer.Child))or WorldMapDetailFrame
@@ -4854,7 +5969,17 @@ function V.RenderBatch()
  end
  batch.cursor=batch.cursor+20;if batch.cursor>count then for i=count+1,#V.pins do V.pins[i]:Hide()end;V.pending=nil end
 end
-local worker=CreateFrame('Frame');V.worker=worker;worker:SetScript('OnUpdate',function(_,dt)V.UpdateWorld(dt);V.RenderBatch() end)
+local worker=CreateFrame('Frame');V.worker=worker
+worker:SetScript('OnUpdate',function(_,dt)
+ local visible=WorldMapFrame and WorldMapFrame:IsShown()
+ if not visible then
+  if V.wasVisible then V.wasVisible=nil;V.UpdateWorld(.5)end
+  return
+ end
+ V.wasVisible=true
+ V.UpdateWorld(dt)
+ if V.pending then V.RenderBatch() end
+end)
 local classes={'All Classes','Warrior','Paladin','Hunter','Rogue','Priest','Shaman','Mage','Warlock','Druid'}
 local armor={Warrior={[1]=true,[2]=true,[3]=true,[4]=true,[6]=true},Paladin={[1]=true,[2]=true,[3]=true,[4]=true,[6]=true},Hunter={[1]=true,[2]=true,[3]=true},Rogue={[1]=true,[2]=true},Priest={[1]=true},Shaman={[1]=true,[2]=true,[3]=true,[6]=true},Mage={[1]=true},Warlock={[1]=true},Druid={[1]=true,[2]=true}}
 local weapons={Warrior={[0]=true,[1]=true,[2]=true,[3]=true,[4]=true,[5]=true,[6]=true,[7]=true,[8]=true,[10]=true,[13]=true,[15]=true,[16]=true,[18]=true},Paladin={[0]=true,[1]=true,[4]=true,[5]=true,[6]=true,[7]=true,[8]=true},Hunter={[0]=true,[1]=true,[2]=true,[3]=true,[6]=true,[7]=true,[8]=true,[10]=true,[13]=true,[15]=true,[18]=true},Rogue={[2]=true,[3]=true,[4]=true,[7]=true,[13]=true,[15]=true,[16]=true,[18]=true},Priest={[4]=true,[10]=true,[15]=true,[19]=true},Shaman={[0]=true,[1]=true,[4]=true,[5]=true,[10]=true,[13]=true,[15]=true},Mage={[7]=true,[10]=true,[15]=true,[19]=true},Warlock={[7]=true,[10]=true,[15]=true,[19]=true},Druid={[4]=true,[5]=true,[10]=true,[13]=true,[15]=true}}
@@ -4964,9 +6089,22 @@ local function dist(d,p)if not d or not p or d.mapID~=p.mapID then return end;lo
 if M then local update=M.Update;M.Update=function(...)local v=update(...);local now=clock();if M.fade100 and now-M.fade100<.25 then return v end;M.fade100=now;local p=position();if p then for _,pin in ipairs(M.pins)do if pin:IsShown()and pin.node then local d=dist({mapID=p.mapID,x=pin.node.x,y=pin.node.y},p);if d then pin:SetAlpha(.12+.60*math.max(0,math.min(1,(d-12)/65)))end end end end;return v end end
 -- Compact grouped grids with GF's own checkbox art and labels directly below icons.
 R.collapsed100=R.collapsed100 or{};local category={{'Mining','Mining'},{'Herbalism','Herbalism'},{'Skinning','Skinning'},{'Fishing','Fishing'},{'Cloth','Cloth'}}
+local clothMobFloor={[2589]=5,[2592]=15,[4306]=25,[4338]=37,[14047]=48,[14256]=50}
+local function canGather(m)
+ if m.kind=='Cloth' then return (read(UnitLevel,'player') or 1)+5 >= (clothMobFloor[m.id] or 1) end
+ local rank=F.Skill(m.kind)
+ return rank~=nil and rank >= (m.skill or 1)
+end
+local toggleMaterial=R.ToggleMaterial
+function R.ToggleMaterial(m)
+ if not m or (not K.selected[m.id] and not canGather(m))then return end
+ K.confirmed=nil;K.recommended=nil
+ if K.recommendButton then K.recommendButton.label:SetText('Recommend a Zone')end
+ toggleMaterial(m)
+end
 function R.Fill()
  if not R.body then return end;if not R.grid100 then for _,b in ipairs(R.buttons or{})do b:Hide()end;R.buttons={};R.grid100=true end;R.headers100=R.headers100 or{};local y,index=0,0
- K.gridHeight=math.max(1,R.menu:GetHeight()-193)
+ K.gridHeight=math.max(1,R.menu:GetHeight()-155)
  R.body:SetWidth(math.max(1,R.menu:GetWidth()-59))
  local columns=math.max(1,math.floor(R.body:GetWidth()/66))
  local clothOrder={[2589]=1,[2592]=2,[4306]=3,[4338]=4,[14047]=5,[14256]=6}
@@ -4975,7 +6113,7 @@ function R.Fill()
   h:ClearAllPoints();h:SetPoint('TOPLEFT',R.body,'TOPLEFT',0,-y);h:SetSize(R.body:GetWidth(),30);h.label:SetText(title);h.arrow:SetRotation(R.collapsed100[title]and 0 or-math.pi/2);h:Show();y=y+34
   if not R.collapsed100[title]then for j,m in ipairs(list)do index=index+1;local b=R.buttons[index]
    if not b then b=CreateFrame('Button',nil,R.body);b.icon=b:CreateTexture(nil,'ARTWORK');b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',12);b.label:SetTextColor(.16,.09,.03);b.check=CreateFrame('Button',nil,b);b.box=b.check:CreateTexture(nil,'ARTWORK');b.box:SetAllPoints();b.box:SetTexture(AS..'ControlButtonNormal');b.tick=b.check:CreateTexture(nil,'OVERLAY');b.tick:SetAllPoints();b.tick:SetTexture('Interface\\Buttons\\UI-CheckBox-Check');b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.15);R.buttons[index]=b end
-   b.material=m;b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((j-1)%columns)*66,-y-math.floor((j-1)/columns)*61);b:SetSize(64,61);b.icon:ClearAllPoints();b.icon:SetSize(32,32);b.icon:SetPoint('TOP',b,'TOP',0,-3);b.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,m.id));b.label:ClearAllPoints();b.label:SetPoint('TOPLEFT',b,'TOPLEFT',1,-37);b.label:SetWidth(62);b.label:SetHeight(24);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true);b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:ClearAllPoints();b.check:SetSize(13,13);b.check:SetPoint('BOTTOMRIGHT',b.icon,'BOTTOMRIGHT',1,-1);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);b:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);if b.check.SetChecked then b.check:SetChecked(K.selected[m.id]==true)end;if b.tick then b.tick:SetShown(K.selected[m.id]==true)end;b.wash:SetShown(K.selected[m.id]==true);b:Show()
+   b.material=m;b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((j-1)%columns)*66,-y-math.floor((j-1)/columns)*61);b:SetSize(64,61);b.icon:ClearAllPoints();b.icon:SetSize(32,32);b.icon:SetPoint('TOP',b,'TOP',0,-3);b.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,m.id));b.label:ClearAllPoints();b.label:SetPoint('TOPLEFT',b,'TOPLEFT',1,-37);b.label:SetWidth(62);b.label:SetHeight(24);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true);b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:ClearAllPoints();b.check:SetSize(13,13);b.check:SetPoint('BOTTOMRIGHT',b.icon,'BOTTOMRIGHT',1,-1);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);b:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);if b.check.SetChecked then b.check:SetChecked(K.selected[m.id]==true)end;if b.tick then b.tick:SetShown(K.selected[m.id]==true)end;b.wash:SetShown(K.selected[m.id]==true);b:SetAlpha(canGather(m) and 1 or .35);b:Show()
   end;y=y+math.ceil(#list/columns)*61 end
  end
  for i=index+1,#R.buttons do R.buttons[i]:Hide()end;R.body:SetHeight(math.max(1,y));local n=0;for _ in pairs(K.selected)do n=n+1 end;K.count:SetText(n..' Resources Selected');if K.resourceBar then K.resourceBar:SetShown(y>K.gridHeight)end
@@ -5057,13 +6195,7 @@ local collect=K.Collect
 K.Collect=function(...)
  collect(...);local route=F.route;local p=position();if not p then return end
  local current=N.model and N.model:Current();if not route and current and current.adaptiveVendor then local d=read(ns.ProfessionGuide.Destination);local yards,bearing=dist(d,p);if yards and yards>8 then local seen=false;for _,v in ipairs(K.targets)do if v.active then seen=true end end;if not seen then table.insert(K.targets,1,{key='active',name=d.name or'Vendor',zone=d.zone,location=d,icon='Interface\\Icons\\INV_Misc_Coin_01',active=true,distance=yards,bearing=bearing})end end end
- if not route then return end
- if K.nearTime100 and clock()-K.nearTime100<1 and K.nearMap100==p.mapID and K.nearRoute100==route then if K.near100 then local yards,bearing=dist(K.near100.location,p);K.near100.distance=yards;K.near100.bearing=bearing;K.targets[#K.targets+1]=K.near100 end;return end;K.nearTime100=clock();K.nearMap100=p.mapID;K.nearRoute100=route
- local best,near;for _,kind in ipairs({'Mining','Herbalism','Fishing'})do for coord,id in pairs(F.known[kind]and F.known[kind][p.mapID]or{})do local meta=F.meta[id];if meta and(meta.item==route.item or K.selected[meta.item])then local x,y=F.Decode(coord);local d={mapID=p.mapID,x=x,y=y};local yards,bearing=dist(d,p);if yards and yards>8 and(not best or yards<best)then best=yards;near={key='nearby-resource100',name=meta.name,zone=route.zone,location=d,icon=read(GetItemIcon,meta.item),nearby=true,distance=yards,bearing=bearing}end end end end
- K.near100=near;if near then K.targets[#K.targets+1]=near end
 end
-local update=K.Update
-K.Update=function(...)local v=update(...);for i,target in ipairs(K.targets or{})do local marker=K.markers and K.markers[i];if marker and target.nearby then if marker.scale100~=.70 then marker:SetScale(.70);marker.scale100=.70 end;if not marker.nearLabel100 then marker.nearLabel100=marker:CreateFontString(nil,'OVERLAY');marker.nearLabel100:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',16);marker.nearLabel100:SetPoint('TOP',marker,'BOTTOM',0,-4)end;local caption=math.floor(target.distance or 0)..' yd';if marker.caption100~=caption then marker.nearLabel100:SetText(caption);marker.caption100=caption end;marker.nearLabel100:Show()elseif marker then if marker.scale100~=1 then marker:SetScale(1);marker.scale100=1 end;if marker.nearLabel100 then marker.nearLabel100:Hide()end end end;return v end
 local D={};ns.Review100=D
 function D.Menu(anchor,values,callback)
  if V.menu then V.menu:Hide()end
@@ -5124,7 +6256,7 @@ end)(ADDON,GF)
 ;(function(...)
 local _,ns=...;local N=ns.NormalUI;local E=ns.SharedExplorer or ns.Forever;local U=ns.SharedUI or ns.ForeverUI
 if not N or not E or not U then return end
-local maps={["Ragefire Chasm"]={{["file"]="213.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Deadmines"]={{["file"]="291.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="292.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Wailing Caverns"]={{["file"]="279.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Shadowfang Keep"]={{["file"]="310.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="316.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="315.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Stockade"]={{["file"]="225.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.654296875,["aspect"]=1.528358208955224}},["Blackfathom Deeps"]={{["file"]="221.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="222.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="223.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Gnomeregan"]={{["file"]="226.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="227.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="228.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="229.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Razorfen Kraul"]={{["file"]="301.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Scarlet Monastery"]={{["file"]="302.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="303.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="304.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="305.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Razorfen Downs"]={{["file"]="300.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Uldaman"]={{["file"]="230.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="231.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Zul'Farrak"]={{["file"]="219.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Maraudon"]={{["file"]="280.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="281.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Temple of Atal'Hakkar"]={{["file"]="220.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Blackrock Depths"]={{["file"]="242.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="243.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Lower Blackrock Spire"]={{["file"]="250.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="251.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="252.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="253.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="254.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="255.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Upper Blackrock Spire"]={{["file"]="250.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="251.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="252.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="253.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="254.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="255.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Molten Core"]={{["file"]="232.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Blackwing Lair"]={{["file"]="287.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="288.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="289.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="290.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Dire Maul"]={{["file"]="234.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="235.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="236.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="237.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="238.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="239.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="240.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Scholomance"]={{["file"]="306.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="307.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="308.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="309.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Stratholme"]={{["file"]="317.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="318.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Zul'Gurub"]={{["file"]="233.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Onyxia's Lair"]={{["file"]="248.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ruins of Ahn'Qiraj"]={{["file"]="247.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ahn'Qiraj"]={{["file"]="319.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="320.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="321.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Naxxramas"]={{["file"]="166.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="162.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="163.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="164.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="165.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="167.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ruins of Lordaeron"]={{["file"]="2999.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Hall of Thanes"]={{["file"]="3065.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Excavation Site: Wetlands"]={{["file"]="cb7b0553-92ce-471d-a208-76fc7d080e66.tga",["u0"]=0.00732421875,["u1"]=0.63037109375,["v0"]=0.00732421875,["v1"]=0.42333984375,["aspect"]=1.4976525821596245}},["City of Dalaran"]={{["file"]="4ea62afb-de93-4c9d-b051-834461d56c75.tga",["u0"]=0.0146484375,["u1"]=0.6376953125,["v0"]=0.01416015625,["v1"]=0.43017578125,["aspect"]=1.4976525821596245},{["file"]="29df9463-6295-4e49-9751-de8b833f2436.tga",["u0"]=0.0107421875,["u1"]=0.6337890625,["v0"]=0.01611328125,["v1"]=0.43505859375,["aspect"]=1.4871794871794872}}};ns.BundledDungeonMaps=maps
+local maps={["Ragefire Chasm"]={{["legacyLandmarks"]=false,["file"]="BlizzardRagefire.tga",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Deadmines"]={{["file"]="291.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="292.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Wailing Caverns"]={{["file"]="ClassicWailingCaverns.tga",["u0"]=0,["v0"]=0,["u1"]=0.978515625,["v1"]=0.65234375,["aspect"]=1.5}},["Shadowfang Keep"]={{["file"]="310.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="316.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="315.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Stockade"]={{["file"]="225.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.654296875,["aspect"]=1.528358208955224}},["Blackfathom Deeps"]={{["file"]="221.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="222.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="223.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Gnomeregan"]={{["file"]="226.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="227.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="228.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="229.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Razorfen Kraul"]={{["file"]="301.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Scarlet Monastery"]={{["file"]="302.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="303.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="304.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="305.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Razorfen Downs"]={{["file"]="300.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Uldaman"]={{["file"]="230.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="231.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Zul'Farrak"]={{["file"]="219.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Maraudon"]={{["file"]="280.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="281.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Temple of Atal'Hakkar"]={{["file"]="AtlasSunken1.tga",["u0"]=0,["v0"]=0,["u1"]=0.513671875,["v1"]=0.6806640625,["aspect"]=0.7546628407460545},{["file"]="AtlasSunken2.tga",["u0"]=0,["v0"]=0,["u1"]=0.9873046875,["v1"]=0.9345703125,["aspect"]=1.0564263322884013},{["file"]="AtlasSunken3.tga",["u0"]=0,["v0"]=0,["u1"]=0.669921875,["v1"]=0.837890625,["aspect"]=0.7995337995337995}},["Blackrock Depths"]={{["file"]="242.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="243.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Lower Blackrock Spire"]={{["file"]="250.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="251.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="252.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="253.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="254.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="255.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Upper Blackrock Spire"]={{["file"]="250.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="251.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="252.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="253.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="254.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="255.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Molten Core"]={{["file"]="232.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Blackwing Lair"]={{["file"]="287.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="288.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="289.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="290.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Dire Maul"]={{["file"]="234.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="235.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="236.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="237.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="238.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="239.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="240.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Scholomance"]={{["file"]="306.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="307.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="308.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="309.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Stratholme"]={{["file"]="317.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="318.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Zul'Gurub"]={{["file"]="233.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Onyxia's Lair"]={{["file"]="248.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ruins of Ahn'Qiraj"]={{["file"]="247.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ahn'Qiraj"]={{["file"]="319.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="320.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="321.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Naxxramas"]={{["file"]="166.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="162.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="163.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="164.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="165.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="167.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ruins of Lordaeron"]={{["file"]="2999.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Hall of Thanes"]={{["file"]="3065.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Excavation Site: Wetlands"]={{["file"]="cb7b0553-92ce-471d-a208-76fc7d080e66.tga",["u0"]=0.00732421875,["u1"]=0.63037109375,["v0"]=0.00732421875,["v1"]=0.42333984375,["aspect"]=1.4976525821596245}},["City of Dalaran"]={{["file"]="4ea62afb-de93-4c9d-b051-834461d56c75.tga",["u0"]=0.0146484375,["u1"]=0.6376953125,["v0"]=0.01416015625,["v1"]=0.43017578125,["aspect"]=1.4976525821596245},{["file"]="29df9463-6295-4e49-9751-de8b833f2436.tga",["u0"]=0.0107421875,["u1"]=0.6337890625,["v0"]=0.01611328125,["v1"]=0.43505859375,["aspect"]=1.4871794871794872}},["The Drowned City"]={{["file"]="SantiagoDrownedCity.tga",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Krol'dok Stronghold"]={{["file"]="SantiagoKroldok.tga",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Alcaz Prison"]={{["file"]="SantiagoAlcaz.tga",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Shaper's Terrace"]={{["file"]="SantiagoShapers.tga",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}}};ns.BundledDungeonMaps=maps
 local function key(name)return(name or''):lower():gsub('[^%w]',''):gsub('^the','')end
 local lookup={};for name,floors in pairs(maps)do lookup[key(name)]=floors end
 lookup[key('Temple of Ahn Qiraj')]=maps["Ahn'Qiraj"];lookup[key('Hall of the Thanes')]=maps['Hall of Thanes'];lookup[key('Sunken Temple')]=maps["The Temple of Atal'Hakkar"];lookup[key('Blackrock Spire')]=maps['Lower Blackrock Spire']
@@ -5170,39 +6302,130 @@ end)(...)
 -- GF_BUNDLED_MAPS102_END
 
 
--- Opt-in dialogue actions; no unattended interaction or reward choice guessing.
+-- Opt-in actions after the player opens quest dialogue or a flight map.
 ;(function(...)
-local _,ns=...;local E,P=ns.Forever,ns.ProfessionGuide
-local function enabled(key)return E.db and E.db[key]==true and not E.Call(InCombatLockdown)end
-local function questID()local id=E.Call(GetQuestID);if E.Public(id)and type(id)=='number'then return id end end
-local pendingGossip
-local f=CreateFrame('Frame');for _,event in ipairs({'QUEST_DETAIL','QUEST_PROGRESS','QUEST_COMPLETE','GOSSIP_SHOW','GOSSIP_CLOSED','TAXIMAP_OPENED'})do E.Call(f.RegisterEvent,f,event)end
-f:SetScript('OnEvent',function(_,event)
- if event=='QUEST_DETAIL'and enabled('autoAcceptQuests')then E.Call(AcceptQuest)
- elseif event=='QUEST_PROGRESS'and enabled('autoTurnInQuests')and E.Call(IsQuestCompletable)then E.Call(CompleteQuest)
- elseif event=='QUEST_COMPLETE'and enabled('autoTurnInQuests')then
-  local n=E.Call(GetNumQuestChoices);if E.Public(n)and type(n)=='number'and n<=1 then E.Call(GetQuestReward,n==1 and 1 or 0)end
- elseif event=='GOSSIP_SHOW'then
-  local token={}
-  pendingGossip=token
-  local function selectQuest()
-  local row=P.selected;local api=C_GossipInfo;if not row or not api then return end
-  local records=E.Call(row.kind=='accept'and api.GetAvailableQuests or api.GetActiveQuests)
-  local allow=row.kind=='accept'and enabled('autoAcceptQuests')or row.kind=='turnin'and enabled('autoTurnInQuests')
-  if allow and type(records)=='table'then for _,r in ipairs(records)do if E.Public(r.questID)and r.questID==row.quest then E.Call(row.kind=='accept'and api.SelectAvailableQuest or api.SelectActiveQuest,r.questID);return end end end
+local _,ns=...
+local E,P=ns.Forever,ns.ProfessionGuide
+local call=E.Call
+local function enabled(key)
+ return E.db and E.db[key]==true and not call(InCombatLockdown)
+end
+local function number(value)
+ return E.Public(value) and type(value)=='number' and value or nil
+end
+local function selectQuest()
+ local api=C_GossipInfo
+ if not api then return end
+ local available=enabled('autoAcceptQuests') and call(api.GetAvailableQuests)
+ local active=enabled('autoTurnInQuests') and call(api.GetActiveQuests)
+ local accepts,turnins={},{}
+ for _,row in ipairs(type(available)=='table' and available or {})do
+  local id=number(row.questID)
+  if id and id>0 then accepts[id]=true end
+ end
+ for _,row in ipairs(type(active)=='table' and active or {})do
+  local id=number(row.questID)
+  if id and id>0 and E.Public(row.isComplete) and (row.isComplete==true or row.isComplete==1)then turnins[id]=true end
+ end
+ local function select(row)
+  local id=row and row.quest
+  if row and row.kind=='turnin' and turnins[id] then call(api.SelectActiveQuest,id);return true end
+  if row and row.kind=='accept' and accepts[id] then call(api.SelectAvailableQuest,id);return true end
+ end
+ if select(P.selected)then return end
+ for _,row in ipairs(P.steps or {})do if select(row)then return end end
+end
+local function selectGreetingQuest()
+ local function choices(count, title, requireComplete)
+  local matches={}
+  for index=1,number(call(count)) or 0 do
+   local label, complete=call(title,index)
+   if E.Public(label) and type(label)=='string' and label~=''
+    and (not requireComplete or E.Public(complete) and (complete==true or complete==1)) then
+    if matches[label]==nil then matches[label]=index else matches[label]=false end
+   end
   end
-  if C_Timer and C_Timer.After then
-   C_Timer.After(.25,function()if pendingGossip==token then selectQuest()end end)
-  else selectQuest()end
- elseif event=='GOSSIP_CLOSED'then pendingGossip=nil
- elseif event=='TAXIMAP_OPENED'and enabled('autoFlights')then
-  local row=P.selected;local name=row and(row.taxiDestination or row.flightDestination)
-  if not E.Public(name)or type(name)~='string'then return end
-  for i=1,E.Call(NumTaxiNodes)or 0 do local n=E.Call(TaxiNodeName,i);local t=E.Call(TaxiNodeType,i)
-   if E.Public(n)and E.Public(t)and n==name and t=='REACHABLE'then E.Call(TakeTaxiNode,i);break end
+  return matches
+ end
+ local available=enabled('autoAcceptQuests') and choices(GetNumAvailableQuests,GetAvailableTitle) or {}
+ local active=enabled('autoTurnInQuests') and choices(GetNumActiveQuests,GetActiveTitle,true) or {}
+ local function select(row)
+  if not row or not row.quest then return end
+  local data=ns.ForeverQuestData
+  local quest=data and data.quests[row.quest]
+  local title=call(C_QuestLog and C_QuestLog.GetTitleForQuestID,row.quest)
+  if not E.Public(title) or type(title)~='string' or title=='' then
+   title=quest and quest.title or (row.title or ''):gsub('^Accept ',''):gsub('^Turn in ','')
+  end
+  local index, action
+  if row.kind=='accept' then index,action=available[title],SelectAvailableQuest
+  elseif row.kind=='turnin' then index,action=active[title],SelectActiveQuest end
+  if index and type(action)=='function' then call(action,index);return true end
+ end
+ if select(P.selected)then return end
+ for _,row in ipairs(P.steps or {})do if select(row)then return end end
+end
+local function takeFlight()
+ if not enabled('autoFlights') or call(UnitOnTaxi,'player')then return end
+ local row=P.selected
+ if not row then return end
+ local named=row.taxiDestination or row.flightDestination
+ local money=number(call(GetMoney))
+ if not money then return end
+ local destination=row.destination
+ local here=E.CurrentPosition()
+ local speed=number(call(GetUnitSpeed,'player')) or 7
+ if speed<7 then speed=7 end
+ local direct=here and destination and E.Distance(here,destination)
+ local best,bestSeconds
+ for slot,edge in pairs(E.taxiChoices or {})do
+  if edge.cost>=0 and edge.cost<=money then
+   if type(named)=='string' and edge.to.name==named then best=slot;break end
+   local remaining=direct and edge.seconds and E.Distance(edge.to,destination)
+   if remaining then
+    local seconds=edge.seconds+remaining/speed
+    if seconds+15<direct/speed and (not bestSeconds or seconds<bestSeconds)then best,bestSeconds=slot,seconds end
+   end
   end
  end
+ if not best and type(named)=='string' then
+  for slot=1,number(call(NumTaxiNodes)) or 0 do
+   local name,state=call(TaxiNodeName,slot),call(TaxiNodeType,slot)
+   local cost=number(call(TaxiNodeCost,slot))
+   if E.Public(name) and E.Public(state) and name==named and state=='REACHABLE'
+    and cost and cost>=0 and cost<=money then best=slot;break end
+  end
+ end
+ if best then call(TakeTaxiNode,best)end
+end
+E.AutoGuideFlight=takeFlight
+local pendingGossip
+local f=CreateFrame('Frame')
+f:SetScript('OnEvent',function(_,event)
+ if event=='QUEST_DETAIL' and enabled('autoAcceptQuests') then
+  call(AcceptQuest)
+ elseif event=='QUEST_PROGRESS' and enabled('autoTurnInQuests') then
+  local ready=call(IsQuestCompletable)
+  if E.Public(ready) and (ready==true or ready==1)then call(CompleteQuest)end
+ elseif event=='QUEST_COMPLETE' and enabled('autoTurnInQuests') then
+  local choices=number(call(GetNumQuestChoices))
+  if choices and choices>=0 and choices<=1 then call(GetQuestReward,choices==1 and 1 or 0)end
+ elseif (event=='GOSSIP_SHOW' or event=='QUEST_GREETING') and (enabled('autoAcceptQuests') or enabled('autoTurnInQuests')) then
+  local token={}
+  pendingGossip=token
+  local function pick()
+   if pendingGossip~=token then return end
+   pendingGossip=nil
+   if event=='QUEST_GREETING' then selectGreetingQuest() else selectQuest() end
+  end
+  if C_Timer and C_Timer.After then C_Timer.After(.25,pick)else pick()end
+ elseif event=='GOSSIP_CLOSED' or event=='QUEST_FINISHED' then
+  pendingGossip=nil
+ end
 end)
+for _,event in ipairs({'QUEST_DETAIL','QUEST_PROGRESS','QUEST_COMPLETE','GOSSIP_SHOW','GOSSIP_CLOSED','QUEST_GREETING','QUEST_FINISHED'})do
+ call(f.RegisterEvent,f,event)
+end
 end)(...)
 
 -- GF_UNIFIED_INTERLEAVING_19
@@ -5228,8 +6451,6 @@ local function better(a,b)
  if not b then return true end
  if a.rareMissing~=b.rareMissing then return a.rareMissing<b.rareMissing end
  if a.ready~=b.ready then return a.ready end
- if a.useful~=b.useful then return a.useful end
- if a.recipe.orange~=b.recipe.orange then return a.recipe.orange==true end
  if a.priced~=b.priced then return a.priced end
  if a.cost~=b.cost then return a.cost<b.cost end
  return tostring(a.recipe.id)<tostring(b.recipe.id)
@@ -5264,18 +6485,10 @@ function Q.Plan(state)
   local skill=state.skills[profession]; local best
   for _,r in ipairs(state.recipes or {})do
    if type(skill.rank)=='number'and type(skill.cap)=='number'and r.profession==profession and r.known and r.bookRank==skill.rank and next(r.reagents or {}) then
-    local useful=r.reserve and r.product and math.max(0,r.reserve-(stock[r.product]or 0))or 0
-    local points=secondary[profession]and 10 or 5
     local count
-    if useful>0 and r.output and r.output>0 then count=math.ceil(useful/r.output)
-     local available=math.huge
-     for id,quantity in pairs(r.reagents)do
-      if type(quantity)=='number'and quantity>0 then available=math.min(available,math.floor((stock[id]or 0)/quantity))end
-     end
-     if available>0 and available<count then count=available end
-    elseif r.orange then
-     count=math.min(points,skill.cap-skill.rank)
-     if r.orangeUntil then count=math.min(count,r.orangeUntil-skill.rank)end
+    if r.orange then
+     local guaranteed=r.orangeUntil and r.orangeUntil-skill.rank or 1
+     count=math.min(secondary[profession] and 10 or 5,skill.cap-skill.rank,guaranteed)
      local available=math.huge
      for id,quantity in pairs(r.reagents)do
       if type(quantity)=='number'and quantity>0 then available=math.min(available,math.floor((stock[id]or 0)/quantity))end
@@ -5293,8 +6506,14 @@ function Q.Plan(state)
      end
      for id,amount in pairs(r.reagents)do if state.prices[id]then cost=cost+state.prices[id]*amount*count else priced=false;cost=cost+amount*count end end
      local candidate={recipe=r,count=count,ledger=ledger,missing=missing,rareMissing=rareMissing,
-      cost=cost/count,priced=priced,ready=ready,useful=useful>0,conversions=work}
-     if better(candidate,best)then best=candidate end
+      cost=cost/count,priced=priced,ready=ready,conversions=work}
+     local allowed=true
+     if state.localMaterials then
+      for id in pairs(missing)do
+       if not state.localMaterials[id]then allowed=false;break end
+      end
+     end
+     if allowed and better(candidate,best)then best=candidate end
     end
    end
   end
@@ -5311,7 +6530,7 @@ function Q.Plan(state)
     local need=needs[id]or{id=id,have=state.inventory[id]or 0,missing=0,professions={}}
     materials[id]=(materials[id]or 0)+amount
     need.missing=need.missing+amount;need.target=need.have+need.missing;need.professions[profession]=true
-    need.purchase=state.rare[id]or state.vendorStock[id]~=nil;needs[id]=need
+    need.purchase=not state.localMaterials and (state.rare[id]or state.vendorStock[id]~=nil);needs[id]=need
    end
   end
  end
@@ -5322,12 +6541,12 @@ function Q.Counters(plan,row,sources,names)
  local mobs={};for _,id in ipairs(row.mobIDs or {})do mobs[id]=true end
  if row.targetID and tostring(row.targetKind):lower()=='npc'then mobs[row.targetID]=true end
  for _,id in ipairs(keys(plan.needs))do
-  local need=plan.needs[id]; local relevant=false
+  local need=plan.needs[id]; local relevant,fishing=false,false
   if not need.purchase then for _,source in ipairs(sources[id]or {})do
    if source.mobID and mobs[source.mobID]then relevant=true end
-   if source.nearby and source.distance and source.distance<=100 and source.learned and source.eligible then relevant=true end
+   if source.nearby and source.distance and source.distance<=100 and source.learned and source.eligible then relevant=true;fishing=fishing or source.fishing==true and need.professions.Cooking==true end
   end end
-  if relevant then out[#out+1]={itemID=id,have=need.have,target=need.target,text=(names[id]or('Item '..id))..': '..need.have..'/'..need.target}end
+  if relevant then out[#out+1]={itemID=id,have=need.have,target=need.target,text=(names[id]or('Item '..id))..': '..need.have..'/'..need.target..(fishing and ' · Fishing + Cooking' or '')}end
   if #out>=3 then break end
  end
  return out
@@ -5350,7 +6569,7 @@ function Q.ShoppingList(plan,itemName,purchaseSource)
    if (not not p.ready)==ready then
     if not heading then
      if #lines>0 then lines[#lines+1]='' end
-     local title=ready and 'Craft In Town' or 'Craft After Gathering Or Buying'
+     local title=ready and 'Craft In Town' or 'Craft After Gathering Nearby'
      lines[#lines+1]=title
      heading={title=title,tiles={}}
      view[#view+1]=heading
@@ -5397,7 +6616,7 @@ function Q.Rewrite(rows,plan,options)
     local lines={};for line in n.questGatheringOriginal:gmatch('[^\r\n]+')do
      if not line:match('^Source step ')and not line:match('^Quest ID:')and not line:match('^Location:')and not line:match('^Draenei shared starter route')and not line:match('^Faction quest route')then lines[#lines+1]=line end
     end
-    n.body=table.concat(lines,'\n');n.resourceCounters=Q.Counters(plan,n,options.sources,options.names)
+    n.body=table.concat(lines,'\n');if n.recommendationReason then n.body=n.body=='' and n.recommendationReason or n.body..'\n'..n.recommendationReason end;n.resourceCounters=Q.Counters(plan,n,options.sources,options.names)
     n.craftingShopping,n.craftingSections,n.craftingBody=nil,nil,nil
     if options.shopping and options.shopping~='' then
      if n.kind=='objective' and n.body~='' then n.body='Quest Objectives\n'..n.body end
@@ -5445,15 +6664,14 @@ end
 local F,L=ns.FarmingPlanner,ns.BlendedProfessions
 local skills
 local function read(fn,...)if type(fn)=='function'then local ok,a,b,c,d,e=pcall(fn,...);if ok then return a,b,c,d,e end end end
-local function merchantInfo(i)
- local _,_,price,pack,available,_,extended=E.Call(GetMerchantItemInfo,i)
- if not extended then return price,pack,available end
-end
 local function now()return read(GetTime)or 0 end
 local function mode()return Q.Mode(E.db)end
 local function manual()return F and F.route~=nil end
 local function itemID(link)return type(link)=='string'and tonumber(link:match('item:(%d+)'))end
-local function count(id)return read(GetItemCount,id,false)or 0 end
+local function count(id)
+ local value=read(C_Item and C_Item.GetItemCount or GetItemCount,id,false)
+ return E.Public(value) and type(value)=='number' and value or 0
+end
 local name=E.ItemName
 local function materialLabel(id)
  local label=read(GetItemInfo,id)
@@ -5466,12 +6684,55 @@ local function position()return read(E.CurrentPosition)end
 local function distance(a,b)return a and b and read(E.Distance,a,b)end
 local function unsafe()return read(InCombatLockdown)or read(UnitAffectingCombat,'player')or read(UnitIsDeadOrGhost,'player')or read(UnitOnTaxi,'player')end
 -- Only live, unlinked books supply learned recipes and current difficulty.
+local function captureForeverBook()
+ local api=C_TradeSkillUI
+ if not api or not api.GetRecipeSchematic or not api.GetAllRecipeIDs
+  or read(api.IsTradeSkillLinked) or read(api.IsTradeSkillGuild) then return end
+ local info=read(api.GetChildProfessionInfo) or read(api.GetBaseProfessionInfo)
+ if not E.Public(info) or type(info)~='table' then return end
+ local profession=info.professionName
+ local rank=info.skillLevel
+ if not E.Public(profession) or not E.Public(rank) or type(profession)~='string'
+  or type(rank)~='number' or rank<=0 then return end
+ local ids=read(api.GetAllRecipeIDs)
+ if not E.Public(ids) or type(ids)~='table' then return end
+ local optimal=Enum and Enum.TradeskillRelativeDifficulty and Enum.TradeskillRelativeDifficulty.Optimal
+ if optimal==nil then optimal=0 end -- Forever 1.60.1 enum value.
+ local rows={}
+ for _,id in ipairs(ids)do
+  local recipe=read(api.GetRecipeInfo,id)
+  if E.Public(recipe) and type(recipe)=='table' and E.Public(recipe.learned) and recipe.learned==true
+   and E.Public(recipe.relativeDifficulty) and recipe.relativeDifficulty==optimal
+   and E.Public(recipe.name) and type(recipe.name)=='string' then
+   local schematic=read(api.GetRecipeSchematic,id,false)
+   local slots=E.Public(schematic) and type(schematic)=='table' and schematic.reagentSlotSchematics
+   if E.Public(slots) and type(slots)=='table' then
+    local reagents,complete={},true
+    for _,slot in ipairs(slots)do
+     if slot.required then
+      local choices=slot.reagents
+      local material=type(choices)=='table' and #choices==1 and choices[1].itemID
+      local quantity=slot.quantityRequired
+      if not E.Public(material) or not E.Public(quantity) or type(material)~='number'
+       or type(quantity)~='number' or quantity<=0 then complete=false;break end
+      reagents[material]=(reagents[material] or 0)+quantity
+     end
+    end
+    if complete and next(reagents)then
+     rows[#rows+1]={id=id,name=recipe.name,profession=profession,known=true,bookRank=rank,
+      orange=true,reagents=reagents,product=schematic.outputItemID,output=schematic.quantityMin,foreverBook=true}
+    end
+   end
+  end
+ end
+ if #ids>0 then R.SaveBook(profession,rank,rows);P.dirty=true end
+end
 function R.CaptureBook()
  local linked=read(GetTradeSkillIsLinked)
  if linked==true or linked==1 then return end
  local profession,rank=read(GetTradeSkillLine)
  local total=read(GetNumTradeSkills)
- if type(profession)~='string'or type(rank)~='number'or type(total)~='number'or total==0 then return end
+ if type(profession)~='string'or type(rank)~='number'or type(total)~='number'or total==0 then return captureForeverBook() end
  local rows={}
  for i=1,total do
   local title,kind=read(GetTradeSkillInfo,i)
@@ -5574,18 +6835,6 @@ function R.Snapshot()
    s.prices[id]=prices and read(prices.Price,id)
   end end
  end
- -- Only the currently open merchant window establishes purchasable stock.
- R.merchant={}
- if MerchantFrame and read(MerchantFrame.IsShown,MerchantFrame)then
-  for i=1,read(GetMerchantNumItems)or 0 do
-   local id=itemID(read(GetMerchantItemLink,i));local price,pack,available=merchantInfo(i)
-   local public=not E.Public or E.Public(price)and E.Public(pack)and E.Public(available)
-   if id and s.inventory[id]~=nil and public and type(price)=='number'and type(pack)=='number'and pack>0 and type(available)=='number'then
-    s.vendorStock[id]=available==-1 and math.huge or available*pack
-    R.merchant[id]={price=price,pack=pack,available=s.vendorStock[id]}
-   end
-  end
- end
  R.snapshotEpoch=R.epoch;R.snapshotCache=s
  return s
 end
@@ -5619,14 +6868,14 @@ function R.ZoneNodes(pos)
  R.nodes,R.nodeMap,R.nodeEpoch=nodes,pos.mapID,R.epoch;return nodes
 end
 function R.Sources(plan,pos,rows)
- local sources,names={},{}
+ local sources={}
  local mobs={}
  for _,row in ipairs(rows or{})do
   for _,id in ipairs(row.mobIDs or{})do mobs[id]=true end
   if row.targetID and row.targetKind=='npc'then mobs[row.targetID]=true end
  end
  for id in pairs(plan.needs)do
-  local list={};sources[id]=list;names[id]=name(id)
+  local list={};sources[id]=list
   if F then
    for _,mob in ipairs(F.clothSources and F.clothSources[id]or{})do list[#list+1]={mobID=mob}end
    if skills().Skinning and count(7005)>0 then for _,mob in ipairs(F.skinSources and F.skinSources[id]or{})do list[#list+1]={mobID=mob}end end
@@ -5637,13 +6886,18 @@ function R.Sources(plan,pos,rows)
    for _,item in ipairs(ns.Adaptive and ns.Adaptive.dropIndex and ns.Adaptive.dropIndex[mob]or{})do if item==id then list[#list+1]={mobID=mob}end end
   end
  end
+ if not next(sources) then return sources end
+ local learned=skills()
+ local tools={Mining=not learned.Mining or count(2901)>0,Skinning=not learned.Skinning or count(7005)>0}
  for _,node in ipairs(R.ZoneNodes(pos))do
-  local skill=skills()[node.kind];local yards=distance(pos,node.location)
-  if sources[node.item]and skill and skill.rank>=node.skill and yards and yards<=100 then
-   sources[node.item][#sources[node.item]+1]={nearby=true,distance=yards,learned=true,eligible=true,name=node.location.name}
+  local list=sources[node.item]
+  local skill=list and learned[node.kind]
+  local yards=skill and tools[node.kind]~=false and skill.rank>=node.skill and distance(pos,node.location)
+  if yards and yards<=100 then
+   sources[node.item][#sources[node.item]+1]={nearby=true,distance=yards,learned=true,eligible=true,name=node.location.name,location=node.location,kind=node.kind,fishing=node.kind=='Fishing' and skill.cap and skill.rank<skill.cap}
   end
  end
- return sources,names
+ return sources
 end
 function R.Stop(profession,recipe)
  if unsafe()then return false end
@@ -5652,6 +6906,20 @@ function R.Stop(profession,recipe)
  -- name alone is insufficient. Caller may attach verified station observations.
  local required=({Blacksmithing='Anvil',Engineering='Anvil',Cooking='Cooking Fire',Mining='Forge'})[profession]
  if required then
+  if recipe and recipe.foreverBook and C_TradeSkillUI then
+   local api=C_TradeSkillUI
+   local info=read(api.GetChildProfessionInfo) or read(api.GetBaseProfessionInfo)
+   if E.Public(info) and type(info)=='table' and E.Public(info.professionName) and info.professionName==profession then
+    local requirements=read(api.GetRecipeRequirements,recipe.id)
+    if E.Public(requirements) and type(requirements)=='table' and #requirements>0 then
+     local ready=true
+     for _,requirement in ipairs(requirements)do
+      if not E.Public(requirement.met) or requirement.met~=true then ready=false;break end
+     end
+     if ready then return true end
+    end
+   end
+  end
   -- Query current tool availability while the matching book is open. Never
   -- persist "near an anvil" from an old book inspection after walking away.
   local linked=read(GetTradeSkillIsLinked)
@@ -5674,25 +6942,6 @@ function R.Stop(profession,recipe)
  if ns.Forever then return not not read(E.CraftingStop,profession,E.state or{}) end
  return L and ns.CraftingSessions and read(ns.CraftingSessions.AtService,profession,L.Context())==true
 end
-local function nodeFor(id)
- local pos=position();if not pos or not F then return end
- local kind=R.Kind(id);if not kind or kind~='Cloth'and not skills()[kind]then return end
- if kind=='Mining'and count(2901)<1 or kind=='Skinning'and count(7005)<1 then return end
- -- Planning is event-driven, but several refreshes can share the same resource.
- -- Cache only the candidate locations; distances are recomputed on each use.
- R.routeCandidates=R.routeCandidates or{}
- local cached=R.routeCandidates[id];local rank=skills()[kind]and skills()[kind].rank or 0
- if not cached or cached.map~=pos.mapID or cached.rank~=rank or now()-cached.at>=2 then
-  cached={map=pos.mapID,rank=rank,at=now(),nodes=read(F.Plan,kind,id,6)or{}}
-  R.routeCandidates[id]=cached
- end
- local nodes=cached.nodes
- local best,yards
- for _,loc in ipairs(nodes or{})do
-  local d=distance(pos,loc);if loc.mapID==pos.mapID and d and d<=2200 and(not yards or d<yards)then best,yards=loc,d end
- end
- return best,kind
-end
 local function isDeferred(id)return(R.deferred[id]or 0)>now()end
 function R.CraftRows(plan)
  local out={}
@@ -5706,91 +6955,60 @@ function R.CraftRows(plan)
  end
  return out
 end
-local supplierTypes={
- [2320]='Tailoring or Leatherworking Supplies', [2321]='Tailoring or Leatherworking Supplies',
- [4291]='Tailoring Supplies', [8343]='Tailoring Supplies', [14341]='Tailoring Supplies',
- [4289]='Leatherworking Supplies', [2678]='Cooking Supplies', [3371]='Alchemy Supplies',
- [4470]='Trade Supplies',
-}
-local zephrasTradeStock={[2320]=true,[2321]=true,[4289]=true}
-local bundledTradeVendors={
- {name='Iallion Featherfall',npcID=252449,mapID=2521,zone='Zephras Isle',x=58.95,y=75.44,stockItems=zephrasTradeStock},
- {name='Belandiel Farflight',npcID=254360,mapID=2521,zone='Zephras Isle',x=44.79,y=45.12,stockItems=zephrasTradeStock},
- {name='Borya',npcID=3364,mapID=1454,zone='Orgrimmar',faction='Horde',x=63.0,y=51.1,
-  stockItems={
-   [2320]=true,[2321]=true,[4291]=true,[8343]=true,[14341]=true,
-   [2324]=true,[2604]=true,[6260]=true,[2605]=true,[4341]=true,
-   [4340]=true,[6261]=true,[2325]=true,[4342]=true,
-  }},
-}
-function R.PurchaseSources(plan,here)
- local sources,distances={},{}
- local faction=E.state and E.state.faction
- local function consider(vendor)
-  if vendor.stockItems and vendor.name and (not vendor.faction or vendor.faction==faction)then
-   local yards
-   for id in pairs(plan.needs)do
-    if vendor.stockItems[id]then
-     yards=yards or distance(here,vendor) or math.huge
-     if not sources[id] or yards<distances[id] then sources[id]=vendor;distances[id]=yards end
+function R.FarmRow(plan,sources)
+ if unsafe()then return end
+ local best,yards
+ for id,need in pairs(plan.needs)do
+  local key='interleave:gather:'..id
+  if not isDeferred(key)then
+   for _,source in ipairs(sources[id]or{})do
+    local loc,d=source.location,source.distance
+    if loc and d and (not yards or d<yards or d==yards and id<best.material)then
+     yards=d
+     best={id=key,kind='profession',integratedProfession=true,profession=source.kind,category='Gathering',
+      material=id,materialTarget=need.target,title=name(id)..': '..need.have..'/'..need.target,
+      body='Gather '..name(id)..' near '..(loc.name or 'the marked location')..'.',destination=loc}
     end
    end
   end
  end
- for _,vendor in pairs(E.vendors or{})do consider(vendor) end
- for _,vendor in ipairs(bundledTradeVendors)do consider(vendor) end
- return sources
-end
-function R.PurchaseRows(plan,here)
- local out={};local money=read(GetMoney)or 0
- if E.Public and not E.Public(money)then money=0 end
- local open=MerchantFrame and read(MerchantFrame.IsShown,MerchantFrame)
- if unsafe()then return out end
- for id,need in pairs(plan.needs)do
-  local stock=R.merchant[id];local key='interleave:buy:'..id
-  local cost=stock and math.ceil(need.missing/stock.pack)*stock.price
-  local vendor=plan.purchaseSources[id]
-  local title='Buy '..need.missing..' '..name(id)
-  if not isDeferred(key)then
-   if stock and stock.available>=need.missing and cost<=money then
-    money=money-cost
-    out[#out+1]={id=key,kind='profession',integratedProfession=true,category='Crafting',title=title,body='From this vendor.'}
-   elseif not open and vendor and here and vendor.mapID==here.mapID and (distance(here,vendor)or math.huge)<=150 then
-    out[#out+1]={id=key,kind='profession',integratedProfession=true,category='Crafting',title=title,body='From '..vendor.name..'.',destination=vendor}
-   end
-  end
- end
- table.sort(out,function(a,b)return a.id<b.id end);return out
-end
-function R.FarmRow(plan)
- if unsafe()then return end
- local held=R.focus
- if held and count(held.material)<held.materialTarget and plan.needs[held.material]and not isDeferred(held.id)then
-  held=copy(held);held.title=name(held.material)..': '..count(held.material)..'/'..held.materialTarget;return held
- end
- R.focus=nil
- local ids={};for id,need in pairs(plan.needs)do if not need.purchase and not supplierTypes[id] and not plan.purchaseSources[id] then ids[#ids+1]=id end end;table.sort(ids)
- local best,yards
- for _,id in ipairs(ids)do
-  local key='interleave:gather:'..id
-  if not isDeferred(key)then local loc,kind=nodeFor(id);local d=distance(position(),loc)
-   if d and(not yards or d<yards)then
-    local need=plan.needs[id];yards=d
-    best={id=key,kind='profession',integratedProfession=true,profession=kind,category='Gathering',material=id,materialTarget=need.target,
-     title=name(id)..': '..need.have..'/'..need.target,body='Gather '..name(id)..' near '..(loc.name or'the marked location')..'.',destination=loc}
-   end
-  end
- end
- R.focus=best;return best
+ return best
 end
 function R.Apply(rows)
  if not mode()or manual()then return rows end
  local snapshot=R.Snapshot();local plan=R.plan
  local here=position()
- if not plan or R.planEpoch~=R.epoch then
-  plan=Q.Plan(snapshot)
-  plan.purchaseSources=R.PurchaseSources(plan,here)
-  R.plan=plan;R.planEpoch=R.epoch
+ local active
+ for _,row in ipairs(rows)do
+  if row.quest and not row.complete then
+   local loc=row.destination
+   if row.kind=='objective' and here and loc and here.mapID==loc.mapID
+    and (distance(here,loc) or math.huge)<=150 then active=row end
+   break
+  end
+ end
+ local probe={needs={}}
+ for id in pairs(snapshot.inventory)do probe.needs[id]=true end
+ local sources=R.Sources(probe,here,active and {active} or {})
+ local mobs={}
+ if active then
+  for _,id in ipairs(active.mobIDs or {})do mobs[id]=true end
+  if active.targetID and tostring(active.targetKind):lower()=='npc'then mobs[active.targetID]=true end
+ end
+ local allowed,ids={},{}
+ for id,list in pairs(sources)do
+  for _,source in ipairs(list)do
+   if source.location or source.mobID and mobs[source.mobID]then
+    allowed[id]=true;ids[#ids+1]=id;break
+   end
+  end
+ end
+ table.sort(ids)
+ local signature=table.concat(ids,',')
+ if not plan or R.planEpoch~=R.epoch or R.planLocalMaterials~=signature then
+  local state=copy(snapshot);state.localMaterials=allowed;state.vendorStock={}
+  plan=Q.Plan(state)
+  R.plan=plan;R.planEpoch=R.epoch;R.planLocalMaterials=signature
  end
  if plan.shopping==nil then
   plan.waitingMaterialLabels={}
@@ -5799,21 +7017,16 @@ function R.Apply(rows)
    if label then return label end
    plan.waitingMaterialLabels[id]=true
    return 'Item '..id
-  end,function(id)
-   local vendor=plan.purchaseSources[id]
-   if vendor then return vendor.name..(vendor.zone and ', '..vendor.zone or '')end
-   return supplierTypes[id]
   end)
  end
- local sources,names=R.Sources(plan,here,rows)
  local base={};for _,row in ipairs(rows)do if not row.integratedProfession then base[#base+1]=row end end
+ local names={};for id in pairs(plan.needs)do names[id]=name(id)end
  local out=Q.Rewrite(base,plan,{sources=sources,names=names,shopping=plan.shopping,shoppingView=plan.shoppingView})
  local additions=R.CraftRows(plan)
- local purchases=R.PurchaseRows(plan,here);for _,row in ipairs(purchases)do additions[#additions+1]=row end
- if mode()=='Farming'and #additions==0 then local farm=R.FarmRow(plan);if farm then additions[1]=farm end end
+ if mode()=='Farming'and #additions==0 then local farm=R.FarmRow(plan,sources);if farm then additions[1]=farm end end
  -- Preserve urgent services, training and immediately available hub turn-ins.
  local at=1
- while out[at]and(out[at].urgentBags or out[at].adaptiveVendor or out[at].kind=='sell'or out[at].kind=='train'or out[at].trainingRequired or out[at].professionChoice or out[at].kind=='turnin'and(distance(position(),out[at].destination)or math.huge)<=150)do at=at+1 end
+ while out[at]and(out[at].urgentBags or out[at].localQuestPickup or out[at].adaptiveVendor or out[at].kind=='sell'or out[at].kind=='train'or out[at].trainingRequired or out[at].professionChoice or out[at].kind=='turnin'and(distance(position(),out[at].destination)or math.huge)<=150)do at=at+1 end
  for i=#additions,1,-1 do table.insert(out,at,additions[i])end
  return out
 end
@@ -5831,9 +7044,9 @@ if L then
  local H=ns.ProfessionTaskFocus
  if H then local valid=H.Valid;H.Valid=function(...)if mode()and not manual()then if H.ref then H.Release('quest gathering branch owns profession focus')end;return false end;return valid(...)end end
 else
- for _,key in ipairs({'CatchupSteps','CraftingCatchup','CampPlan'})do
-  local original=E[key];local camp=key=='CampPlan'
-  E[key]=function(...)if mode()and not manual()then if camp then return nil end;return{}end;return original and original(...)end
+ for _,key in ipairs({'CatchupSteps','CraftingCatchup'})do
+  local original=E[key]
+  E[key]=function(...)if mode()and not manual()then return{}end;return original and original(...)end
  end
  local order=E.Order;E.Order=function(...)return R.Apply(order(...))end
 end
@@ -5872,22 +7085,6 @@ if compass then
    local primary=marker(current.destination,pos,current.itemID or 0,'interleave:quest',true)
    if primary then table.insert(compass.targets,1,primary)end
   end
-  if not R.nearAt or now()-R.nearAt>=1 or R.nearMap~=pos.mapID or R.nearEpoch~=R.epoch then
-   R.nearAt,R.nearMap,R.nearEpoch=now(),pos.mapID,R.epoch;R.near={}
-   for _,node in ipairs(R.ZoneNodes(pos))do
-    local skill=skills()[node.kind]
-    if skill and skill.rank>=node.skill then
-     local yards=distance(pos,node.location)
-     if yards and yards<=100 and yards>5 then local candidate=copy(node);candidate.yards=yards;R.near[#R.near+1]=candidate end
-    end
-   end
-   table.sort(R.near,function(a,b)return a.yards<b.yards end)
-   while #R.near>2 do table.remove(R.near)end
-  end
-  for i,node in ipairs(R.near)do
-   local row=marker(node.location,pos,node.item,'interleave:node:'..i,false)
-   if row and row.distance<=100 and row.distance>5 then compass.targets[#compass.targets+1]=row end
-  end
  end
 end
 local freshSteps=ns.NormalUI and ns.NormalUI.FreshSteps
@@ -5898,15 +7095,19 @@ if freshSteps then
  end
 end
 local originalReadBook=E.ReadBook
- E.ReadBook=function()R.bookDirty=true;R.bookDue=GetTime()+.3 end
 local worker=CreateFrame('Frame');R.worker=worker
-for _,event in ipairs({'TRADE_SKILL_SHOW','TRADE_SKILL_UPDATE','TRADE_SKILL_LIST_UPDATE','CRAFT_SHOW','CRAFT_UPDATE','SKILL_LINES_CHANGED','BAG_UPDATE','BAG_UPDATE_DELAYED','PLAYER_ENTERING_WORLD','MERCHANT_SHOW','MERCHANT_CLOSED','PLAYER_EQUIPMENT_CHANGED','ZONE_CHANGED_NEW_AREA','GET_ITEM_INFO_RECEIVED'})do pcall(worker.RegisterEvent,worker,event)end
-worker:SetScript('OnUpdate',function()
- if not R.bookDue or GetTime()<R.bookDue then return end
+local function readPendingBook(self)
+ if GetTime()<R.bookDue then return end
+ self:SetScript('OnUpdate',nil)
  R.bookDue=nil
  if R.bookDirty then R.bookDirty=nil;originalReadBook();R.CaptureBook()end
  if R.craftDirty then R.craftDirty=nil;R.CaptureCraftBook()end
- end)
+end
+local function queueBook()
+ if not R.bookDue then worker:SetScript('OnUpdate',readPendingBook)end
+ R.bookDue=GetTime()+.3
+end
+E.ReadBook=function()R.bookDirty=true;queueBook()end
 worker:SetScript('OnEvent',function(_,event,...)
  if event=='GET_ITEM_INFO_RECEIVED'then
   local id,success=...
@@ -5919,9 +7120,12 @@ worker:SetScript('OnEvent',function(_,event,...)
   return
  end
  R.epoch=R.epoch+1
- if event=='TRADE_SKILL_SHOW'or event=='TRADE_SKILL_UPDATE'or event=='TRADE_SKILL_LIST_UPDATE'or event=='SKILL_LINES_CHANGED'then R.bookDirty=true;R.bookDue=GetTime()+.3 end
- if event=='CRAFT_SHOW'or event=='CRAFT_UPDATE'then R.craftDirty=true;R.bookDue=GetTime()+.3 end
+ if event=='TRADE_SKILL_SHOW'or event=='TRADE_SKILL_UPDATE'or event=='TRADE_SKILL_LIST_UPDATE'or event=='TRADE_SKILL_DATA_SOURCE_CHANGED'or event=='SKILL_LINES_CHANGED'then R.bookDirty=true;queueBook()end
+ if event=='CRAFT_SHOW'or event=='CRAFT_UPDATE'then R.craftDirty=true;queueBook()end
 end)
+for _,event in ipairs({'TRADE_SKILL_SHOW','TRADE_SKILL_UPDATE','TRADE_SKILL_LIST_UPDATE','TRADE_SKILL_DATA_SOURCE_CHANGED','CRAFT_SHOW','CRAFT_UPDATE','SKILL_LINES_CHANGED','BAG_UPDATE_DELAYED','PLAYER_ENTERING_WORLD','PLAYER_EQUIPMENT_CHANGED','ZONE_CHANGED_NEW_AREA','GET_ITEM_INFO_RECEIVED'})do
+ pcall(worker.RegisterEvent,worker,event)
+end
 
 end)(ADDON,GF)
 
@@ -6048,7 +7252,7 @@ end)(ADDON,GF)
  end
  local display=N.WorkflowLive
  function N.WorkflowLive(step)
-  if not step or step.kind~='objective'or not step.quest then return display(step)end
+  if not step or step.kind~='objective'or not step.quest or step.quest==97583 then return display(step)end
   local state=E.QuestState(step.quest)
   local goals=state and state.objectives
   if type(goals)~='table'then return display(step)end
@@ -6062,6 +7266,14 @@ end)(ADDON,GF)
   end
   local data=ns.ForeverQuestData;local fact=data and data.quests and data.quests[step.quest]
   row.title=fact and fact.title or step.title
+  if lines[1] then
+   local label=lines[1]
+   local progress=label:match('%((%d+%s*/%s*%d+)%)$') or label:match('^(%d+%s*/%s*%d+)%s+')
+   row.actionHeadline=label:gsub('^%d+%s*/%s*%d+%s+',''):gsub('%s*%(%d+%s*/%s*%d+%)$','')
+   row.actionContext=(progress and progress..' · ' or '')..row.title
+   row.actionLine=label
+  end
+  if step.recommendationReason then lines[#lines+1]=step.recommendationReason end
   for _,counter in ipairs(step.resourceCounters or{})do lines[#lines+1]=counter.text end
   row.body=table.concat(lines,'\n')
   if step.craftingSections then row.craftingBody=row.body end
@@ -6081,20 +7293,19 @@ local N,K,W,M,V=ns.NormalUI,ns.NavigationCompass,ns.WindowWorkflow,ns.KnownNodeP
 if not N or not K or not W or not M or not V then return end
 local function sync()
  local f=N.settingsFrame;if not f then return end
- local mode=V.Mode()
- for i,label in ipairs({'World Map Nodes','Minimap Nodes'})do
-  local key=i==1 and'worldNodesCheck'or'miniNodesCheck';local b=K[key]
-  if not b then
-   b=N.MakeButton(f,label,294);N.MakeCheckbox(b,false);K[key]=b
-   b:SetScript('OnClick',function()
-    local current=V.Mode();local world=current=='Both'or current=='World Map';local mini=current=='Both'or current=='Minimap'
-    if i==1 then world=not world else mini=not mini end
-    V.SetMode(world and(mini and'Both'or'World Map')or(mini and'Minimap'or'Off'));sync()
-   end)
-  end
-  b:ClearAllPoints();b:SetPoint('TOPLEFT',f,'TOPLEFT',18,-390-(i-1)*38);b:SetSize(294,32)
-  b:SetCheckedVisual(mode=='Both'or mode==(i==1 and'World Map'or'Minimap'));b:Show()
+ local toggle=K.worldNodesCheck
+ if not toggle then
+  toggle=N.MakeButton(f,'World Map Nodes',294)
+  N.MakeCheckbox(toggle,false)
+  K.worldNodesCheck=toggle
+  toggle:SetPoint('TOPLEFT',f,'TOPLEFT',18,-390)
+  toggle:SetSize(294,32)
+  toggle:SetScript('OnClick',function()
+   V.SetMode(V.Mode()=='Off' and 'World Map' or 'Off')
+   sync()
+  end)
  end
+ toggle:SetCheckedVisual(V.Mode()=='World Map')
  if M.button then M.button:Hide()end
 end
 local settings=K.Settings
@@ -6171,4 +7382,170 @@ end)(ADDON,GF)
   return value
  end
  N.WorkflowLayout=W.Layout
+end)(ADDON,GF)
+
+;(function(_,ns)
+local E,P,N=ns.Forever,ns.ProfessionGuide,ns.NormalUI
+if not E or not P or not N then return end
+local prep={dismissed={}}
+ns.DungeonPrep=prep
+local raid={["onyxias lair"]=true,["barrow deeps"]=true,["hyjal summit"]=true,
+ ["molten core"]=true,["blackwing lair"]=true,["zulgurub"]=true,["ahnqiraj"]=true,
+ ["temple of ahnqiraj"]=true,["ruins of ahnqiraj"]=true,naxxramas=true}
+local function allowed(quest,level)
+ local record=quest.reference or quest.record or {}
+ local side=record.faction or record.side
+ local faction=E.Call(UnitFactionGroup,'player')
+ local _,class=E.Call(UnitClass,'player')
+ local required=record.min_level or (type(record.requires)=='number' and record.requires) or 1
+ return level>=required and (not record.classOnly or record.classOnly==class)
+  and ((side~='Alliance' and side~='Horde') or side==faction)
+  and (not ns.ForeverQuestPlanner or ns.ForeverQuestPlanner.AllowsQuest(quest.id,faction,record))
+end
+local function pending(instance,level)
+ local rows,seen={},{}
+ local data=ns.ForeverQuestData.quests
+ local function add(row)
+  if row.id and not seen[row.id] and allowed(row,level) then
+   seen[row.id]=row
+   rows[#rows+1]=row
+  end
+ end
+ for _,row in ipairs(ns.DungeonQuestRows(instance,instance.name))do add(row)end
+ for _,ref in ipairs(ns.DungeonReferencesFor(instance.name))do
+  for _,fact in ipairs(ref.quests or {})do
+   local row=seen[fact.id]
+   if row then row.reference=fact
+   else add({id=fact.id,name=fact.name,reference=fact,record=data[fact.id] or {}})end
+  end
+ end
+ local out={}
+ for _,row in ipairs(rows)do
+  local state=E.QuestState(row.id)
+  if allowed(row,level) and not state.inLog and not state.rewarded and state.status~='unavailable' then
+   out[#out+1]=row
+  end
+ end
+ return out
+end
+local function makeStep(quest,kind,loc,hint)
+ local verb=kind=='accept' and 'Accept ' or kind=='turnin' and 'Turn In ' or ''
+ local record=quest.record or {}
+ local body=kind=='objective' and (record.objective or 'Complete the prerequisite in your quest log.')
+  or hint or (loc and loc.name) or 'Location unavailable. Check the quest journal.'
+ return {id='gf-dungeon-prep:'..kind..':'..quest.id,quest=quest.id,kind=kind,
+  category='Dungeons',title=verb..quest.name,body=body,destination=loc}
+end
+local function stepsFor(instance,level)
+ local steps,seen={},{}
+ local data=ns.ForeverQuestData.quests
+ local function step(quest,prerequisite)
+  if seen[quest.id] or not allowed(quest,level) then return end
+  seen[quest.id]=true
+  local state=E.QuestState(quest.id)
+  if state.rewarded then return end
+  local start=not state.inLog
+  if not start and not prerequisite then return end
+  if not start and not state.ready then
+   steps[#steps+1]=makeStep(quest,'objective')
+   return
+  end
+  local hint,points=ns.DungeonQuestLocations(quest,start)
+  local loc=E.Nearest(points,E.state) or points[1]
+  steps[#steps+1]=makeStep(quest,start and 'accept' or 'turnin',loc,hint)
+ end
+ for _,quest in ipairs(pending(instance,level))do
+  local chain=quest.reference and quest.reference.chain
+  for _,link in ipairs(chain or {})do
+   if link[1]~=quest.id then
+    step({id=link[1],name=link[2] or ('Quest '..link[1]),record=data[link[1]] or {},
+     reference=link[3] and {startPoint=link[3]} or nil},true)
+   end
+  end
+  step(quest,false)
+ end
+ return steps
+end
+local function offer(level)
+ local here=E.CurrentPosition()
+ if not here then return end
+ local best,bestDistance
+ for name,instance in pairs(E.dungeons)do
+  local key=ns.DungeonNameKey(name)
+  if not prep.dismissed[key] and not raid[key] and instance.minimum and instance.maximum
+   and level>=math.ceil((instance.minimum+instance.maximum)/2) and level<=instance.maximum then
+   local entrance=ns.DungeonEntrance(instance)
+   local distance=entrance and E.Distance(entrance,here)
+   if distance and distance<3000 and (not bestDistance or distance<bestDistance)
+    and #pending(instance,level)>0 then best,bestDistance=instance,distance end
+  end
+ end
+ return best
+end
+local function finish()
+ if prep.active then prep.dismissed[ns.DungeonNameKey(prep.active.name)]=true end
+ prep.active=nil
+ prep.resume=prep.saved
+ prep.saved=nil
+ prep.offer=nil
+end
+local refresh=P.Refresh
+function P.Refresh(...)
+ local normal=refresh(...)
+ if not ns.DungeonQuestRows or not ns.DungeonQuestLocations or (ns.FarmingPlanner and ns.FarmingPlanner.route) then return normal end
+ local level=E.Call(UnitLevel,'player') or 1
+ if prep.active then
+  local steps=stepsFor(prep.active,level)
+  if #steps>0 then P.steps=steps;P.firstPending=steps[1].id;return steps end
+  finish()
+ end
+ local clock=E.Call(GetTime) or 0
+ if not prep.checked or clock-prep.checked>=5 or prep.level~=level then
+  prep.checked,prep.level=clock,level
+  local candidate=offer(level)
+  if candidate~=prep.offer and candidate then
+   prep.previous=N.model and N.model.index
+  end
+  prep.offer=candidate
+ end
+ if prep.offer then
+  local instance=prep.offer
+  local rows={{id='gf-dungeon-offer:'..instance.name,kind='dungeonPrepOffer',category='Dungeons',
+   title='Get Quests for '..instance.name,body='Temporarily switch to gathering the available dungeon quests.'}}
+  for _,row in ipairs(normal or {})do rows[#rows+1]=row end
+  P.steps=rows;P.firstPending=rows[1].id;return rows
+ end
+ return normal
+end
+local done,skip=P.Done,P.Skip
+function P.Done(...)
+ if P.selected and P.selected.kind=='dungeonPrepOffer' and prep.offer then
+  prep.saved=prep.previous
+  if not prep.saved then
+   for _,row in ipairs(P.steps or {})do
+    if row.kind~='dungeonPrepOffer' then prep.saved=row.id;break end
+   end
+  end
+  prep.active,prep.offer=prep.offer,nil
+  return true
+ end
+ return done(...)
+end
+function P.Skip(...)
+ if prep.active then finish();return true end
+ if P.selected and P.selected.kind=='dungeonPrepOffer' and prep.offer then
+  prep.dismissed[ns.DungeonNameKey(prep.offer.name)]=true;prep.offer=nil;return true
+ end
+ return skip(...)
+end
+local resync=N.Resync
+function N.Resync(...)
+ local value=resync(...)
+ if prep.resume and N.model then
+  N.model.index=prep.resume;prep.resume=nil
+  N.model:Reconcile()
+  N.Refresh()
+ end
+ return value
+end
 end)(ADDON,GF)

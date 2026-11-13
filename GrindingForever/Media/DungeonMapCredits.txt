@@ -4,4 +4,15 @@ Thank you to Santiago Reyes for kindly allowing his Atlas de Azeroth: Forever ma
 https://asguevara433.wixsite.com/srmaps/post/proyecto-atlas-de-azeroth-forever
 https://www.artstation.com/artwork/lEG15k
 
+The Drowned City, Krol'dok Stronghold, Alcaz Prison, and The Shaper's Terrace use the corresponding Santiago artwork available in the local ForeverDungeonJournal media. Texture padding is excluded and credits are preserved.
+
 Other numbered reference maps depict Blizzard World of Warcraft dungeon artwork. MapUtils is not a runtime dependency and no MapUtils code is included. Some reference layouts depict later client revisions; boss placement is intentionally not inferred from the art.
+
+Wailing Caverns uses the original pre-4.1 Blizzard artwork with the eastern maze intact, sourced from ForeverDungeonJournal's WailingCavernsFull map. Its documented eastern boss positions are used for Lord Pythas and Skum.
+https://warcraft.wiki.gg/wiki/The_Wailing_Caverns
+
+Grinding Forever renders Ragefire Chasm on parchment using the calibrated client geometry from HiddenMaps v1.2.2. All four marker coordinates match the Classic-DB map 389 spawn records.
+https://www.curseforge.com/wow/addons/hiddenmaps/files/9496110
+
+Grinding Forever renders the Sunken Temple floors on parchment using Forever-client minimap geometry from ForeverDB. The previous artwork coordinates do not apply to these images.
+https://foreverdb.net/dungeon/109-sunken-temple

@@ -18,8 +18,8 @@ ns.DungeonLandmarks = {
         {"Verdan the Everliving", .546, .460},
         {"Lord Serpentis", .616, .535},
         {"Deviate Faerie Dragon", .581, .600},
-        {"Lord Pythas", .622, .658},
-        {"Skum", .623, .735},
+        {"Lord Pythas", .856, .289},
+        {"Skum", .927, .792},
         {"Mutanus the Devourer", .348, .130, "boss", "Drops Glowing Shard, which starts a quest."},
     },
     ["The Deadmines"] = {

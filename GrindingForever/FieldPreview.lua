@@ -14,7 +14,7 @@ local function showRecipes()
     panel = CreateFrame("Frame", nil, UIParent)
     panel:SetSize(510, 528)
     panel:SetPoint("CENTER")
-    panel:SetFrameStrata("DIALOG")
+    N.ApplyWindowLayer(panel,"recipes")
     panel:EnableMouse(true)
     panel:SetMovable(true)
     panel:SetClampedToScreen(true)
@@ -27,9 +27,9 @@ local function showRecipes()
     mine:SetPoint("LEFT", search, "RIGHT", 10, 0)
     local label = N.MakeText(panel, 12, "", true)
     label:SetPoint("LEFT", mine, "RIGHT", 1, 0)
-    label:SetText("My Professions")
+    label:SetText("All Professions")
     label:SetTextColor(.18, .11, .06)
-    local profession, continent, chosenZone
+    local continent, chosenZone
     local function mapContinent(mapID)
         for _ = 1, 8 do
             local info = mapID and E.Call(C_Map and C_Map.GetMapInfo, mapID)
@@ -39,17 +39,46 @@ local function showRecipes()
             mapID = info.parentMapID
         end
     end
-    local locationContinents, availableContinents, availableZones = {}, {}, {}
-    local trainedExpanded = true
+    local locationContinents, availableZones = {}, {}
+    local collapsed = {}
+    local sourceRank = {Vendor=1, Quest=2, ["Quest Reward"]=2, Drop=3, Trainer=5}
+    local sourceLabels = {"Vendors","Quests","Drops","Other Sources","Trainers"}
+    local raidZones = {["onyxias lair"]=true,["barrow deeps"]=true,["hyjal summit"]=true,
+        ["molten core"]=true,["blackwing lair"]=true,["zulgurub"]=true,["ahnqiraj"]=true,
+        ["temple of ahnqiraj"]=true,["ruins of ahnqiraj"]=true,naxxramas=true}
+    local function locationGroup(loc)
+        local name=loc.zone or loc.dungeon
+        if loc.raid or (name and raidZones[ns.DungeonNameKey(name)]) then return "Raids" end
+        if loc.dungeon then return "Dungeons" end
+        if loc.zone=="Zephras Isle" then return loc.zone end
+        local map=loc.mapID or loc.zone
+        if map and locationContinents[map]==nil then locationContinents[map]=mapContinent(loc.mapID) or false end
+        return map and locationContinents[map]
+    end
+    local gathering = {Mining=true,Herbalism=true,Skinning=true,Fishing=true}
+    local function rankSource(loc)
+        if not loc then return 4 end
+        return loc.vendor and 1 or sourceRank[loc.source] or 4
+    end
+    local function priceText(loc)
+        if loc.source ~= "Vendor" then return "" end
+        if type(loc.price) ~= "number" then return " / Price unrecorded" end
+        local price = GetCoinTextureString and GetCoinTextureString(loc.price)
+        return " / " .. (price or (loc.price .. "c"))
+    end
+    local function recipeBound(recipe)
+        local id = recipe.learnableItemID
+        local getter = GetItemInfo
+        if not id then return false end
+        local _,_,_,_,_,_,_,_,_,_,_,_,_,binding = E.Call(getter,id)
+        return binding == 1
+    end
     local catalog = ns.RecipeCatalog
-    local professionButton = N.MakeButton(panel, "All Professions", 155)
-    professionButton:SetPoint("TOPRIGHT", -18, -45)
-    local continentButton = N.MakeButton(panel, "All Continents", 156)
+    local continentButton = N.MakeButton(panel, "Search by Zone", 190)
+    continentButton.label:SetFont(continentButton.label:GetFont(), 16); N.ButtonArrow(continentButton,"down","RIGHT")
     continentButton:SetPoint("TOPLEFT", 18, -76)
-    local zoneButton = N.MakeButton(panel, "Current Zone", 156)
-    zoneButton:SetPoint("LEFT", continentButton, "RIGHT", 7, 0)
     local menu = CreateFrame("Frame", nil, panel, "BackdropTemplate")
-    menu:SetPoint("TOPRIGHT", professionButton, "BOTTOMRIGHT", 0, -2)
+    menu:SetPoint("TOPLEFT", continentButton, "BOTTOMLEFT", 0, -2)
     menu:SetWidth(155)
     menu:SetFrameLevel(panel:GetFrameLevel() + 12)
     menu:EnableMouse(true)
@@ -98,23 +127,24 @@ local function showRecipes()
                 button.detail:SetShown(recipe ~= nil)
                 if row.heading then
                     button.label:SetText(row.heading)
-                    button.disclosure:SetShown(row.trained == true)
-                    button.disclosure:SetRotation(trainedExpanded and math.pi / 2 or 0)
+                    button.disclosure:Show()
+                    button.disclosure:SetRotation(collapsed[row.collapseKey or row.heading] and 0 or -math.pi / 2)
                 elseif loc then
                     button.disclosure:Hide()
                     button.icon:SetTexture(loc.source == "Vendor" and "Interface\\Icons\\INV_Misc_Coin_01"
-                        or loc.source == "Trainer" and "Interface\\Icons\\INV_Misc_Book_09"
+                        or loc.source == "Trainer" and ns.WindowWorkflow.TrainerIcon(recipe)
                         or loc.source == "Drop" and "Interface\\Icons\\Ability_Creature_Cursed_02"
                         or "Interface\\Icons\\INV_Misc_Map_01")
                     button.label:SetText(loc.name or "Unknown source")
-                    button.detail:SetText((loc.source or "Source") .. " / " .. (loc.zone or "Unknown zone")
-                        .. (catalog.HasWaypoint(loc) and "" or " / No waypoint"))
+                    button.detail:SetText((row.trainer and recipe.profession or loc.source or "Source") .. " / " .. (loc.zone or "Unknown zone")
+                        .. priceText(loc) .. (catalog.HasWaypoint(loc) and "" or " / No waypoint"))
                 else
                     button.disclosure:SetShown(row.count > 0)
-                    button.disclosure:SetRotation(expanded == recipe.key and math.pi / 2 or 0)
+                    button.disclosure:SetRotation(expanded == recipe.key and -math.pi / 2 or 0)
                     button.icon:SetTexture(recipeIcon(recipe))
-                    button.label:SetText(recipe.name)
-                    button.detail:SetText((recipe.profession or "Recipe") .. (recipe.skill and recipe.skill > 0 and (" " .. recipe.skill) or "")
+                    local bound = recipeBound(recipe)
+                    button.label:SetText(recipe.name .. (bound and " |cffa42a13(Bind on Pickup)|r" or ""))
+                    button.detail:SetText((row.learning or recipe.profession or "Recipe") .. (recipe.skill and recipe.skill > 0 and (" " .. recipe.skill) or "")
                         .. (row.count > 0 and (" / " .. row.count .. " sources") or (row.trained and "" or " / Source unrecorded")))
                 end
                 button.label:ClearAllPoints()
@@ -141,69 +171,130 @@ local function showRecipes()
         local state = E.state or E.Snapshot()
         local mapID = E.Position().mapID
         local info = mapID and E.Call(C_Map and C_Map.GetMapInfo, mapID)
-        local currentZone = info and info.name
-        local global = query or profession or mine:GetChecked() or continent
+        local currentZone = info and info.name or E.Call(GetRealZoneText)
         local zone = chosenZone
-        if zone == "Current Zone" or (not zone and not global) then zone = currentZone end
+        if not zone and not continent and not query then zone = currentZone end
         if zone == "All Zones" then zone = nil end
         scope:SetText(zone and ("Browsing " .. zone) or (continent and ("Browsing " .. continent) or "Browsing All Zones"))
         if not recipes or revision ~= catalog.revision then
             recipes = catalog.Browse()
             revision = catalog.revision
-            known, locationContinents, availableContinents, availableZones = {}, {}, {}, {}
+            known, locationContinents, availableZones = {}, {}, {}
         end
         rows = {}
-        local groups, listed, trained = {}, {}, {}
-        local onlyMine = mine:GetChecked()
+        local groups, listed, trainers, trainerKeys = {}, {}, {}, {}
+        local trainerZone=zone or (not continent and currentZone)
+        local localProfessions, fallbacks={},{}
+        local capitals={Orgrimmar=true,Undercity=true,["Thunder Bluff"]=true,["Stormwind City"]=true,
+            Stormwind=true,Ironforge=true,Darnassus=true}
+        local zoneFacts=trainerZone and ns.ForeverData.zones[trainerZone]
+        local position=E.CurrentPosition()
+        local origin=trainerZone==currentZone and position or zoneFacts and zoneFacts.mapID
+            and {mapID=zoneFacts.mapID,x=50,y=50} or position
+        local function matches(recipe)
+            if not query or recipe.name:lower():find(query,1,true) then return true end
+            local id=recipe.productID or recipe.learnableItemID
+            local name=id and E.Call(GetItemInfo,id)
+            return type(name)=="string" and name:lower():find(query,1,true)~=nil
+        end
+        local allProfessions = mine:GetChecked()
         for _, recipe in ipairs(recipes) do
             if recipe.profession ~= "Jewelcrafting" and E.Eligible(recipe, state)
-                and ((onlyMine and state.skills[recipe.profession]) or (not onlyMine and (not profession or recipe.profession == profession)))
-                and (not query or recipe.name:lower():find(query, 1, true)) then
+                and (allProfessions or state.skills[recipe.profession])
+                then
                 local sources = {}
                 for _, loc in ipairs(recipe.locations or {}) do
                     local locContinent
                     if continent then
-                        local map = loc.mapID or loc.zone
-                        if map and locationContinents[map] == nil then locationContinents[map] = mapContinent(loc.mapID) or false end
-                        locContinent = map and locationContinents[map]
+                        locContinent = locationGroup(loc)
                     end
-                    if E.Eligible(loc, state) and (not continent or locContinent == continent)
+                    if loc.source=="Trainer" then
+                        local key=(recipe.profession or "").."/"..catalog.SourceKey(loc)
+                        local profession=recipe.profession
+                        local inScope=trainerZone and (loc.zone==trainerZone or (trainerZone==currentZone and mapID and loc.mapID==mapID))
+                            or not trainerZone and continent and locContinent==continent
+                        if not query and E.Eligible(loc,state) then
+                            if inScope and not trainerKeys[key] then
+                                trainerKeys[key]=true
+                                localProfessions[profession]=true
+                                trainers[#trainers+1]={recipe=recipe,location=loc}
+                            elseif state.skills[profession] and capitals[loc.zone] and catalog.HasWaypoint(loc) then
+                                local distance=origin and E.Distance(origin,loc)
+                                local previous=fallbacks[profession]
+                                if distance and (not previous or distance<previous.distance) then
+                                    fallbacks[profession]={recipe=recipe,location=loc,distance=distance}
+                                end
+                            end
+                        end
+                    elseif matches(recipe) and E.Eligible(loc, state) and (not continent or locContinent == continent)
                         and (not zone or loc.zone == zone or (zone == currentZone and loc.mapID == mapID))
-                        and (global or loc.source ~= "Trainer") then
+                        then
                         sources[#sources + 1] = loc
                     end
                 end
                 local key = recipe.key
-                if known[key] == nil then known[key] = state.skills[recipe.profession] and E.Known(recipe) == true or false end
-                if known[key] or #sources > 0 or (global and not zone and not continent) then
+                known[key] = state.skills[recipe.profession] and E.Known(recipe) or nil
+                if #sources > 0 then
+                    table.sort(sources,function(a,b)
+                        local ar,br=rankSource(a),rankSource(b)
+                        if ar~=br then return ar<br end
+                        return (a.zone or "") .. (a.name or "") < (b.zone or "") .. (b.name or "")
+                    end)
                     groups[recipe] = sources
-                    local list = known[key] and trained or listed
-                    list[#list + 1] = recipe
+                    listed[#listed + 1] = recipe
                 end
             end
         end
-        local function append(list)
-            table.sort(list, function(a, b) return a.name < b.name end)
-            for _, recipe in ipairs(list) do
-                local sources = groups[recipe]
-                rows[#rows + 1] = { recipe = recipe, count = #sources, trained = known[recipe.key] }
-                if expanded == recipe.key then
-                    table.sort(sources, function(a, b)
-                        return (a.zone or "") .. (a.name or "") < (b.zone or "") .. (b.name or "")
-                    end)
-                    for _, loc in ipairs(sources) do
-                        rows[#rows + 1] = { recipe = recipe, location = loc }
+        table.sort(listed,function(a,b)
+            local ap,bp=a.profession or "",b.profession or ""
+            if gathering[ap]~=gathering[bp] then return not gathering[ap] end
+            if ap~=bp then return ap<bp end
+            local ar,br=rankSource(groups[a][1]),rankSource(groups[b][1])
+            if ar~=br then return ar<br end
+            return a.name<b.name
+        end)
+        if #listed == 1 and expanded == nil then expanded=listed[1].key end
+        local profession, previousRank
+        for _,recipe in ipairs(listed) do
+            local name=recipe.profession or "Other"
+            if name~=profession then
+                profession=name;previousRank=nil
+                rows[#rows+1]={heading=name}
+            end
+            if not collapsed[name] then
+                local sources=groups[recipe]
+                local rank=rankSource(sources[1])
+                local key=name.."/"..rank
+                if rank~=previousRank then
+                    rows[#rows+1]={heading=sourceLabels[rank],collapseKey=key}
+                    previousRank=rank
+                end
+                if not collapsed[key] then
+                    local skill=state.skills[recipe.profession]
+                    local learning
+                    if known[recipe.key]==true then learning="Already known"
+                    elseif skill and type(skill.rank)=="number" and type(recipe.skill)=="number" and recipe.skill>0 then
+                        learning=skill.rank>=recipe.skill and "Meets skill" or "Requires skill"
+                    end
+                    rows[#rows+1]={recipe=recipe,count=#sources,trained=known[recipe.key],preferred=sources[1],learning=learning}
+                    if expanded==recipe.key then
+                        for _,loc in ipairs(sources) do rows[#rows+1]={recipe=recipe,location=loc} end
                     end
                 end
             end
         end
-        if #listed + #trained == 1 and expanded == nil then
-            expanded = (listed[1] or trained[1]).key
+        for profession,row in pairs(fallbacks)do
+            if not localProfessions[profession] then trainers[#trainers+1]=row end
         end
-        append(listed)
-        if #trained > 0 then
-            rows[#rows + 1] = { heading = "Trained Recipes (" .. #trained .. ")", trained = true }
-            if trainedExpanded then append(trained) end
+        if #trainers>0 then
+            rows[#rows+1]={heading="Trainers · "..(trainerZone or continent or "Nearby Capitals"),collapseKey="zone-trainers"}
+            if not collapsed["zone-trainers"] then
+                table.sort(trainers,function(a,b)
+                    if a.recipe.profession~=b.recipe.profession then return a.recipe.profession<b.recipe.profession end
+                    return (a.location.name or "")<(b.location.name or "")
+                end)
+                for _,row in ipairs(trainers)do row.trainer=true;rows[#rows+1]=row end
+            end
         end
         if keepPage ~= true then rowOffset = 0 end
         draw()
@@ -239,10 +330,10 @@ local function showRecipes()
             local r = self.record and self.record.recipe
             if not r then return end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            local itemID = r.learnableItemID or r.productID
+            local itemID = not self.record.trainer and (r.learnableItemID or r.productID)
             if itemID then
                 E.Call(GameTooltip.SetHyperlink, GameTooltip, "item:" .. itemID)
-            elseif r.spellID then
+            elseif r.spellID and not self.record.trainer then
                 E.Call(GameTooltip.SetSpellByID, GameTooltip, r.spellID)
             end
             local loc = self.record.location
@@ -262,11 +353,13 @@ local function showRecipes()
         b:SetScript("OnClick", function(self)
             if not self.record then return end
             if self.record.heading then
-                trainedExpanded = not trainedExpanded
+                local heading=self.record.collapseKey or self.record.heading
+                collapsed[heading]=not collapsed[heading]
                 refresh(true)
                 return
             end
             local r = self.record.recipe
+            local isTrainer = self.record.trainer
             local loc = self.record.location
             if not loc then
                 if self.record.count == 0 then
@@ -276,17 +369,18 @@ local function showRecipes()
                 end
                 feedback:SetText("")
                 if expanded == r.key then expanded = false else expanded = r.key end
+                loc = self.record.preferred
                 refresh(true)
-                return
             end
-            if not catalog.HasWaypoint(loc) then
-                feedback:SetText((loc.name or "Source") .. " has no recorded waypoint.")
+            if not loc or not catalog.HasWaypoint(loc) then
+                feedback:SetText((loc and loc.name or r.name) .. " has no recorded waypoint.")
                 return
             end
             local compass = ns.NavigationCompass
             local key = "recipe-browser"
             compass.pins[key] = { key = key, name = loc.name or r.name, zone = loc.zone, location = loc,
-                icon = "Interface\\AddOns\\GrindingForever\\Media\\RecipePin", pin = true }
+                icon = isTrainer and ns.WindowWorkflow.TrainerIcon(r) or assets .. "UI-MicroButton-Professions-Up",
+                professionButton = not isTrainer, customIcon = true }
             compass.age = 1
             local pinned = catalog.PinWorldMap(loc)
             selected = tostring(r.key) .. "/" .. catalog.SourceKey(loc)
@@ -295,14 +389,6 @@ local function showRecipes()
             feedback:SetText((loc.name or loc.zone or r.name) .. "  ·  " .. result)
             draw()
         end)
-    end
-    local professions = { "All Professions" }
-    local professionNames = { ["All Professions"] = true }
-    for _, name in ipairs(ns.Forever.professions or catalog.professions) do
-        if name ~= "Jewelcrafting" and not professionNames[name] then
-            professions[#professions + 1] = name
-            professionNames[name] = true
-        end
     end
     local options, selectOption, offset, menuOwner = {}, nil, 0, nil
     local optionRows = {}
@@ -318,7 +404,7 @@ local function showRecipes()
     end
     for i = 1, 12 do
         local option = N.PlainOption(N.MakeButton(menu, "", 147))
-        option:SetHeight(22)
+        option.label:SetFont(option.label:GetFont(), 15); option:SetHeight(22)
         option:SetPoint("TOPLEFT", 4, -4 - (i - 1) * 22)
         option:SetScript("OnClick", function(self)
             menu:Hide()
@@ -348,49 +434,29 @@ local function showRecipes()
         if next(availableZones) then return end
         for _, recipe in ipairs(recipes) do
             for _, loc in ipairs(recipe.locations or {}) do
-                local map = loc.mapID or loc.zone
-                if map and locationContinents[map] == nil then locationContinents[map] = mapContinent(loc.mapID) or false end
-                local area = map and locationContinents[map]
-                if area then availableContinents[area] = true end
+                local area = locationGroup(loc)
                 if loc.zone then availableZones[loc.zone] = area or availableZones[loc.zone] or false end
             end
         end
     end
     continentButton:SetScript("OnClick", function(self)
         geography()
-        local values = {}
-        for name in pairs(availableContinents) do values[#values + 1] = name end
-        table.sort(values)
-        table.insert(values, 1, "All Continents")
-        openMenu(self, values, function(value)
-            continent = value ~= "All Continents" and value or nil
-            chosenZone = continent and "All Zones" or nil
-            continentButton.label:SetText(value)
-            zoneButton.label:SetText(chosenZone or "Current Zone")
-            resetFilters()
-        end)
-    end)
-    zoneButton:SetScript("OnClick", function(self)
-        geography()
-        local values = {}
-        for name, area in pairs(availableZones) do
-            if not continent or continent == area then values[#values + 1] = name end
-        end
-        table.sort(values)
-        table.insert(values, 1, "All Zones")
-        if not continent then table.insert(values, 1, "Current Zone") end
-        openMenu(self, values, function(value)
-            chosenZone = value
-            zoneButton.label:SetText(value)
-            resetFilters()
-        end)
-    end)
-    professionButton:SetScript("OnClick", function(self)
-        if mine:GetChecked() then return end
-        openMenu(self, professions, function(value)
-            profession = value ~= "All Professions" and value or nil
-            professionButton.label:SetText(value)
-            resetFilters()
+        openMenu(self, {"Current Zone","Eastern Kingdoms","Kalimdor","Zephras Isle","Dungeons","Raids"}, function(value)
+            if value=="Current Zone" then continent=nil;chosenZone=nil;resetFilters();return end
+            local values={"All Zones"}
+            for name,area in pairs(availableZones) do
+                if area==value or name==value then values[#values+1]=name end
+            end
+            table.sort(values,function(a,b)
+                if a=="All Zones" then return b~="All Zones" end
+                if b=="All Zones" then return false end
+                return a<b
+            end)
+            openMenu(self,values,function(zone)
+                continent=value
+                chosenZone=zone
+                resetFilters()
+            end)
         end)
     end)
     local function resizeRows()
@@ -400,7 +466,8 @@ local function showRecipes()
     syncScroll = N.PanelScroll(panel, viewport, function() return rowOffset end,
         function(value) rowOffset = math.floor(value + .5); draw() end,
         function() return math.max(0, #rows - pageSize) end, 3)
-    N.PanelChrome(panel, "Recipes & Vendors", 500, 430, resizeRows)
+    N.PanelChrome(panel, {"Recipe","List"}, 500, 430, resizeRows)
+    N.LiveLayout(panel, resizeRows)
     panel:SetScript("OnShow", refresh)
     panel:SetScript("OnHide", function()
         recipes, rows, known = nil, {}, {}
@@ -412,6 +479,7 @@ local function showRecipes()
     local pendingSearch
     search:SetScript("OnTextChanged", function()
         if pendingSearch then pendingSearch:Cancel() end
+        if not (C_Timer and C_Timer.NewTimer) then refresh();return end
         pendingSearch = C_Timer.NewTimer(.2, function()
             pendingSearch = nil
             if panel:IsShown() then refresh() end
@@ -419,21 +487,9 @@ local function showRecipes()
     end)
     mine:SetScript("OnClick", function()
         menu:Hide()
-        local onlyMine = mine:GetChecked()
-        professionButton.label:SetText(onlyMine and "My Professions" or profession or "All Professions")
-        professionButton:SetAlpha(onlyMine and .55 or 1)
         resetFilters()
     end)
     refresh()
-end
-
-local compass = ns.NavigationCompass
-local collect = compass.Collect
-function compass.Collect(...)
-    collect(...)
-    if ns.FarmingPlanner.route and compass.targets[1] and compass.targets[1].active then
-        table.remove(compass.targets, 1)
-    end
 end
 
 local layout, legacySetView = W.Layout, W.SetView
@@ -460,6 +516,12 @@ function W.Layout(...)
 
     recipeButton:SetSize((width - 12) * .48, 36)
     farmButton:SetSize((width - 12) * .25, 36)
+    local active = ns.FarmingPlanner.route ~= nil
+    if farmButton.selected ~= active then
+        farmButton.selected = active
+        farmButton:SetEnamelTint()
+        farmButton.activeGlow:SetShown(active)
+    end
     dungeonButton:SetSize((width - 12) * .27, 36)
     return result
 end
@@ -480,12 +542,29 @@ applyMode = function()
     local r = N.root
     if not r then Showcase.Show(); r = N.root end
     if not recipeButton then
-        recipeButton = N.MakeButton(r.panels[1], "Recipes & Vendors", 165, showRecipes)
+        recipeButton = N.MakeButton(r.panels[1], "Recipe List", 165, showRecipes)
         farmButton = N.MakeButton(r.panels[1], "Farming", 90, function()
             local button = N.farmButton
             local click = button and button:GetScript("OnClick")
             if click then click(button, "LeftButton") end
         end)
+        farmButton.activeGlow = CreateFrame("Frame", nil, farmButton)
+        farmButton.activeGlow:SetAllPoints(farmButton)
+        farmButton.activeGlow:EnableMouse(false)
+        for _, side in ipairs({"TOP", "BOTTOM", "LEFT", "RIGHT"}) do
+            local edge = farmButton.activeGlow:CreateTexture(nil, "OVERLAY")
+            if side == "TOP" or side == "BOTTOM" then
+                edge:SetPoint(side .. "LEFT", 2, 0)
+                edge:SetPoint(side .. "RIGHT", -2, 0)
+                edge:SetHeight(2)
+            else
+                edge:SetPoint("TOP" .. side, 0, -2)
+                edge:SetPoint("BOTTOM" .. side, 0, 2)
+                edge:SetWidth(2)
+            end
+            edge:SetColorTexture(1, .77, .29, 1)
+        end
+        farmButton.activeGlow:Hide()
         dungeonButton = N.MakeButton(r.panels[1], "Dungeons", 90, ns.ToggleDungeonBrowser)
         dungeonButton:SetPoint("LEFT", farmButton, "RIGHT", 6, 0)
         farmButton:SetPoint("LEFT", recipeButton, "RIGHT", 6, 0)
@@ -514,3 +593,5 @@ events:SetScript("OnEvent", function()
         end
     end)
 end)
+
+ns.ProfessionKnowledge.InitializeAuction(E)

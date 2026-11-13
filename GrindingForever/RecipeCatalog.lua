@@ -242,6 +242,10 @@ local function buildFacts()
     return recipes
 end
 
+local function hasText(value)
+    return type(value) == "string" and value:find("%S") ~= nil
+end
+
 function Catalog.Browse()
     local rows, bySpell, byItem = {}, {}, {}
     local function merge(recipe)
@@ -254,17 +258,20 @@ function Catalog.Browse()
             rows[#rows + 1] = row
         end
         for _, key in ipairs({"spellID", "productID", "profession", "faction", "skill", "knowledgeVerified", "learned"}) do
-            if recipe[key] ~= nil then row[key] = recipe[key] end
+            if recipe[key] ~= nil and (key ~= "profession" or hasText(recipe[key])) then row[key] = recipe[key] end
         end
         if itemID then row.learnableItemID = itemID; byItem[itemID] = row end
         if row.spellID then bySpell[row.spellID] = row end
-        if recipe.name and not recipe.name:match("^Spell %d+$") then row.name = recipe.name end
+        if hasText(recipe.name) and not recipe.name:match("^Spell %d+$") then row.name = recipe.name end
         for _, loc in ipairs(recipe.locations or {}) do addLocation(row, loc) end
     end
     for _, recipe in ipairs(buildFacts()) do merge(recipe) end
     for _, recipe in pairs(E.recipes) do merge(recipe) end
     for _, recipe in ipairs(rows) do
-        recipe.name = recipe.name or (recipe.spellID and E.SpellName(recipe.spellID)) or "Unnamed Recipe"
+        if not hasText(recipe.name) then
+            local spellName = recipe.spellID and E.SpellName(recipe.spellID)
+            recipe.name = hasText(spellName) and spellName or "Unnamed Recipe"
+        end
         recipe.key = recipe.spellID or recipe.learnableItemID or recipe.name
         recipe.sourceIndexes = nil
     end
