@@ -155,7 +155,7 @@ local function paintBossToken(frame, boss, anchor, offset, size)
         token:SetPoint(anchor, offset, 0)
         local edge = token:CreateTexture(nil, "BACKGROUND")
         edge:SetAllPoints()
-        edge:SetColorTexture(.78, .58, .31, 1)
+        N.BronzeRail(edge,"TOP")
         local interior = token:CreateTexture(nil, "BORDER")
         interior:SetPoint("TOPLEFT", 2, -2)
         interior:SetPoint("BOTTOMRIGHT", -2, 2)
@@ -265,14 +265,27 @@ function ns.ToggleDungeonBrowser()
     window:SetClampedToScreen(true)
     window:SetMovable(true)
     window:EnableMouse(true)
-    local title, header
     local media = "Interface\\AddOns\\GrindingForever\\Media\\"
-    local function ink(label)
-        label:SetTextColor(44/255,34/255,30/255)
-        if label.SetShadowColor then
-            label:SetShadowColor(.92,.76,.49,.35)
-            label:SetShadowOffset(1,-1)
-        end
+    local function sizeText(label, parent, size, minimumPixels)
+        local font, _, flags = label:GetFont()
+        label:SetFont(font, math.max(size, N.PixelSize(parent, minimumPixels)), flags)
+    end
+    local function warmLight(label, pixel)
+        label:SetTextColor(.99, .91, .73)
+        label:SetShadowColor(.06, .035, .02, .95)
+        label:SetShadowOffset(0, -pixel)
+    end
+    local function darkInk(label, secondary)
+        if secondary then label:SetTextColor(.27, .16, .085)
+        else label:SetTextColor(.15, .085, .045) end
+        label:SetShadowOffset(0, 0)
+    end
+    local function wood(parent, layer, sublevel)
+        local texture = parent:CreateTexture(nil, layer, nil, sublevel or 0)
+        texture:SetTexture(media .. "BaseWood")
+        texture:SetTexCoord(.10, .56, .11, .37)
+        texture:SetVertexColor(.64, .58, .50)
+        return texture
     end
     local function paper(parent, layer, sublevel, fullSheet)
         local texture=parent:CreateTexture(nil,layer or "BACKGROUND",nil,sublevel or 0)
@@ -281,12 +294,9 @@ function ns.ToggleDungeonBrowser()
         else texture:SetTexCoord(.13,.49,.13,.49) end
         return texture
     end
-    local base=paper(window,"BACKGROUND",4,true)
-    base:SetTexCoord(.018,.595,.018,.595)
-    base:SetPoint("TOPLEFT",1,-39)
-    base:SetPoint("BOTTOMRIGHT",-1,1)
     local status = N.MakeText(window, 12)
-    status:SetTextColor(.26, .14, .07)
+    sizeText(status, window, 13, 14)
+    darkInk(status, true)
     status:SetPoint("BOTTOMLEFT", 18, 14)
     status:SetPoint("BOTTOMRIGHT", -18, 14)
 
@@ -310,44 +320,30 @@ function ns.ToggleDungeonBrowser()
     local syncScroll = N.PanelScroll(window, list, function() return list:GetVerticalScroll() end,
         function(value) list:SetVerticalScroll(value) end,
         function() return math.max(0, content:GetHeight() - list:GetHeight()) end, 114)
-    local rows, cards, pendingItems = {}, {}, {}
+    local rows, cards, pendingItems, detailBlocks = {}, {}, {}, {}
     local rowHeight = 38
     local selected, floor, tab = nil, 1, "bosses"
     local selectedBoss, selectedQuest, questLandmark
     local draw
-    title, header = N.PanelChrome(window, "", 600, 490, function() draw(true) end)
-    title:SetJustifyH("CENTER")
-    title:SetTextColor(.93,.73,.37)
-    title:ClearAllPoints()
-    title:SetPoint("LEFT",header,"LEFT",92,0)
-    title:SetPoint("RIGHT",header,"RIGHT",-92,0)
-    local emblem = header:CreateTexture(nil,"OVERLAY")
-    emblem:SetTexture("Interface\\AddOns\\GrindingForever\\Media\\ControlForeverEmblem")
-    emblem:SetSize(32,32)
-    emblem:SetPoint("CENTER",header,"CENTER")
-    local dungeonTitle = N.MakeText(header,20,"Dungeons")
-    dungeonTitle:SetTextColor(.93,.73,.37)
-    dungeonTitle:SetPoint("RIGHT",emblem,"LEFT",-8,0)
-    local raidTitle = N.MakeText(header,20,"Raids")
-    raidTitle:SetTextColor(.93,.73,.37)
-    raidTitle:SetPoint("LEFT",emblem,"RIGHT",8,0)
+    N.PanelChrome(window, {"Dungeon","Journal"}, 600, 490, function() draw(true) end)
+    local headerExtra = N.HeaderSize(window) - N.PixelSize(window, 40)
 
     local function button(parent, label, width, action)
-        local b = N.MakeButton(parent, label, width, action)
-        b:SetSize(width, 28)
+        local b = N.WoodButton(parent, label, width, action)
+        b:SetSize(math.max(width,b:GetWidth(),N.PixelSize(b,24)),math.max(28,b.label:GetStringHeight()+N.PixelSize(b,8),N.PixelSize(b,24)))
         return b
     end
 
     local back = button(window, "Instances", 128, function() selected = nil; draw() end)
     N.ButtonArrow(back,"left","LEFT")
-    back:SetPoint("TOPLEFT", 18, -45)
+    back:SetPoint("TOPLEFT", 18, -45 - headerExtra)
     local floorButton
     floorButton = button(window, "", 120, function()
         if floorButton.floorCount < 2 then return end
         floor = floor % floorButton.floorCount + 1
         draw()
     end)
-    floorButton:SetPoint("TOPRIGHT", -18, -45)
+    floorButton:SetPoint("TOPRIGHT", -18, -45 - headerExtra)
 
     local entrance = button(window, "Pin Entrance", 142, function()
         status:SetText(setWaypoint(ns.DungeonEntrance(selected)))
@@ -362,27 +358,13 @@ function ns.ToggleDungeonBrowser()
     clearQuest:SetPoint("LEFT", entrance, "RIGHT", 8, 0)
 
     local function makeTab(label, key, width)
-        local control = CreateFrame("Button", nil, window)
-        control:SetSize(width, 29)
-        local fill=paper(control)
-        fill:SetAllPoints()
-        fill:SetVertexColor(.86,.71,.49)
-        control.paper=fill
-        local hover=paper(control,"BACKGROUND",1)
-        hover:SetAllPoints();hover:SetVertexColor(.99,.89,.65)
-        control:SetHighlightTexture(hover)
-        N.BronzeRectangle(control)
-        control.label = N.MakeText(control, 15, label, true)
-        ink(control.label)
-        control.label:SetPoint("LEFT", 8, 0)
-        control.line = control:CreateTexture(nil, "ARTWORK")
-        control.line:SetColorTexture(.77, .54, .27, 1)
-        control.line:SetPoint("BOTTOMLEFT", 8, 0)
-        control.line:SetPoint("BOTTOMRIGHT", -8, 0)
-        control.line:SetHeight(2)
-        control:SetScript("OnClick", function()
+        local control = N.WoodButton(window, label, width, function()
             if tab ~= key then tab = key; draw() end
         end)
+        control:SetSize(width, 29)
+        N.UnderlineControl(control, true)
+        control.selectionLine:SetColorTexture(.92, .73, .44, .95)
+        control.selectionLine:SetHeight(N.PixelSize(control, 3))
         return control
     end
 
@@ -407,6 +389,36 @@ function ns.ToggleDungeonBrowser()
         row.icon:SetTexture(E.Public(icon) and icon or "Interface\\Icons\\INV_Misc_QuestionMark")
     end
 
+    local function itemLink(id)
+        local _, link = E.Call(C_Item and C_Item.GetItemInfo or GetItemInfo, id)
+        if E.Public(link) and type(link) == "string" and link:find("|Hitem:", 1, true) then return link end
+    end
+
+    local function activeChatWindow()
+        local edit = E.Call(ChatFrameUtil and ChatFrameUtil.GetActiveWindow or ChatEdit_GetActiveWindow)
+        if E.Public(edit) then return edit end
+    end
+
+    local function insertItemLink(link)
+        E.Call(ChatEdit_InsertLink or ChatFrameUtil and ChatFrameUtil.InsertLink, link)
+    end
+
+    local pendingLink
+    local function linkItemInChat(id)
+        pendingLink = nil
+        local link = itemLink(id)
+        if link then insertItemLink(link); return end
+        local edit = activeChatWindow()
+        local request = C_Item and C_Item.RequestLoadItemDataByID
+        if edit and type(request) == "function" then
+            local draft = E.Call(edit.GetText, edit)
+            if E.Public(draft) and type(draft) == "string" then
+                pendingLink = { id = id, edit = edit, draft = draft, time = E.Time() }
+            end
+            E.Call(request, id)
+        end
+    end
+
     window:RegisterEvent("GET_ITEM_INFO_RECEIVED")
     for _, event in ipairs({"QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN"}) do
         E.Call(window.RegisterEvent, window, event)
@@ -416,7 +428,18 @@ function ns.ToggleDungeonBrowser()
             if self:IsShown() and selected and tab == "quests" then draw(true) end
             return
         end
-        if not E.Public(itemID) or type(itemID) ~= "number" or not pendingItems[itemID] then return end
+        if not E.Public(itemID) or type(itemID) ~= "number" then return end
+        if pendingLink and pendingLink.id == itemID then
+            local chat = pendingLink
+            pendingLink = nil
+            local draft = E.Call(chat.edit.GetText, chat.edit)
+            if self:IsShown() and E.Time() - chat.time <= 5 and activeChatWindow() == chat.edit
+                and E.Public(draft) and draft == chat.draft then
+                local link = itemLink(itemID)
+                if link then insertItemLink(link) end
+            end
+        end
+        if not pendingItems[itemID] then return end
         pendingItems[itemID] = false
         if not self:IsShown() then return end
         for index = 1, content.visibleRows do
@@ -425,7 +448,7 @@ function ns.ToggleDungeonBrowser()
         end
     end)
 
-    local function addRow(label, action, itemID, detail, actionLabel, boss, heading, completed, underway, framed)
+    local function addRow(label, action, itemID, detail, actionLabel, boss, heading, completed, underway, framed, inDetailBlock)
         local index = content.visibleRows + 1
         content.visibleRows = index
         local row = rows[index]
@@ -434,18 +457,24 @@ function ns.ToggleDungeonBrowser()
             row:SetPoint("TOPLEFT", 0, -(index - 1) * rowHeight)
             row:SetPoint("TOPRIGHT", 0, -(index - 1) * rowHeight)
             row:SetHeight(rowHeight)
-            row.selectorTrim=N.BronzeRectangle(row)
+            row.selectorTrim=N.BronzeRectangle(row, 2)
             local separator = row:CreateTexture(nil, "BACKGROUND")
             separator:SetPoint("BOTTOMLEFT", 6, 0)
             separator:SetPoint("BOTTOMRIGHT", -6, 0)
             separator:SetHeight(1)
-            separator:SetColorTexture(.68, .48, .26, .20)
+            N.BronzeRail(separator,"TOP");separator:SetAlpha(.26)
             local fill=paper(row,"BACKGROUND",-2)
             fill:SetAllPoints();fill:SetVertexColor(.96,.87,.70,.18)
-            local highlight=paper(row,"BACKGROUND",1)
-            highlight:SetAllPoints()
-            highlight:SetVertexColor(.95,.78,.51,.78)
-            row:SetHighlightTexture(highlight)
+            row.separator, row.paperFill = separator, fill
+            row.questFill = row:CreateTexture(nil, "BACKGROUND", nil, -1)
+            row.questFill:SetAllPoints()
+            row.questFill:SetColorTexture(.98, .84, .58, .40)
+            row.bossFill = wood(row, "BACKGROUND")
+            row.bossFill:SetAllPoints()
+            row.hover = row:CreateTexture(nil, "HIGHLIGHT")
+            row.hover:SetAllPoints()
+            row.hover:SetColorTexture(.95, .78, .51, .20)
+            row:SetHighlightTexture(row.hover)
             row.icon = row:CreateTexture(nil, "ARTWORK")
             row.icon:SetSize(23, 23)
             row.icon:SetPoint("LEFT", 7, 0)
@@ -453,21 +482,23 @@ function ns.ToggleDungeonBrowser()
             row.label:SetWordWrap(true)
             row.detail = N.MakeText(row, 11)
             row.detail:SetWordWrap(true)
-            row.detail:SetTextColor(.28, .16, .065)
             row.command = N.MakeText(row, 12)
             row.command:SetJustifyH("RIGHT")
             row.command:SetWordWrap(false)
-            row.command:SetTextColor(.34,.20,.085)
             row.command:SetPoint("RIGHT", -8, 0)
             row.disclosure=N.ControlArrow(row,"right","RIGHT")
             row.disclosure:SetVertexColor(.49,.31,.12)
             row.stamp = row:CreateTexture(nil, "OVERLAY", nil, 5)
-            row.stamp:SetTexture("Interface\\AddOns\\GrindingForever\\Media\\DungeonQuestCompleteStamp")
-            row.stamp:SetSize(86,43)
+            row.stamp:SetTexture(media .. "JournalQuestChainV3")
+            row.stamp:SetVertexColor(.36, .23, .13)
+            row.stampInk = row:CreateTexture(nil, "OVERLAY", nil, 4)
+            row.stampInk:SetTexture(media .. "JournalQuestChainV3")
+            row.stampInk:SetVertexColor(.26, .15, .075, .70)
+            row.stampInk:SetAllPoints(row.stamp)
             row.underway=row:CreateTexture(nil,"OVERLAY",nil,5)
             row.underway:SetSize(26,26)
             row.underway:SetPoint("RIGHT",-28,0)
-            row:SetScript("OnEnter", function(self)
+            local function showTooltip(self)
                 if not self.itemID or not GameTooltip then return end
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 if GameTooltip.SetItemByID then
@@ -476,54 +507,111 @@ function ns.ToggleDungeonBrowser()
                     GameTooltip:SetHyperlink("item:" .. self.itemID)
                 end
                 GameTooltip:Show()
-            end)
+            end
             local function hideTooltip(self)
                 if self.itemID and GameTooltip and GameTooltip:IsOwned(self) then GameTooltip:Hide() end
             end
+            row:SetScript("OnEnter", showTooltip)
             row:SetScript("OnLeave", hideTooltip)
             row:SetScript("OnHide", hideTooltip)
+            row.itemButton = CreateFrame("Button", nil, row)
+            row.itemButton:SetAllPoints(row.icon)
+            row.itemButton:RegisterForClicks("LeftButtonUp")
+            row.itemButton:SetScript("OnEnter", function() showTooltip(row) end)
+            row.itemButton:SetScript("OnLeave", function() hideTooltip(row) end)
+            row.itemButton:SetScript("OnClick", function(_, mouseButton)
+                if not row.itemID then return end
+                if E.Call(IsModifiedClick, "CHATLINK") then linkItemInChat(row.itemID); return end
+                local action = row:GetScript("OnClick")
+                if action then action(row, mouseButton) end
+            end)
             rows[index] = row
         end
         row.itemID, row.itemName = itemID, label
+        local showUnderway = type(underway) == "string"
+        local chainMarker = showUnderway and completed == true
+        local openQuest = showUnderway and actionLabel == "Collapse"
+        local pixel = N.PixelSize(row, 1)
+        local pad = math.max(8, 9 * pixel)
+        local verticalPad = inDetailBlock and 5 * pixel or pad
+        local bossSize = math.max(26, 28 * pixel)
+        row.paperFill:SetShown(not inDetailBlock)
+        row.separator:SetShown(not inDetailBlock)
+        row.questFill:SetShown(showUnderway and not openQuest)
+        row.bossFill:SetShown(boss ~= nil or openQuest)
+        local titleSize = (boss or showUnderway) and 16 or heading and 15 or 14
+        sizeText(row.label, row, titleSize, (boss or showUnderway) and 17 or 15)
+        sizeText(row.detail, row, 13, 14)
+        sizeText(row.command, row, 13, 14)
+        if boss or openQuest then
+            warmLight(row.label, pixel)
+            warmLight(row.command, pixel)
+            warmLight(row.detail, pixel)
+            row.disclosure:SetVertexColor(.98, .83, .52)
+        else
+            darkInk(row.label, false)
+            darkInk(row.command, true)
+            darkInk(row.detail, true)
+            row.disclosure:SetVertexColor(.42, .24, .11)
+        end
         row.icon:SetShown(itemID ~= nil)
-        paintBossToken(row, boss, "LEFT", 7, 26)
+        row.itemButton:SetShown(itemID ~= nil)
+        paintBossToken(row, boss, "LEFT", pad, bossSize)
+        if boss then
+            row.bossToken:SetSize(bossSize, bossSize)
+            row.bossToken:ClearAllPoints()
+            row.bossToken:SetPoint("LEFT", row, "LEFT", pad, 0)
+        end
         row.label:ClearAllPoints()
         row.detail:ClearAllPoints()
-        local left = (itemID or boss) and 40 or 8
+        local left = boss and (bossSize + 2 * pad) or itemID and 40 or pad
         local disclosure = actionLabel=="Expand" or actionLabel=="Collapse"
-        local showUnderway = type(underway) == "string"
-        local right = showUnderway and (completed and -88 or -58) or disclosure and -28 or actionLabel and -math.max(55, #actionLabel * 7 + 13) or -8
-        local y = detail and -4 or -11
-        row.label:SetPoint("TOPLEFT", left, y)
-        local textWidth=math.max(45, content:GetWidth()-left+right)
+        row.command:SetText(not disclosure and actionLabel or "")
+        local glyphWidth = math.max(12, 12 * pixel)
+        local badgeWidth = math.max(24, 25 * pixel)
+        local badgeInset = disclosure and (pad + glyphWidth + 4 * pixel) or pad
+        local stampWidth = 58 * pixel
+        local stampInset = badgeInset + badgeWidth + 5 * pixel
+        local right = chainMarker and (stampInset + stampWidth + 6 * pixel)
+            or showUnderway and (badgeInset + badgeWidth + 6 * pixel)
+            or disclosure and (pad + glyphWidth + 7 * pixel)
+            or actionLabel and (row.command:GetStringWidth() + 2 * pad) or pad
+        local textWidth=math.max(32, content:GetWidth()-left-right)
         row.label:SetWidth(textWidth)
         row.detail:SetWidth(textWidth)
         row.detail:SetText(detail or "")
-        row.command:SetText(not disclosure and actionLabel or "")
+        row.command:ClearAllPoints()
+        row.command:SetPoint("RIGHT", row, "RIGHT", -pad, 0)
+        row.disclosure:SetSize(glyphWidth, glyphWidth)
         row.disclosure:SetShown(disclosure)
         if disclosure then row.disclosure:SetRotation(actionLabel=="Collapse" and -math.pi/2 or 0) end
-        row.stamp:SetShown(showUnderway and completed == true)
+        row.stamp:SetSize(stampWidth,29 * pixel)
+        row.stamp:SetShown(chainMarker)
+        row.stampInk:SetShown(chainMarker and not openQuest)
+        row.stamp:SetBlendMode(openQuest and "ADD" or "BLEND")
+        if openQuest then row.stamp:SetVertexColor(1, .90, .72)
+        else row.stamp:SetVertexColor(.36, .23, .13) end
         if showUnderway then
             row.underway:SetTexture(media.."JournalQuest"..underway)
-            row.stamp:SetTexture(media.."JournalQuestChain")
-            row.stamp:SetSize(27,27)
         end
+        row.underway:SetSize(badgeWidth, badgeWidth)
+        row.underway:ClearAllPoints()
+        row.underway:SetPoint("RIGHT",row,"RIGHT",-badgeInset,0)
         row.underway:SetShown(showUnderway)
         row.disclosure:ClearAllPoints()
-        row.disclosure:SetPoint((showUnderway or completed) and "TOPRIGHT" or "RIGHT", row, (showUnderway or completed) and "TOPRIGHT" or "RIGHT", -10, (showUnderway or completed) and -7 or 0)
-        if heading then row.label:SetTextColor(.37, .19, .06)
-        else row.label:SetTextColor(.16, .09, .03) end
+        row.disclosure:SetPoint("RIGHT", row, "RIGHT", -pad, 0)
         if itemID then paintItem(row) else row.label:SetText(label) end
-        local selector=framed or itemID~=nil or (action~=nil and not heading)
+        local selector=not inDetailBlock and (framed or itemID~=nil or (action~=nil and not heading))
         row.selectorTrim:SetShown(selector)
-        local labelHeight=math.max(18,row.label:GetStringHeight())
-        local detailHeight=detail and math.max(14,row.detail:GetStringHeight()) or 0
-        local height=math.max((showUnderway or completed) and 48 or rowHeight,selector and 36 or 0,labelHeight+detailHeight+13)
-        row.label:ClearAllPoints()
-        row.label:SetPoint("TOPLEFT",left,detail and -4 or -(height-labelHeight)/2)
-        row.detail:SetPoint("TOPLEFT",left,-labelHeight-5)
+        local labelHeight=math.max(18 * pixel,row.label:GetStringHeight())
+        local detailHeight=detail and row.detail:GetStringHeight() + 2 * pixel or 0
+        local minimumHeight=boss and math.max(41,42*pixel) or showUnderway and math.max(48,50*pixel) or rowHeight
+        if inDetailBlock then minimumHeight=itemID and 30 * pixel or 27 * pixel end
+        local height=math.max(minimumHeight,labelHeight+detailHeight+2*verticalPad)
+        row.label:SetPoint("TOPLEFT",left,detail and -verticalPad or -(height-labelHeight)/2)
+        row.detail:SetPoint("TOPLEFT",left,-labelHeight-verticalPad-2*pixel)
         row.stamp:ClearAllPoints()
-        row.stamp:SetPoint("RIGHT",row,"RIGHT",-57,0)
+        row.stamp:SetPoint("RIGHT",row,"RIGHT",-stampInset,0)
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT",content,"TOPLEFT",0,-content.rowY)
         row:SetPoint("TOPRIGHT",content,"TOPRIGHT",0,-content.rowY)
@@ -533,6 +621,29 @@ function ns.ToggleDungeonBrowser()
         row:EnableMouse(action ~= nil or itemID ~= nil)
         row:Show()
         return row
+    end
+
+    local function drawDetailBlock(top)
+        local index = content.visibleDetailBlocks + 1
+        content.visibleDetailBlocks = index
+        local block = detailBlocks[index]
+        if not block then
+            block = CreateFrame("Frame", nil, content)
+            block:SetFrameLevel(content:GetFrameLevel())
+            block:EnableMouse(false)
+            local fill = block:CreateTexture(nil, "BACKGROUND")
+            fill:SetAllPoints()
+            fill:SetColorTexture(.98, .90, .73, .72)
+            N.BronzeRectangle(block, 2)
+            detailBlocks[index] = block
+        end
+        local pixel = N.PixelSize(block, 1)
+        block:ClearAllPoints()
+        block:SetPoint("TOPLEFT",content,"TOPLEFT",0,-top)
+        block:SetPoint("TOPRIGHT",content,"TOPRIGHT",0,-top)
+        block:SetHeight(content.rowY - top + 3 * pixel)
+        block:Show()
+        content.rowY = content.rowY + 8 * pixel
     end
 
     local function addPin(position, count)
@@ -580,14 +691,15 @@ function ns.ToggleDungeonBrowser()
     end
 
     local currentMapAspect
+    local detailActive=false
     local function fitMap()
         if not currentMapAspect or not map:IsShown() then return end
         local width = window:GetWidth()
         local leftWidth = math.max(250, math.floor(width * .36))
         mapPane:ClearAllPoints()
-        mapPane:SetPoint("TOPLEFT", window, "TOPLEFT", leftWidth + 22, -76)
+        mapPane:SetPoint("TOPLEFT", window, "TOPLEFT", leftWidth + 22, -76 - headerExtra)
         mapPane:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -18, 42)
-        local height = math.max(1, math.min(window:GetHeight() - 126, (width - leftWidth - 48) / currentMapAspect))
+        local height = math.max(1, math.min(window:GetHeight() - 126 - headerExtra, (width - leftWidth - 48) / currentMapAspect))
         local mapWidth = height * currentMapAspect
         map:SetSize(mapWidth, height)
         for _, pin in ipairs(pins) do
@@ -808,44 +920,95 @@ function ns.ToggleDungeonBrowser()
     local function showQuests(questRows)
         local faction = E.Call(UnitFactionGroup, "player")
         local _, class = E.Call(UnitClass, "player")
-        local function addEndpoint(q, start)
-            local label = start and "Start" or "Turn In"
+        local questData = ns.ForeverQuestData
+        local data = questData.quests
+        local function blockRow(title, detail, itemID, action, command, heading)
+            return addRow(title, action, itemID, detail, command, nil, heading, nil, nil, nil, true)
+        end
+        local function nameKey(name, questName)
+            if type(name) ~= "string" or name == questName or name == "Inside the dungeon"
+                or name:match("^%a+ #%d+$") then return end
+            return ns.DungeonNameKey(name:match("^(.-)%s+—%s+") or name)
+        end
+        local function samePlace(a, b)
+            return a.location == b.location
+                or not (a.preferred and b.preferred) and a.world and b.world and a.world == b.world
+        end
+        local function endpoints(q, start)
             local hint, points = ns.DungeonQuestLocations(q, start)
             local reference = q.reference
             local primary = reference and ns.DungeonLocation(start and reference.startPoint or not start and reference.endPoint, hint or q.name)
-            local known = primary and primary.name
-            if not known or known == q.name or known:match("^%a+ #%d+$") then known = hint or known end
+            local record = data[q.id] or q.record or {}
+            local sources = (start and record.starts or not start and record.ends) or {}
+            local source = #sources == 1 and sources[1]
+            local npc = source and source.kind == "npc" and source.id or nil
+            local npcKey = npc and ("npc:"..npc)
+            local npcName = npcKey and questData.names and questData.names[npcKey]
+            local aliases = npcKey and questData.spawns and questData.spawns[npcKey] or {}
+            local known = npcName or (primary and nameKey(primary.name, q.name) and primary.name) or hint
+            local function worldPosition(point, preferred)
+                local result
+                for _, alias in ipairs(aliases) do
+                    local distance = preferred and 1 or .05
+                    if alias.mapID == point.mapID and type(alias.x) == "number" and type(alias.y) == "number"
+                        and math.abs(alias.x - point.x) < distance and math.abs(alias.y - point.y) < distance
+                        and type(alias.worldMap) == "number" and type(alias.worldX) == "number" and type(alias.worldY) == "number" then
+                        local value = string.format("%d:%.2f:%.2f", alias.worldMap, alias.worldX, alias.worldY)
+                        if result and result ~= value then return end
+                        result = value
+                    end
+                end
+                return result
+            end
             local groups, byName = {}, {}
             local function collect(point, preferred)
                 if not localEndpoint(point) then return end
-                local name = point.name or known or q.name
-                if name == q.name or name:match("^%a+ #%d+$") then name = known or name end
-                local key = ns.DungeonNameKey(name)
+                local name = nameKey(point.name, q.name) and point.name or known or q.name
+                local key = nameKey(name, q.name) or name
+                local matchesNPC = npc and (not npcName or key == nameKey(npcName, q.name))
+                local candidate = {name = matchesNPC and npcName or name, point = point, preferred = preferred,
+                    nameKey = nameKey(name, q.name), npc = matchesNPC and npc or nil,
+                    location = string.format("%d:%.1f:%.1f", point.mapID, point.x, point.y),
+                    world = matchesNPC and worldPosition(point, preferred) or nil}
                 local group = byName[key]
                 if not group then
-                    group = {name = name, point = point, preferred = preferred}
-                    byName[key], groups[#groups + 1] = group, group
-                elseif not group.preferred then
-                    local first = group.point
-                    if first.mapID ~= point.mapID or math.abs(first.x - point.x) >= 1
-                        or math.abs(first.y - point.y) >= 1 then group.conflict = true end
+                    byName[key], groups[#groups + 1] = candidate, candidate
+                elseif not samePlace(group, candidate) then
+                    group.conflict = true
                 end
             end
             collect(primary, true)
-            for _, point in ipairs(points) do collect(point) end
-            for _, group in ipairs(groups) do
-                local point = group.point
-                local title = label .. "  /  " .. group.name
-                if group.conflict then
-                    addRow(title, nil, nil, "Conflicting Coordinates")
-                else
-                    local location = string.format("%s (%.1f, %.1f)", point.zone or "Zone Map", point.x, point.y)
-                    addRow(title, function() local result=questWaypoint(point); draw(true); status:SetText(result) end, nil, location, questPinLabel(point))
-                end
-            end
-            if #groups == 0 then addRow(label .. "  /  " .. (hint or "Location Unavailable")) end
+            for _, point in ipairs(points or {}) do collect(point) end
+            if #groups == 0 then groups[1] = {name = hint or "Location Unavailable"} end
+            return groups, #sources > 0 and not npc
         end
-        local data = ns.ForeverQuestData.quests
+        local function endpointRow(label, group)
+            local title = label .. " / " .. group.name
+            local point = group.point
+            if group.conflict and not group.preferred then
+                blockRow(title, "Conflicting Coordinates")
+            elseif not point then
+                blockRow(title)
+            else
+                local location = string.format("%s (%.1f, %.1f)", point.zone or "Zone Map", point.x, point.y)
+                blockRow(title, location, nil,
+                    function() local result=questWaypoint(point); draw(true); status:SetText(result) end, questPinLabel(point))
+            end
+        end
+        local function addEndpoints(q)
+            local starts, startAmbiguous = endpoints(q, true)
+            local ends, endAmbiguous = endpoints(q, false)
+            local first, last = starts[1], ends[1]
+            local sameNPC = first.npc and last.npc and first.npc == last.npc
+                or (not first.npc or not last.npc) and first.nameKey and first.nameKey == last.nameKey
+            if #starts == 1 and #ends == 1 and not startAmbiguous and not endAmbiguous and sameNPC
+                and first.point and last.point and not first.conflict and not last.conflict and samePlace(first, last) then
+                endpointRow("Start / Turn In", last.preferred and not first.preferred and last or first)
+            else
+                for _, group in ipairs(starts) do endpointRow("Start", group) end
+                for _, group in ipairs(ends) do endpointRow("Turn In", group) end
+            end
+        end
         local known, previous, nextSteps = {}, {}, {}
         local function link(before, after)
             if not before or not after or before == after then return end
@@ -937,6 +1100,32 @@ function ns.ToggleDungeonBrowser()
         local function underway(q)
             return q.id and E.QuestState(q.id).inLog == true and not questComplete(q)
         end
+        local function objectiveText(step, supplemental)
+            local state=step.id and E.QuestState(step.id)
+            local live={}
+            for _,goal in ipairs(state and state.objectives or {}) do
+                if E.Public(goal.text) and type(goal.text)=="string" and goal.text:find("%S") then
+                    live[#live+1]=goal.text
+                end
+            end
+            if #live>0 then return table.concat(live,"\n") end
+            for _,text in ipairs({step.record.objective or false, supplemental.objective or false,
+                questObjectiveFallbacks[step.id] or false, ns.DungeonObjectiveText and ns.DungeonObjectiveText[step.id] or false}) do
+                if type(text)=="string" and text:find("%S") then return text end
+            end
+            local goals={}
+            for _,goal in ipairs(supplemental.objectives or step.record.objectives or {}) do
+                if goal.kind=="item" and goal.target then
+                    local name=E.Call(GetItemInfo,goal.target)
+                    if not E.Public(name) or type(name)~="string" then name="item #"..goal.target end
+                    goals[#goals+1]=("Collect %d × %s"):format(goal.count or 1,name)
+                end
+            end
+            if #goals>0 then return table.concat(goals,"\n") end
+            local hint=ns.DungeonQuestLocations(step,false)
+            if hint and hint~=step.name and not hint:match("^%a+ #%d+$") then return "Speak with "..hint.." to turn in this step." end
+        end
+
         local function details(chain)
             local nextStep
             for _, step in ipairs(chain) do
@@ -946,27 +1135,31 @@ function ns.ToggleDungeonBrowser()
             for index, step in ipairs(chain) do
                 local record = step.record
                 local supplemental = ns.ForeverQuestData.quests[step.id] or {}
-                local title = #chain > 1 and (index .. ". " .. step.name) or step.name
-                addRow(title, nil, nil, questLevel(step), nil, nil, true, false,
-                    badge(step), true)
-                if #chain>1 and step==nextStep then
-                    addRow(underway(step) and "Current step" or "Next step", nil, nil, nil, nil, nil, true)
+                if #chain > 1 then
+                    local summary = questLevel(step)
+                    if step == nextStep then
+                        local progress = underway(step) and "Current step" or "Next step"
+                        summary = summary and (summary .. " · " .. progress) or progress
+                    end
+                    addRow(index .. ". " .. step.name, nil, nil, summary, nil, nil, true, false, badge(step), true)
                 end
-                addRow("Objective", nil, nil,
-                    record.objective or supplemental.objective or questObjectiveFallbacks[step.id] or "Objective unavailable", nil, nil, true)
-                addEndpoint(step,true)
-                addEndpoint(step,false)
+                local top = content.rowY
+                local objective=objectiveText(step,supplemental)
+                if objective then blockRow("Objective", objective, nil, nil, nil, true) end
+                addEndpoints(step)
                 local reward = record.rewards or record.rewardSummary
                 local xp = record.xp or supplemental.xp or record.liveXPFallback
                 local items = record.rewardItems or {}
-                addRow(record.rewardChoice and "Rewards · Choose one" or "Rewards", nil, nil,
-                    reward or (xp and (xp .. " XP")) or (#items == 0 and "Reward information unavailable" or nil))
+                blockRow(record.rewardChoice and "Rewards · Choose one" or "Rewards",
+                    reward or (xp and (xp .. " XP")) or (#items == 0 and "Reward information unavailable" or nil),
+                    nil, nil, nil, true)
                 for _, item in ipairs(items) do
-                    addRow(item[2] or ("Item " .. item[1]), nil, item[1])
+                    blockRow(item[2] or ("Item " .. item[1]), nil, item[1])
                 end
-                if type(record.requires) == "string" then addRow(record.requires,nil,nil,"Requirement") end
+                if type(record.requires) == "string" then blockRow(record.requires, "Requirement") end
                 local item = step.reference and step.reference.startItem or record.startItem
-                if item then addRow(item[2],nil,item[1],type(item[4]) == "string" and item[4] or "Starts Quest") end
+                if item then blockRow(item[2], type(item[4]) == "string" and item[4] or "Starts Quest", item[1]) end
+                drawDetailBlock(top)
             end
         end
         local landmarkTitle, landmarkQuests
@@ -1035,7 +1228,7 @@ function ns.ToggleDungeonBrowser()
         if not card then
             card = CreateFrame("Button", nil, content)
             card.image = card:CreateTexture(nil, "ARTWORK")
-            card.image:SetPoint("TOPLEFT", 1, -1);card.image:SetPoint("BOTTOMRIGHT", -1, 1)
+            card.image:SetPoint("TOPLEFT", 4, -4)
             card.base=paper(card)
             card.base:SetAllPoints()
             card.base:SetVertexColor(.89,.75,.53)
@@ -1043,19 +1236,23 @@ function ns.ToggleDungeonBrowser()
             local hover=paper(card,"OVERLAY",-2)
             hover:SetAllPoints();hover:SetVertexColor(1,.87,.63,.25)
             card:SetHighlightTexture(hover)
-            local band=card:CreateTexture(nil,"OVERLAY",nil,-1)
+            local band = wood(card, "OVERLAY", -1)
             card.band = band
-            band:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT",1,1)
-            band:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT",-1,1)
-            band:SetColorTexture(0,0,0,.5)
+            band:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT",4,4)
+            band:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT",-4,4)
+            card.image:SetPoint("BOTTOMRIGHT",band,"TOPRIGHT")
+            local bandEdge = card:CreateTexture(nil, "OVERLAY")
+            bandEdge:SetPoint("TOPLEFT", band, "TOPLEFT")
+            bandEdge:SetPoint("TOPRIGHT", band, "TOPRIGHT")
+            bandEdge:SetHeight(N.PixelSize(card, 1))
+            N.BronzeRail(bandEdge, "TOP")
+            bandEdge:SetAlpha(.60)
             card.name = N.MakeText(card, 15, "", true)
-            card.name:SetTextColor(.98,.77,.48)
-            card.name:SetPoint("BOTTOMLEFT", card.band, "LEFT", 5, 0)
-
-            card.name:SetWordWrap(false)
+            card.name:SetPoint("LEFT", card.band, "LEFT", 5, 0)
+            if card.name.SetMaxLines then card.name:SetMaxLines(2) end
             card.level = N.MakeText(card, 11, "", true)
             card.level:SetPoint("RIGHT",card.band,"RIGHT",-5,0)
-            card.level:SetTextColor(.95,.72,.43)
+            card.level:SetWordWrap(false)
             card.complete = card:CreateTexture(nil, "OVERLAY", nil, 5)
             card.complete:SetTexture("Interface\\AddOns\\GrindingForever\\Media\\DungeonQuestCompleteStamp")
             card.complete:SetSize(54,27)
@@ -1068,28 +1265,23 @@ function ns.ToggleDungeonBrowser()
         card.image:SetShown(id ~= nil)
         card:SetSize(width,height)
         card:ClearAllPoints();card:SetPoint("TOPLEFT",content,"TOPLEFT",x,-y)
-        local family = ns.DungeonNameKey(entry.name):match("^([^:]+):")
-        local wing = family and wingFamilies[family]
-        local font, _, flags = card.name:GetFont()
-        card.name:SetFont(font, 13, flags)
-        card.name:SetWordWrap(false)
+        local pixel = N.PixelSize(card, 1)
+        sizeText(card.name, card, 14, 15)
+        sizeText(card.level, card, 12, 13)
+        warmLight(card.name, pixel)
+        warmLight(card.level, pixel)
+        card.level:SetTextColor(.97, .80, .53)
         local quests = dungeonQuests(entry.instance)
         local complete = #quests > 0
         for _, quest in ipairs(quests) do
             if not questComplete(quest) then complete = false; break end
         end
         card.complete:SetShown(complete)
-        card.name:SetText(entry.name)
-        card.band:SetHeight(height*.175)
         local levels = entry.minimum and entry.maximum and string.format("%d–%d",entry.minimum,entry.maximum)
         card.level:SetText(levels or (entry.raid and "Raid" or ""))
-        card.name:SetWidth(0)
-        local available=math.max(20,width-card.level:GetStringWidth()-18)
-        for size=13,8,-1 do
-            card.name:SetFont(font,size,flags)
-            if card.name:GetStringWidth()<=available then break end
-        end
-        card.name:SetWidth(available)
+        card.name:SetWidth(math.max(38, width - card.level:GetStringWidth() - 24 * pixel))
+        card.name:SetText(entry.name)
+        card.band:SetHeight(math.max(24 * pixel, math.min(44 * pixel, card.name:GetStringHeight() + 8 * pixel)))
         card:SetScript("OnClick",function()
             selected, floor, tab = entry.instance, 1, "bosses"
             selectedBoss, selectedQuest, questLandmark = nil, nil, nil
@@ -1101,15 +1293,12 @@ function ns.ToggleDungeonBrowser()
     draw = function(keepScroll)
         local previousScroll = keepScroll == true and list:GetVerticalScroll() or 0
         local width = window:GetWidth()
-        title:SetShown(selected ~= nil)
-        emblem:SetShown(not selected)
-        dungeonTitle:SetShown(not selected)
-        raidTitle:SetShown(not selected)
         local leftWidth = math.max(250,math.floor(width * .36))
         for _, row in ipairs(rows) do row:Hide() end
+        for _, block in ipairs(detailBlocks) do block:Hide() end
         for _, card in ipairs(cards) do card:Hide() end
         for _, pin in ipairs(pins) do pin:Hide() end
-        content.visibleRows = 0
+        content.visibleRows, content.visibleDetailBlocks = 0, 0
         content.rowY=0
         list:SetVerticalScroll(0)
         back:SetShown(selected ~= nil)
@@ -1129,25 +1318,33 @@ function ns.ToggleDungeonBrowser()
         floorButton.floorCount = floors and #floors or 0
         floorButton:SetShown(floors and #floors > 1 or false)
         if image then floorButton.label:SetText("Floor " .. floor .. " / " .. #floors) end
+        local previousMapAspect=currentMapAspect
         currentMapAspect = image and image.aspect
+        if (image ~= nil) ~= detailActive or (image and previousMapAspect ~= image.aspect) then
+            detailActive = image ~= nil
+            local unit,p,minW,minH,maxW,maxH=N.ApplySizeProfile(window,detailActive and "detail" or "")
+            local width=math.max(minW,math.min(p[3],maxW))
+            local leftWidth=math.max(250,math.floor(width*unit*.36))
+            local height=detailActive and math.floor(((width*unit-leftWidth-48)/image.aspect+126+headerExtra)/unit+.5) or p[4]
+            window:SetSize(width*unit,math.max(minH,math.min(height,maxH))*unit)
+        end
         mapPane:SetShown(image ~= nil)
         map:SetShown(image ~= nil)
         list:ClearAllPoints()
+        width=window:GetWidth()
+        leftWidth=math.max(250,math.floor(width*.36))
         local rightInset = image and (width - leftWidth) or 34
-        list:SetPoint("TOPLEFT", 18, selected and -119 or -47)
+        list:SetPoint("TOPLEFT", 18, (selected and -119 or -47) - headerExtra)
         list:SetPoint("BOTTOMRIGHT", -rightInset, 42)
         content:SetWidth(width - rightInset - 18)
         local cardHeight
         if selected then
-            title:SetText(selected.name)
             bossTab:ClearAllPoints()
-            bossTab:SetPoint("TOPLEFT", 18, -85)
+            bossTab:SetPoint("TOPLEFT", 18, -85 - headerExtra)
             questTab:ClearAllPoints()
             questTab:SetPoint("LEFT", bossTab, "RIGHT", 8, 0)
-            bossTab.line:SetShown(tab == "bosses")
-            questTab.line:SetShown(tab == "quests")
-            bossTab.paper:SetVertexColor(.9,.74,.50,tab=="bosses" and 1 or .48)
-            questTab.paper:SetVertexColor(.9,.74,.50,tab=="quests" and 1 or .48)
+            bossTab:SetSelected(tab == "bosses")
+            questTab:SetSelected(tab == "quests")
             local questRows = dungeonQuests(selected)
             local allowedNames = {}
             for _, quest in ipairs(questRows) do
@@ -1266,7 +1463,7 @@ function ns.ToggleDungeonBrowser()
                     local heading = addRow("Raids", nil, nil, nil, nil, nil, true)
                     heading:ClearAllPoints();heading:SetPoint("TOPLEFT",content,"TOPLEFT",0,-y)
                     heading:SetPoint("TOPRIGHT",content,"TOPRIGHT",0,-y)
-                    y = y + 34
+                    y = y + heading:GetHeight()
                 end
                 showCard(index,entry,x*(cardWidth+gap),y,cardWidth,cardSize)
                 x=x+1

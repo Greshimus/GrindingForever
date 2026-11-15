@@ -12,6 +12,7 @@ local vendorReagents = {
 }
 local stockRead
 local observedByVendor, observedByItem
+local purchaseRecipes
 function E.NoteVendorStock(id)
     vendorReagents[id] = true
 end
@@ -59,6 +60,7 @@ end
 
 function E.NoteRecipeSource(recipe, npcID)
     ensureObserved()
+    purchaseRecipes = nil
     local key = recipe.spellID or recipe.learnableItemID
     local previous = observedByVendor[npcID]
     if not previous or not previous[key] then
@@ -223,6 +225,12 @@ local function addLocation(recipe, loc)
     else
         local previous = recipe.locations[at]
         if exact(previous) and not exact(loc) then return end
+        if previous.requirement and not loc.requirement then
+            local merged = {}
+            for field, value in pairs(loc) do merged[field] = value end
+            merged.requirement = previous.requirement
+            loc = merged
+        end
     end
     recipe.locations[at] = loc
 end
@@ -257,7 +265,8 @@ function Catalog.Browse()
             row = {locations = {}, sourceIndexes = {}}
             rows[#rows + 1] = row
         end
-        for _, key in ipairs({"spellID", "productID", "profession", "faction", "skill", "knowledgeVerified", "learned"}) do
+        for _, key in ipairs({"spellID", "productID", "profession", "faction", "skill", "requiredSkill", "knowledgeVerified", "learned",
+            "minLevel", "maxLevel", "requiredQuest", "reputationID", "reputationStanding", "specializationSpell"}) do
             if recipe[key] ~= nil and (key ~= "profession" or hasText(recipe[key])) then row[key] = recipe[key] end
         end
         if itemID then row.learnableItemID = itemID; byItem[itemID] = row end
@@ -275,6 +284,30 @@ function Catalog.Browse()
         recipe.key = recipe.spellID or recipe.learnableItemID or recipe.name
         recipe.sourceIndexes = nil
     end
+    return rows
+end
+
+function Catalog.PurchaseRecipes()
+    if purchaseRecipes then return purchaseRecipes end
+    local rows = {}
+    local sources = ns.ForeverCatalog and ns.ForeverCatalog.byItem or {}
+    for _, recipe in ipairs(Catalog.Browse()) do
+        local itemID = recipe.learnableItemID
+        local vendors = {}
+        for _, loc in ipairs(recipe.locations) do
+            if loc.source == "Vendor" then vendors[#vendors + 1] = loc end
+        end
+        for _, loc in ipairs(sources[itemID] or {}) do
+            if loc.kind == "Vendor" or loc.source == "Vendor" then vendors[#vendors + 1] = loc end
+        end
+        recipe.requiredSkill = recipe.skill or recipe.requiredSkill
+        if itemID and recipe.spellID and recipe.requiredSkill and #vendors > 0 then
+            recipe.vendors = vendors
+            rows[#rows + 1] = recipe
+        end
+    end
+    table.sort(rows, function(a, b) return a.spellID < b.spellID end)
+    purchaseRecipes = rows
     return rows
 end
 

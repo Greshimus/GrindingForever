@@ -115,8 +115,6 @@ function ns.DungeonQuestLocations(quest, start)
     local record = data and data.quests and data.quests[quest.id] or quest.record or {}
     local endpoints = {}
     local hint = start and record.pickup or not start and record.turnin
-    local kind = start and "accept" or "turnin"
-    local planner = ns.ForeverQuestPlanner
     local seen = {}
     local function add(mapID, x, y, name)
         if not mapID or type(x) ~= "number" or type(y) ~= "number" then return end
@@ -139,12 +137,10 @@ function ns.DungeonQuestLocations(quest, start)
         end
         if not hint then hint = name end
     end
-    for _, action in pairs(planner and planner.actionIndex and planner.actionIndex[quest.id] or {}) do
-        local point = action.kind == kind and action.map
-        if point then
-            local target = type(action.target) == "table" and action.target.name or action.target
-            add(point.ui_map, point.x, point.y, type(target) == "string" and target or quest.name)
-        end
+    local evidence = ns.QuestLocationEvidence and ns.QuestLocationEvidence[quest.id]
+    local points = evidence and (start and evidence.startPoints or not start and evidence.endPoints)
+    for _, point in ipairs(points or {}) do
+        add(point.mapID, point.x, point.y, point.name or quest.name)
     end
     table.sort(endpoints, function(a, b)
         if a.mapID ~= b.mapID then return a.mapID < b.mapID end

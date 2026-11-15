@@ -1,4 +1,4 @@
--- Grinding Forever: Forever tester build 37.
+-- Grinding Forever: Forever Farming Routes tester build.
 local ADDON,GF=...
 -- GF_MODULE_BEGIN Engine
 ;(function(...)
@@ -64,10 +64,74 @@ function E.QuestState(id)
  if type(objectives)~='table'then local index=call(q.GetLogIndexForQuestID or GetQuestLogIndexByID,id);if index and index>0 then objectives={};for slot=1,call(GetNumQuestLeaderBoards,index)or 0 do local text,kind,done=call(GetQuestLogLeaderBoard,slot,index);if text then local current,total=text:match('(%d+)%s*/%s*(%d+)');objectives[#objectives+1]={text=text,type=kind,finished=done==true,numFulfilled=tonumber(current),numRequired=tonumber(total)}end end end end
  return{status=type(inLog)=='boolean'and'available'or'unavailable',inLog=inLog,rewarded=rewarded,complete=ready,ready=ready,objectives=type(objectives)=='table'and objectives or nil}
 end
+local wellFedXP, wellFedSpell = 1243969, 1249521
+local campBenefits, campWarmup, campNearby = 1229741, 1229739, 1283391
+local sleepingBagItem, wellRested, bagTracking = 211527, 429959, 429960
+local unrollBag = 429961
+local partyBags = {}
+local partyBagRadius = 60
+local partyBagDuration = 20*60
+
+local function readPlayerAuras()
+ local auras, fed = {}, false
+ local unreadable = false
+ local foodAura = usableItemLabel(call(C_Spell and C_Spell.GetSpellName,wellFedSpell)) or 'Well Fed'
+ local function add(id,name,duration,expiration,stacks)
+  if not public(id) or not public(name) then unreadable=true;return end
+  if type(id)=='number' then
+   auras[id]={duration=public(duration) and duration or nil,expiration=public(expiration) and expiration or nil,
+    stacks=public(stacks) and stacks or nil}
+  end
+  if name==foodAura or id==wellFedXP then fed=true end
+ end
+ local api=C_UnitAuras
+ if api and api.GetAuraDataByIndex then
+  for i=1,80 do
+   local ok,a=pcall(api.GetAuraDataByIndex,'player',i,'HELPFUL')
+   if not ok or not public(a) then unreadable=true;break end
+   if not a then break end
+   add(a.spellId,a.name,a.duration,a.expirationTime,a.applications)
+  end
+  -- Some of these auras are hidden from the default buff bar.
+  for _,id in ipairs({wellFedXP,campBenefits,campWarmup,campNearby,wellRested,bagTracking})do
+   if not auras[id] then
+    local a=call(api.GetPlayerAuraBySpellID,id)
+    if not public(a) then unreadable=true
+    elseif a then add(id,a.name,a.duration,a.expirationTime,a.applications)end
+   end
+  end
+ elseif UnitBuff then
+  for i=1,80 do
+   local ok,name,_,count,_,duration,expiration,_,_,_,id=pcall(UnitBuff,'player',i)
+   if not ok or not public(name) then unreadable=true;break end
+   if not name then break end
+   add(id,name,duration,expiration,count)
+  end
+ else
+  unreadable=true
+ end
+ return auras,fed,not unreadable
+end
+
+local function enhancementSignature(auras,fed,readable)
+ local rested=auras[wellRested]
+ local stacks=rested and rested.stacks
+ return table.concat({readable and 1 or 0,fed and 1 or 0,auras[campBenefits] and 1 or 0,
+  auras[campWarmup] and 1 or 0,auras[campNearby] and 1 or 0,
+  rested and (type(stacks)=='number' and stacks or 3) or 0,auras[bagTracking] and 1 or 0},':')
+end
+function E.CheckEnhancementAuras()
+ local auras,fed,readable=readPlayerAuras()
+ local state=ns.ProfessionGuide.character
+ if not state.auras then state=nil end
+ if auras[campWarmup] and (not state or not state.auras[campWarmup]) then E.ObserveCamp(auras)end
+ return not state or enhancementSignature(auras,fed,readable)~=state.enhancementSignature
+end
+
 function E.Record() end
 function E.Snapshot()
- local _,race=call(UnitRace,'player');local _,class=call(UnitClass,'player')
- local s={faction=call(UnitFactionGroup,'player'),race=race,class=class,level=call(UnitLevel,'player'),position=E.CurrentPosition(),skills={},known={},quests={},completed={},auras={},talents={},reputations={},speed=call(GetUnitSpeed,'player'),money=call(GetMoney)}
+ local _,race,raceId=call(UnitRace,'player');local _,class=call(UnitClass,'player')
+ local s={faction=call(UnitFactionGroup,'player'),race=race,raceId=raceId,class=class,level=call(UnitLevel,'player'),position=E.CurrentPosition(),skills={},known={},quests={},completed={},auras={},talents={},reputations={},speed=call(GetUnitSpeed,'player'),money=call(GetMoney)}
  -- Read learned skills through the client's available API generation.
  local function learned(name,rank,cap,id)
   if public(name)and type(name)=='string'and num(rank,1,10000)then s.skills[name]={rank=rank,cap=num(cap,1,10000)or rank,id=id}end
@@ -90,9 +154,8 @@ function E.Snapshot()
  s.completedAvailable=type(ids)=='table';if s.completedAvailable then for _,id in ipairs(ids)do s.completed[id]=true end end
  local n=call(C_QuestLog and C_QuestLog.GetNumQuestLogEntries or GetNumQuestLogEntries);s.questLogAvailable=num(n,0,1e5)~=nil;n=s.questLogAvailable and n or 0
  for i=1,n do local q=call(C_QuestLog and C_QuestLog.GetInfo,i);if not q then local title,_,_,header,_,_,_,id=call(GetQuestLogTitle,i);if title and id then q={questID=id,isHeader=header,title=title}end end;if q and q.questID and not q.isHeader then s.quests[q.questID]=E.QuestState(q.questID);s.quests[q.questID].title=q.title;s.quests[q.questID].inLog=true;if q.isComplete==true or q.isComplete==1 then s.quests[q.questID].ready=true end end end
- if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-  for i=1,80 do local a=call(C_UnitAuras.GetAuraDataByIndex,'player',i,'HELPFUL');if not a then break end;if public(a.spellId)then s.auras[a.spellId]={duration=a.duration,expiration=a.expirationTime}end end
- else for i=1,80 do local name,_,_,_,duration,expires,_,_,_,id=call(UnitBuff,'player',i);if not name then break end;if id then s.auras[id]={duration=duration,expiration=expires}end end end
+ s.auras,s.wellFed,s.enhancementAurasReadable=readPlayerAuras()
+ s.enhancementSignature=enhancementSignature(s.auras,s.wellFed,s.enhancementAurasReadable)
  for tab=1,call(GetNumTalentTabs)or 0 do for i=1,call(GetNumTalents,tab)or 0 do local name,_,_,_,rank,maxRank=call(GetTalentInfo,tab,i);if name then s.talents[name]={rank=rank,maxRank=maxRank}end end end
  for i=1,call(GetNumFactions)or 0 do local name,_,standing,_,_,value,_,_,header,_,_,_,_,id=call(GetFactionInfo,i);if name and not header then s.reputations[id or name]={name=name,standing=standing,value=value}end end
  for _,f in ipairs(ns.ForeverFacts and ns.ForeverFacts.selfBuffs or{})do if call(IsPlayerSpell or IsSpellKnown,f.id)==true then s.known[f.id]=true end end
@@ -133,7 +196,8 @@ function E.ReadBook()
   if not id or profession=='Skinning'or profession=='Herbalism'or profession=='Fishing'then return end
   if learned==true then E.known[id]=true elseif learned==false then E.known[id]=nil end
   local r=E.recipes[id]or{spellID=id,name=name or spell(id),sources={},locations={}};E.recipes[id]=r
-  r.name=name or r.name;r.profession=profession or r.profession;r.requiredSkill=required or r.requiredSkill;r.productID=product or r.productID;r.reagents=reagents or r.reagents;r.observed=true
+  r.name=name or r.name;r.requiredSkill=required or r.requiredSkill;r.productID=product or r.productID;r.reagents=reagents or r.reagents;r.observed=true
+  if type(profession)=='string' and profession~='' then r.profession=profession end
   if product then E.crafted[product]=true end
   for material in pairs(reagents or{})do E.reagents[material]=E.reagents[material]or{};if r.profession then E.reagents[material][r.profession]=true end end
  end
@@ -155,10 +219,20 @@ function E.ReadBook()
  for i=1,call(GetNumCrafts)or 0 do local name,_,kind=call(GetCraftInfo,i);if kind~='header'then local link=call(GetCraftRecipeLink,i);local id=type(link)=='string'and tonumber(link:match('enchant:(%d+)')or link:match('spell:(%d+)'));local reagents={};for k=1,call(GetCraftNumReagents,i)or 0 do local material=idFromLink(call(GetCraftReagentItemLink,i,k));local _,_,quantity=call(GetCraftReagentInfo,i,k);if material and quantity then reagents[material]=quantity end end;add(id,name,true,idFromLink(call(GetCraftItemLink,i)),reagents,profession)end end
 end
 function E.Known(r)
- if E.known[r.spellID]then return true end
- if r.spellID and(call(IsPlayerSpell,r.spellID)==true or call(IsSpellKnown,r.spellID)==true)then return true end
+ local id=r.spellID
+ if not id then return end
+ if E.known[id] then return true end
+ local bank=Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player
+ local book=call(C_SpellBook and C_SpellBook.IsSpellKnown,id,bank)
+ local playerSpell,knownSpell=call(IsPlayerSpell,id),call(IsSpellKnown,id)
+ local info=call(C_TradeSkillUI and C_TradeSkillUI.GetRecipeInfo,id)
+ local learned
+ if public(info) and type(info)=='table' then learned=info.learned end
+ if (public(book) and book==true) or (public(playerSpell) and playerSpell==true)
+    or (public(knownSpell) and knownSpell==true) or (public(learned) and learned==true) then return true end
  if r.knowledgeVerified==true and r.learned==false then return false end
- return nil -- Unknown knowledge evidence is not an unknown acquisition category.
+ if (public(book) and book==false) or (public(playerSpell) and playerSpell==false)
+    or (public(knownSpell) and knownSpell==false) or (public(learned) and learned==false) then return false end
 end
 local seasonalRecipes={[21143]=true,[21144]=true,[45022]=true}
 local seasonalItems={[17200]=true,[17201]=true,[34413]=true}
@@ -175,13 +249,15 @@ function E.SeasonalAvailable(row)
  end
  return false
 end
-function E.Eligible(row,state)
+function E.Eligible(row,state,levelsDescribeNPC)
  if not E.SeasonalAvailable(row)then return false end
  state=state or E.state or E.Snapshot()
  if row.faction and row.faction~='Both'and row.faction~='Neutral'and row.faction~=state.faction then return false end
  if row.race and row.race~=state.race or row.class and row.class~=state.class then return false end
- if row.minLevel and state.level<row.minLevel then return false end
- if row.maxLevel and state.level>row.maxLevel then return false end
+ if not levelsDescribeNPC then
+  if row.minLevel and state.level<row.minLevel then return false end
+  if row.maxLevel and state.level>row.maxLevel then return false end
+ end
  if row.requiredQuest and not state.completed[row.requiredQuest]and E.QuestState(row.requiredQuest).rewarded~=true then return false end
  if row.reputationID then local rep=state.reputations[row.reputationID];if not rep or not row.reputationStanding or rep.standing<row.reputationStanding then return false end end
  if row.specializationSpell and call(IsPlayerSpell or IsSpellKnown,row.specializationSpell)~=true then return false end
@@ -205,19 +281,35 @@ function E.Nearest(rows,state)
  return best,score
 end
 function E.CampPlan(state)
- state=state or E.state or E.Snapshot();if state.auras[1229741]then return end
+ state=state or E.state or E.Snapshot()
+ if not state.enhancementAurasReadable or state.auras[campBenefits] or call(UnitIsDeadOrGhost,'player')then return end
+ if state.auras[campWarmup]then
+  return{id='camp:visit',kind='camp',category='Questing',title='Finish warming by the campfire',
+   body='Stay seated until Camp Benefits appears.',priority=85}
+ end
+ local nearby={}
+ for _,camp in ipairs(E.camps)do
+  local d=E.Distance(state.position,camp)
+  if camp.expires>E.Time() and d and d<=100 then nearby[#nearby+1]=camp end
+ end
+ local camp=E.Nearest(nearby,state)
+ if camp or state.auras[campNearby]then
+  return{id='camp:visit',kind='camp',category='Questing',title='Rest at the nearby campfire',destination=camp,
+   body='Sit close to the campfire for one minute to gain Camp Benefits.',priority=85}
+ end
+ local cooking=state.skills.Cooking
+ if cooking and not call(IsIndoors) then
+  for _,kit in ipairs({{279974,220,'Expert Campfire Kit'},{279961,90,'Journeyman Campfire Kit'},{279981,1,'Basic Campfire Kit'}})do
+   if cooking.rank>=kit[2] and E.EnhancementItemReady(kit[1])then
+    return{id='camp:place',kind='camp',category='Crafting',title='Set up a campfire',
+     body='Use your '..kit[3]..' outdoors and sit close to the fire for one minute to gain Camp Benefits.',priority=75}
+   end
+  end
+ end
  local useful={};for _,feature in ipairs(ns.ForeverFacts and ns.ForeverFacts.campFeatures or{})do
   local conflict=false;for _,id in ipairs(feature.conflicts or{})do if state.known[id]or state.auras[id]then conflict=true end end
   if not conflict and(not feature.classes or feature.classes[state.class])then useful[#useful+1]=feature end
  end
- if #useful==0 then return end
- local campfireNearbyRadius=100 -- Campfire Nearby (spell 1283391).
- local nearby={};for _,camp in ipairs(E.camps)do local d=E.Distance(state.position,camp);if camp.expires>E.Time()and d and d<=campfireNearbyRadius then nearby[#nearby+1]=camp end end
- local camp=E.Nearest(nearby,state)
- if camp then return{id='camp:visit',kind='camp',category='Questing',title='Refresh camp benefits',destination=camp,body='Visit the observed campsite and sit nearby until Camp Benefits appears. Choose a useful feature that does not duplicate your class buffs. Camp may have expired; actions remain manual.',priority=85}end
- local kit
- for _,option in ipairs({{279974,220,'Expert Campfire Kit'},{279961,140,'Journeyman Campfire Kit'},{279981,0,'Basic Campfire Kit'}})do local cooking=state.skills.Cooking;if(option[2]==0 or cooking and cooking.rank>=option[2])and(call(GetItemCount,option[1])or 0)>0 then kit=option[3];break end end
- if kit then return{id='camp:place',kind='camp',category='Crafting',title='Set up your camp',body='Use your '..kit..' on safe accessible ground. Add one useful feature from your supplies, then sit nearby until Camp Benefits appears. Placement, crafting and sitting are manual.',priority=75}end
  for _,feature in ipairs(useful)do local r=E.recipes[feature.spellID];if r and E.Known(r)==true and state.skills[feature.profession]and state.skills[feature.profession].rank>=20 then
   local enough=true;for id,quantity in pairs(r.reagents or{})do if(call(GetItemCount,id)or 0)<quantity then enough=false end end
   local start,duration=call(GetSpellCooldown,feature.spellID)
@@ -225,19 +317,220 @@ function E.CampPlan(state)
   if enough and next(r.reagents or{})and not cooling then return{id='camp:craft:'..feature.spellID,kind='camp',category='Crafting',title='Prepare '..feature.name,body='You know this camp recipe and have its observed ingredients. Craft manually, obtain a campfire kit, and place the feature at a safe camp. Check the shared feature cooldown first.',priority=65}end
  end end
 end
-function E.RecipeOpportunity(r,state)
+local function itemReady(id)
+ local count=call(C_Item and C_Item.GetItemCount or GetItemCount,id,false)
+ if not num(count,1,1e8)then return false end
+ local usable=call(C_Item and C_Item.IsUsableItem or IsUsableItem,id)
+ if not public(usable) or usable==false or usable==0 then return false end
+ local cooldown=C_Item and C_Item.GetItemCooldown or GetItemCooldown
+ local start,duration=call(cooldown,id)
+ if cooldown and (not num(start,0,1e10) or not num(duration,0,1e6) or start+duration>E.Time()+1.5)then return false end
+ return true
+end
+E.EnhancementItemReady=itemReady
+
+local foodMinimumLevel={[6290]=1,[4593]=15}
+local foodNames={[6290]='Brilliant Smallfish',[4593]='Bristle Whisker Catfish'}
+local function buffFood(state)
+ local food=usableItemLabel(call(C_Spell and C_Spell.GetSpellName,1248391)) or 'Nutritious Food'
+ local drink=usableItemLabel(call(C_Spell and C_Spell.GetSpellName,1249918)) or 'Nutritious Drink'
+ local itemSpell=C_Item and C_Item.GetItemSpell or GetItemSpell
+ local maxBag=NUM_BAG_SLOTS or 4
+ local bagItem=C_Container and C_Container.GetContainerItemID or GetContainerItemID
+ local bagSize=C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
+ for bag=0,maxBag do
+  for slot=1,num(call(bagSize,bag),0,1000) or 0 do
+   local id=call(bagItem,bag,slot)
+   if num(id,1,1e8)then
+    local name=call(itemSpell,id)
+    local floor=foodMinimumLevel[id]
+    if (not floor or state.level>=floor) and (floor or public(name)and(name==food or name==drink)) and itemReady(id)then
+     local label=E.ItemLabel(id) or foodNames[id]
+     if label then return label end
+    end
+   end
+  end
+ end
+ for _,id in ipairs({6290,4593})do
+  if state.level>=foodMinimumLevel[id]and itemReady(id)then return E.ItemLabel(id) or foodNames[id]end
+ end
+end
+
+local function partyMemberAvailable(unit)
+ local connected,phase=call(UnitIsConnected,unit),call(UnitPhaseReason,unit)
+ return public(connected) and connected~=false and connected~=0 and public(phase) and not phase
+end
+
+function E.ObservePartyBag(unit,spellID)
+ if not public(spellID) or spellID~=unrollBag or not public(unit) or type(unit)~='string' or
+    not unit:match('^party[1-4]$') or not partyMemberAvailable(unit) then return false end
+ local guid=usableItemLabel(call(UnitGUID,unit))
+ local mapAPI=C_Map or {}
+ local map=call(mapAPI.GetBestMapForUnit,unit)
+ if not guid or not num(map,1,1e8) then return false end
+ local p=call(mapAPI.GetPlayerMapPosition,map,unit)
+ if not public(p) or not p then return false end
+ local x,y
+ if p.GetXY then x,y=call(p.GetXY,p) else x,y=p.x,p.y end
+ if not num(x,0,1) or not num(y,0,1) or x==0 and y==0 then return false end
+ partyBags[guid]={mapID=map,x=x*100,y=y*100,expires=E.Time()+partyBagDuration,
+  owner=usableItemLabel(call(UnitName,unit))}
+ return true
+end
+
+local function nearbyPartyBag(position)
+ if not next(partyBags) then return end
+ local now=E.Time()
+ for guid,bag in pairs(partyBags)do if bag.expires<=now then partyBags[guid]=nil end end
+ if not position then return end
+ local best,distance,bestGUID
+ for index=1,4 do
+  local unit='party'..index
+  local guid=usableItemLabel(call(UnitGUID,unit))
+  local bag=guid and partyBags[guid]
+  if bag and position.mapID==bag.mapID and partyMemberAvailable(unit) then
+   local map=call(C_Map and C_Map.GetBestMapForUnit,unit)
+   if public(map) and map==bag.mapID then
+    local yards=E.Distance(position,bag)
+    if yards and yards<=partyBagRadius and (not distance or yards<distance) then best,distance,bestGUID=bag,yards,guid end
+   end
+  end
+ end
+ return best,bestGUID
+end
+
+local function mayUseSleepingBag(state)
+ local rested=state and state.auras and state.auras[wellRested]
+ local stacks=rested and rested.stacks
+ return state and state.enhancementAurasReadable and num(state.level,1,59) and
+  (not rested or type(stacks)=='number' and stacks<3)
+end
+
+function E.CheckPartyBagReminder()
+ local guide=ns.ProfessionGuide
+ if not next(partyBags) and not guide.partyBagReminder then return false end
+ local _,guid=nearbyPartyBag(E.CurrentPosition())
+ if not mayUseSleepingBag(guide.character) or call(InCombatLockdown) or call(UnitIsDeadOrGhost,'player') or
+    call(IsInInstance) or guide.character.auras[bagTracking] then guid=nil end
+ return guid~=guide.partyBagReminder
+end
+
+function E.ClearPartyBags()
+ partyBags={}
+end
+
+function E.EnhancementReminders(state,camp)
+ local reminders={}
+ local guide=ns.ProfessionGuide
+ guide.partyBagReminder=nil
+ if not state.enhancementAurasReadable or call(InCombatLockdown) or call(UnitIsDeadOrGhost,'player') then return reminders end
+ if not state.wellFed then
+  local food=buffFood(state)
+  reminders.food=food and ('Use '..food..' and stay seated for 10 sec for Well Fed.') or 'Bring cooked food that grants Well Fed.'
+ end
+ if not state.auras[campBenefits] and not call(IsInInstance) then
+  reminders.camp=camp and camp.body or 'Rest at the next campfire for Camp Benefits.'
+ end
+ if mayUseSleepingBag(state) then
+  if state.auras[bagTracking] then
+   reminders.sleep='Stay in the sleeping bag until Well-Rested reaches 3 stacks.'
+  elseif not call(IsInInstance) then
+   local bag,guid=nearbyPartyBag(state.position)
+   if bag then
+    local owner=bag.owner and (bag.owner.."'s") or "your party member's"
+    reminders.sleep='Use '..owner..' nearby Cozy Sleeping Bag for Well-Rested.'
+    guide.partyBagReminder=guid
+   elseif not (call(IsResting) or call(IsIndoors)) and itemReady(sleepingBagItem) then
+    reminders.sleep='Unroll your Cozy Sleeping Bag and lie in it until Well-Rested reaches 3 stacks.'
+   end
+  end
+ end
+ return reminders
+end
+local recipeVendorRadius=650
+local reputationRanks={Hated=1,Hostile=2,Unfriendly=3,Neutral=4,Friendly=5,Honored=6,Revered=7,Exalted=8}
+local function recipeVendorAllowed(v,state,requirement,live)
+ if not E.Eligible(v,state,true) then return false end
+ local vendorFlag={source='Vendor',npcID=v.npcID,name=v.name,currency=v.currency,requirement=requirement}
+ if (v.hasExtendedCost or v.currency or v.merchantFavor or
+     E.IsMerchantFavorVendor and E.IsMerchantFavorVendor(vendorFlag)) and not (live and live.costText) then return false end
+ if not requirement then return true end
+ local name,rank=requirement:match('^(.+) / (%a+)$')
+ rank=reputationRanks[rank]
+ if not name or not rank then return false end
+ for _,rep in pairs(state.reputations or {})do
+  if rep.name and rep.name:lower()==name:lower() then return type(rep.standing)=='number' and rep.standing>=rank end
+ end
+ return false
+end
+function E.RecipeOpportunity(r,state,vendorDistances)
  state=state or E.state or E.Snapshot();local skill=r.profession and state.skills[r.profession]
  if not skill then return end
  if type(r.requiredSkill)~='number'or r.requiredSkill>skill.rank+25 then return end
- if r.requiredSkill<skill.rank-25 and not r.specializationSpell then return end
- if E.Known(r)~=false or not E.Eligible(r,state)then return end
- local locations={};for _,v in ipairs(r.locations or{})do if v.source=='Vendor'and v.evidence~='classic-reference-unconfirmed'then locations[#locations+1]=v end end
- local near=E.Nearest(locations,state);local distance=near and E.Distance(state.position,near)
- if not distance or distance>650 then return end
- local key=r.spellID or r.learnableItemID
+ local itemID=r.learnableItemID or r.itemId or r.itemID
+ if not itemID then return end
+ local sources=r.vendors or r.locations or {}
+ local candidates,requirements,prices={},{},{}
+ local function consider(v,imported)
+  local npcID=v.npcID
+  if not npcID or (v.source~='Vendor' and v.kind~='Vendor') then return end
+  requirements[npcID]=v.requirement or requirements[npcID]
+  if v.evidence=='classic-reference-unconfirmed' or not v.mapID or not v.x or not v.y then return end
+  local observed=v.evidence=='observed-player-at-vendor'
+  local weight=observed and 3 or v.verifiedCoinCost and 2 or 1
+  local price=(not imported or v.verifiedCoinCost) and v.price or nil
+  if price and not v.hasExtendedCost and (not prices[npcID] or weight>prices[npcID].weight) then
+   prices[npcID]={value=price,weight=weight}
+  end
+  local key=npcID..':'..v.mapID
+  local prior=candidates[key]
+  if not prior or weight>prior.weight then
+   candidates[key]={location=v,weight=weight}
+  end
+ end
+ for _,v in ipairs(sources)do consider(v,v.kind=='Vendor' and v.evidence~='observed-player-at-vendor') end
+ if not r.vendors then
+  local catalog=ns.ForeverCatalog
+  for _,v in ipairs(catalog and catalog.byItem and catalog.byItem[itemID] or {})do consider(v,true) end
+ end
+ if not next(candidates) or not E.Eligible(r,state) then return end
+ local key=r.spellID or itemID
  local deferred=E.db and E.db.recipeDeferred and E.db.recipeDeferred[key]
- if deferred and deferred.npcID==near.npcID then local away=E.Distance(state.position,deferred.position);if away and away>900 then deferred.left=true end;if not deferred.left then return end end
- return{id='recipe:'..key..':'..tostring(near.npcID),kind='recipe',category='Crafting',title='Buy '..r.name,destination=near,recipe=r,body='Check '..(near.name or'vendor')..' for '..r.name..'. '..(r.requiredSkill>skill.rank and'Buy ahead before leaving this area; learn it when your skill is sufficient.'or'Learn the recipe after buying it.')..' Check price and limited stock before purchase.',priority=r.specializationSpell and 105 or 70}
+ local best,distance,bestPrice,bestCostText
+ local merchant=E.activeRecipeMerchant
+ for _,candidate in pairs(candidates)do
+  local v=candidate.location
+  local npcID=v.npcID
+  local price=prices[npcID] and prices[npcID].value
+  local live=merchant and merchant.npcID==npcID and merchant.items[itemID]
+  if live and live.price~=nil then price=live.price end
+  if not (deferred and deferred.npcID==npcID and not deferred.left)
+     and not (live and (live.stock==0 or live.hasExtendedCost and not live.costText))
+     and recipeVendorAllowed(v,state,requirements[npcID],live)
+     and not (price and num(state.money,0,1e12) and price>state.money) then
+   local yards=vendorDistances and vendorDistances[v]
+   if yards==nil then
+    yards=E.Distance(state.position,v) or false
+    if vendorDistances then vendorDistances[v]=yards end
+   end
+   if yards and yards<=recipeVendorRadius and (not distance or yards<distance or yards==distance and npcID<best.npcID) then
+    best,distance,bestPrice,bestCostText=v,yards,price,live and live.costText
+   end
+  end
+ end
+ if not best then return end
+ local owned=call(C_Item and C_Item.GetItemCount or GetItemCount,itemID,true)
+ if num(owned,0,1e9)~=0 or E.Known(r)~=false then return end
+ local vendor=best.name or 'the vendor'
+ local coin=bestPrice and bestPrice>0 and (call(GetCoinTextureString,bestPrice) or tostring(bestPrice)..' copper')
+ local cost=coin and bestCostText and (coin..' + '..bestCostText) or coin or bestCostText
+ local price=cost and (' Recorded price: '..cost..'.') or ' Check price at the vendor.'
+ local near=distance<=150
+ local closeSkill=math.abs(r.requiredSkill-skill.rank)<=25
+ return {id='recipe:'..key..':'..best.npcID,kind='recipe',category='Crafting',title='Buy '..r.name,
+  destination=best,recipe=r,body='Visit '..vendor..' ('..math.floor(distance+.5)..' yd). Requires '..r.profession..' '..r.requiredSkill..'.'..price..
+   (r.requiredSkill>skill.rank and ' Buy ahead and learn it when your skill is sufficient.' or ' Learn the recipe after buying it.')..' Check current stock before buying.',
+  nearbyRecipeVendor=near,priority=(near and 1160 or 900)+(closeSkill and 12 or 0)-distance/100}
 end
 function E.Priority(row,state)
  local score=row.priority or 30
@@ -286,8 +579,9 @@ function E.BossLoot(boss)
  for _,dungeon in pairs(E.dungeons)do for _,q in ipairs(dungeon.quests or{})do local item=q.startItem;if boss.name and item and not seen[item[1]]and type(item[4])=='string'and item[4]:find('Dropped by: '..boss.name,1,true)then out[#out+1]={item[1],item[2],'Starts quest: '..q.name,item[3],startsQuest=q.id};seen[item[1]]=true end end end
  return out
 end
-function E.ObserveCamp()
- local s=E.state or E.Snapshot();if not s.auras[1229739]then return end
+function E.ObserveCamp(auras)
+ auras=auras or (E.state or E.Snapshot()).auras
+ if not auras[campWarmup]then return end
  local p=E.CurrentPosition();if not p then return end
  p.name='Observed campsite';p.expires=E.Time()+300;p.evidence='player-inside-welcoming-campfire-aura'
  for i,c in ipairs(E.camps)do local d=E.Distance(c,p);if d and d<40 then E.camps[i]=p;return end end
@@ -313,28 +607,67 @@ function E.DropLines(npcID)
  table.sort(out);return out
 end
 local P={steps={},skills={},book={},active=true,character={level=1}};ns.ProfessionGuide=P
+local function refreshSkippedRecipeVendors(position)
+ for _,entry in pairs(E.db and E.db.recipeDeferred or {})do
+  if not entry.left then
+   local yards=E.Distance(position,entry.position)
+   if yards and yards>900 then entry.left=true end
+  end
+ end
+end
+local function recipeOpportunities(state)
+ local rows,signature,distances={},{},{}
+ local catalog=ns.RecipeCatalog
+ for _,r in ipairs(catalog and catalog.PurchaseRecipes() or {})do
+  local row=E.RecipeOpportunity(r,state,distances)
+  local deferred=row and E.db and E.db.deferred[row.id]
+  if row and (not deferred or E.Time()>deferred) then
+   rows[#rows+1]=row
+   signature[#signature+1]=row.id..':'..row.destination.mapID..(row.nearbyRecipeVendor and ':near' or '')
+  end
+ end
+ return rows,table.concat(signature,';')
+end
+function E.CheckRecipeVendorPosition()
+ local state=P.character
+ if not state.skills or not next(state.skills) then return false end
+ local position=E.CurrentPosition()
+ local previous=P.recipeVendorPosition
+ if not position or previous and previous.mapID==position.mapID and previous.x==position.x and previous.y==position.y then return false end
+ P.recipeVendorPosition=position
+ refreshSkippedRecipeVendors(position)
+ local moved={};for key,value in pairs(state)do moved[key]=value end
+ moved.position=position
+ local _,signature=recipeOpportunities(moved)
+ return signature~=P.recipeVendorSignature
+end
 function P.ReadSkills()local s=E.Snapshot();P.skills=s.skills;P.character=s;return P.skills end
 function P.ReadBook()E.ReadBook();return P.book end
 function P.Refresh()
  local s=E.Snapshot();P.skills=s.skills;P.character=s;local rows={};local manual=E.db and E.db.manual or{};local deferred=E.db and E.db.deferred or{}
- for _,entry in pairs(E.db and E.db.recipeDeferred or{})do local away=E.Distance(s.position,entry.position);if away and away>900 then entry.left=true end end
+ refreshSkippedRecipeVendors(s.position)
  local source=E.db and E.db.journey=='Completionist'and E.collections or E.route
  for _,base in ipairs(source)do local row={};for k,v in pairs(base)do row[k]=v end
   local q=row.quest and E.QuestState(row.quest);row.complete=manual[row.id]or q and((row.kind=='accept'and q.inLog==true)or(row.kind=='turnin'and q.rewarded==true)or(row.kind=='objective'and q.objectives and row.slot and q.objectives[row.slot]and q.objectives[row.slot].finished==true))
   if not deferred[row.id]or E.Time()>deferred[row.id]then rows[#rows+1]=row end
  end
- for _,r in pairs(E.recipes)do local opportunity=E.RecipeOpportunity(r,s);if opportunity and(not deferred[opportunity.id]or E.Time()>deferred[opportunity.id])then rows[#rows+1]=opportunity end end
- local camp=E.CampPlan(s);if camp and(not deferred[camp.id]or E.Time()>deferred[camp.id])then rows[#rows+1]=camp end
+ local purchases,signature=recipeOpportunities(s)
+ P.recipeVendorPosition,P.recipeVendorSignature=s.position,signature
+ for _,opportunity in ipairs(purchases)do rows[#rows+1]=opportunity end
+ local camp=E.CampPlan(s)
+ if camp and deferred[camp.id] and E.Time()<=deferred[camp.id]then camp=nil end
+ if camp then rows[#rows+1]=camp end
+ P.enhancementReminders=E.EnhancementReminders(s,camp)
  for _,r in ipairs(E.CatchupSteps and E.CatchupSteps(s,source)or{})do rows[#rows+1]=r end
  for _,r in ipairs(E.CraftingCatchup and E.CraftingCatchup(s,source)or{})do rows[#rows+1]=r end
  for _,r in ipairs(E.farmSteps or{})do rows[#rows+1]=r end
  for id in pairs(E.farmFlags)do local r=E.recipes[id];if r and E.Known(r)~=true then local locations={};for _,v in ipairs(r.locations or{})do if v.source=='Drop'or v.source=='Treasure'then locations[#locations+1]=v end end;local loc=E.Nearest(locations,s);local dungeon=not loc and r.locations[1]and E.dungeons[r.locations[1].dungeon];if dungeon then loc=dungeon.entrance end;rows[#rows+1]={id='farmrecipe:'..id,kind='farmRecipe',category='Crafting',title='Find '..r.name,body='Farm '..(r.learnableName or r.name)..' from '..(r.locations[1]and r.locations[1].name or'its recorded source')..'. Drops are not guaranteed.',destination=loc,priority=90}end end
- if #rows==0 then rows[1]={id='awaiting-route',kind='information',category='Questing',title='Forever guide preparation',body='No eligible route is loaded. Your Forever Factoruide export is pending. Profession and collection recommendations appear only when their sources and requirements are known.'}end
+ if #rows==0 then rows[1]={id='awaiting-route',kind='information',category='Questing',title='No quest steps available',body='Check your quest log or use Fresh Steps in another questing area.'}end
  P.steps=E.Order(rows,s)
  if #P.steps==0 and E.db and E.db.journey=='Completionist'then
   local required;for _,r in ipairs(E.collections)do if r.minLevel and r.minLevel>s.level and(not required or r.minLevel<required)then required=r.minLevel end end
   if required then for _,row in ipairs(E.route)do if not manual[row.id]and E.Eligible(row,s)then P.steps[1]=row;break end end
-   if #P.steps==0 then P.steps[1]={id='collection:level-gate',kind='information',category='Questing',title='Collection preparation: level '..required,body='The next sourced collection activities recommend level '..required..'. Your Forever Factoruide export will supply the prerequisite leveling steps. No quest or location is invented.'}end
+   if #P.steps==0 then P.steps[1]={id='collection:level-gate',kind='information',category='Questing',title='Collection preparation: level '..required,body='The next collection activities recommend level '..required..'. Switch to Leveling to see available quest steps.'}end
   end
  end
  P.firstPending=P.steps[1]and P.steps[1].id;return P.steps
@@ -581,38 +914,78 @@ end
 -- A source observation is not proof that the character has learned its recipe.
 function E.ObserveVendorRecipe(itemID)
  for _,r in pairs(E.recipes)do if r.learnableItemID==itemID then return r end end
- local name,_,_,_,required,_,subclass,_,_,icon,_,classID=call(C_Item and C_Item.GetItemInfo or GetItemInfo,itemID)
+ local name,_,_,_,_,_,subclass,_,_,icon,_,classID=call(C_Item and C_Item.GetItemInfo or GetItemInfo,itemID)
  if not E.Public(name)or type(name)~='string'or not E.Public(classID)or classID~=9 then return end
  if not E.Public(subclass)or type(subclass)~='string'then return end
  local profession=({Alchemy='Alchemy',Blacksmithing='Blacksmithing',Cooking='Cooking',Enchanting='Enchanting',Engineering='Engineering',['First Aid']='First Aid',Fishing='Fishing',Jewelcrafting='Jewelcrafting',Leatherworking='Leatherworking',Tailoring='Tailoring'})[subclass]
  if not profession then return end
  return E.IndexRecipe({learnableItemID=itemID,itemId=itemID,name=name,profession=profession,icon=E.Public(icon)and icon or nil,sources={},locations={},catalogOnly=true,observed=true})
 end
-function E.ObserveMerchant()
- local id=E.NPCID(call(UnitGUID,'npc'));local p=E.CurrentPosition();if not id or not p then return end
+local function affordableMerchantCost(index)
+ local count=call(GetMerchantItemCostInfo,index)
+ if not E.Public(count) or type(count)~='number' or count<1 then return end
+ local costs={}
+ for slot=1,count do
+  local _,amount,link,name=call(GetMerchantItemCostItem,index,slot)
+  if not E.Public(link) or type(link)~='string' or not E.Public(amount) or type(amount)~='number' or amount<1 then return end
+  local itemID=E.ItemID(link)
+  local currencyID=tonumber(link:match('currency:(%d+)'))
+  local available
+  if itemID then available=call(C_Item and C_Item.GetItemCount or GetItemCount,itemID)
+  elseif currencyID then
+   local info=call(C_CurrencyInfo and C_CurrencyInfo.GetCurrencyInfo,currencyID)
+   if E.Public(info) and type(info)=='table' then available=info.quantity end
+  end
+  if not E.Public(available) or type(available)~='number' or available<amount then return end
+  local label=link:match('|h%[(.-)%]|h')
+  if not label and E.Public(name) and type(name)=='string' then label=name end
+  if not label then return end
+  costs[#costs+1]=amount..' × '..label
+ end
+ return table.concat(costs,', ')
+end
+function E.ObserveMerchant(recordVisit)
+ local id=E.NPCID(call(UnitGUID,'npc'));local p=E.CurrentPosition();if not id or not p then E.activeRecipeMerchant=nil;return end
  local state=E.state or E.Snapshot();local info=call(C_Map and C_Map.GetMapInfo,p.mapID);p.zone=info and info.name;p.name=call(UnitName,'npc');p.npcID=id;p.faction=state.faction;p.source='Vendor';p.evidence='observed-player-at-vendor'
  local previous=E.vendors[id]
  p.stockItems=previous and previous.stockItems or{};E.vendors[id]=p
- for i=1,call(GetMerchantNumItems)or 0 do local itemID=E.ItemID(call(GetMerchantItemLink,i));if itemID then
-  local _,_,price,_,_,_,extended=call(GetMerchantItemInfo,i)
+ local active={npcID=id,items={}}
+ E.activeRecipeMerchant=active
+ for i=1,call(GetMerchantNumItems)or 0 do
   local merchant=call(C_MerchantFrame and C_MerchantFrame.GetItemInfo,i)
-  if E.Public(merchant)and type(merchant)=='table'then price=merchant.price;extended=merchant.hasExtendedCost end
-  if E.Public(price)and E.Public(extended)and type(price)=='number'and price>0 and not extended then p.stockItems[itemID]=true;if E.NoteVendorStock then E.NoteVendorStock(itemID)end end
-  local r=E.ObserveVendorRecipe(itemID)
-  if r then
-   local info=call(C_MerchantFrame and C_MerchantFrame.GetItemInfo,i)
-   local _,_,price,_,stock=call(GetMerchantItemInfo,i)
-   if type(info)=='table'then price=info.price;stock=info.numAvailable end
-   if not E.Public(price)or type(price)~='number'then price=nil end
-   if not E.Public(stock)or type(stock)~='number'then stock=nil end
-   local exists=false;for _,loc in ipairs(r.locations)do if loc.npcID==id and loc.source=='Vendor'then loc.price=price;loc.stock=stock;exists=true end end
-   if not exists then local loc={};for k,v in pairs(p)do if k~='stockItems'then loc[k]=v end end;loc.price=price;loc.stock=stock;r.locations[#r.locations+1]=loc end
-   local source=false;for _,v in ipairs(r.sources)do if v=='Vendor'then source=true end end;if not source then r.sources[#r.sources+1]='Vendor'end
-   r.observed=true
-   if E.NoteRecipeSource then E.NoteRecipeSource(r,id)end
+  if not E.Public(merchant) or type(merchant)~='table' then merchant={} end
+  local link=call(GetMerchantItemLink,i)
+  local itemID=E.Public(link) and E.ItemID(link) or nil
+  if not itemID and E.Public(merchant.itemLink) then itemID=E.ItemID(merchant.itemLink) end
+  if itemID then
+   local _,_,price,_,stock,_,extended=call(GetMerchantItemInfo,i)
+   if E.Public(merchant.price) and merchant.price~=nil then price=merchant.price end
+   if E.Public(merchant.numAvailable) and merchant.numAvailable~=nil then stock=merchant.numAvailable end
+   if E.Public(merchant.hasExtendedCost) and merchant.hasExtendedCost~=nil then extended=merchant.hasExtendedCost end
+   if not E.Public(price) or type(price)~='number' then price=nil end
+   if not E.Public(stock) or type(stock)~='number' then stock=nil end
+   extended=E.Public(extended) and (extended==true or extended==1)
+   active.items[itemID]={price=price,stock=stock,hasExtendedCost=extended,costText=extended and affordableMerchantCost(i) or nil}
+   if price and price>0 and not extended then
+    p.stockItems[itemID]=true
+    if E.NoteVendorStock then E.NoteVendorStock(itemID)end
+   end
+   local r=E.ObserveVendorRecipe(itemID)
+   if r then
+    local loc
+    for _,prior in ipairs(r.locations)do if prior.npcID==id and prior.source=='Vendor'then loc=prior;break end end
+    if not loc then loc={};r.locations[#r.locations+1]=loc end
+    for k,v in pairs(p)do if k~='stockItems'then loc[k]=v end end
+    loc.price,loc.stock,loc.hasExtendedCost=price,stock,extended
+    local source=false
+    for _,v in ipairs(r.sources)do if v=='Vendor'then source=true;break end end
+    if not source then r.sources[#r.sources+1]='Vendor'end
+    r.observed=true
+    if E.NoteRecipeSource then E.NoteRecipeSource(r,id)end
+   end
   end
- end end
- E.Record('vendor-observed',{npcID=id})
+ end
+ if recordVisit then E.Record('vendor-observed',{npcID=id}) end
 end
 function E.ObserveLoot()
  local p=E.CurrentPosition();if not p then return end
@@ -654,7 +1027,7 @@ end
 ns.FarmingPlanner.StartCurrent=E.FarmSelected
 -- Two-way extension points accept only sourced Forever records.
 function E.RegisterRoute(route)
- if type(route)~='table'or route.client~='FOREVER'or type(route.steps)~='table'then return false,'A Forever Factoruide export is required.'end
+ if type(route)~='table'or route.client~='FOREVER'or type(route.steps)~='table'then return false,'Expected sourced quest steps for WoW Forever.'end
  local ids={};for _,r in ipairs(route.steps)do if not r.id or ids[r.id]or type(r.title)~='string'or not r.source then return false,'Route needs stable unique IDs, titles and provenance.'end;ids[r.id]=true end
  E.route=route.steps;ns.ForeverData.steps=E.route;return true
 end
@@ -828,7 +1201,7 @@ function E.RefreshCatalog()
  end
 end
 local eligible=E.Eligible
-function E.Eligible(row,state)
+function E.Eligible(row,state,levelsDescribeNPC)
  state=state or E.state
  if row.kind=='collection'and row.recipe and E.Known(row.recipe)==true then return false end
  if row.kind=='collection'and row.itemID then
@@ -836,7 +1209,7 @@ function E.Eligible(row,state)
   if mount then local values={call(C_MountJournal.GetMountInfoByID,mount)};if values[11]==true then return false end end
   if call(PlayerHasToy,row.itemID)==true then return false end
  end
- return eligible(row,state)
+ return eligible(row,state,levelsDescribeNPC)
 end
 local camp=E.CampPlan
 function E.CampPlan(state)
@@ -920,6 +1293,15 @@ end)(hotAddon,hotNS);
 -- Phase B presentation: no game reads, data changes, hooks or controller ownership.
 local _,ns=...
 local B=assert(ns.VisualPhaseB);local T=assert(B.Theme);local C={};B.Components=C
+function C.HeaderAnimal(texture,index)
+    -- Use Forever's HUD atlas, including the original one-pixel gutter.
+    texture:SetTexture(7948326)
+    if index==1 then
+        texture:SetTexCoord(0,482/1024,0,282/1024)
+    else
+        texture:SetTexCoord(482/1024,0,282/1024,564/1024)
+    end
+end
 local positions={TOPLEFT={1,1},TOP={2,1},TOPRIGHT={3,1},LEFT={1,2},RIGHT={3,2},
     BOTTOMLEFT={1,3},BOTTOM={2,3},BOTTOMRIGHT={3,3}}
 function C.Decorate(frame,size)
@@ -977,10 +1359,10 @@ function C.Header(parent,width,height)
     local capLayer=CreateFrame("Frame",nil,header);capLayer:SetAllPoints(header);capLayer:EnableMouse(false)
     if capLayer.SetFrameLevel and plate.GetFrameLevel then capLayer:SetFrameLevel(plate:GetFrameLevel()+3) end
     local endcaps={}
-    for i,side in ipairs({"Left","Right"}) do
+    for i=1,2 do
         local tex=capLayer:CreateTexture(nil,"ARTWORK")
-        tex:SetTexture("Interface\\AddOns\\GrindingForever\\Media\\Wyvern"..side.."_PREVIEW_ONLY")
-        tex:SetTexCoord(12/256,243/256,42/256,214/256);tex:SetSize(width,width*172/231)
+        C.HeaderAnimal(tex,i)
+        tex:SetSize(width,width*282/482)
         local anchor=i==1 and "TOPLEFT" or "TOPRIGHT"
         tex:SetPoint(anchor,header,anchor,i==1 and 0 or -m.closeGutter,0);endcaps[i]=tex
     end
@@ -1008,7 +1390,7 @@ function C.Close(parent,callback)
     if button.SetFrameLevel and parent.GetFrameLevel then button:SetFrameLevel(parent:GetFrameLevel()+8) end
     local tex=button:CreateTexture(nil,"ARTWORK");tex:SetSize(m.closeArt,m.closeArt)
     tex:SetPoint("CENTER",button,"CENTER",0,0);tex:SetTexture(T.textures.close)
-    local wash=button:CreateTexture(nil,"OVERLAY");wash:SetAllPoints(tex);wash:SetColorTexture(.65,.40,.12,.09);wash:Hide()
+    local wash=button:CreateTexture(nil,"OVERLAY");wash:SetAllPoints(tex);wash:SetColorTexture(164/255,122/255,75/255,.09);wash:Hide()
     local state={hover=false,pressed=false,enabled=true};button.phaseBClose={texture=tex,state=state,hoverWash=wash}
     local function refresh()
         local key=state.enabled and state.pressed and "pressed" or "normal"
@@ -1069,6 +1451,8 @@ function GuideView.New()
  function self:Reconcile(visible)
   visible=visible or self:Visible()
   local current=self:Current(visible)
+  local first=visible[1]
+  if not self.browsing and first and first.nearbyRecipeVendor then self.index=first.id;return end
   if not current or current.complete and not self.browsing then
    self.index=nil
    for _,node in ipairs(visible)do if not node.complete then self.index=node.id;break end end
@@ -1096,7 +1480,6 @@ local saveSession,activate
 local refreshing=false
 ns.NormalUI=N
 local AS="Interface\\AddOns\\GrindingForever\\Media\\Base"
-local THEME="Interface\\AddOns\\GrindingForever\\Media\\Banner"
 local UIART={panel={u=0.6123046875,v=0.6123046875},button={x={39,100,1563,1624},top=353,bottom=596,width=2048,height=1024}}
 local OLD="Interface\\AddOns\\GrindingForever\\Media\\"
 local C=assert(ns.VisualPhaseB.Components)
@@ -1109,26 +1492,95 @@ local DECOR="Interface\\AddOns\\GrindingForever\\Media\\Junction"
  local CLEAR="Interface\\AddOns\\GrindingForever\\Media\\Clear"
  local WINGLESS="Interface\\AddOns\\GrindingForever\\Media\\Crest"
  local EXPLORER="Interface\\AddOns\\GrindingForever\\Media\\"
- -- Repeat the physical motif at a constant aspect; rotate sampling for uprights.
+ local bronzeSize={window=10,panel=4,divider=2,corner=16,header=56,title=23,animalWidth=86,animalHeight=50,hit=24,steps={380,530,440,660,540,810},seamGap=8}
+ local railRow={TOP=0,BOTTOM=1,LEFT=2,RIGHT=3}
+ local trimVariants=setmetatable({},{__mode="k"})
+ local previousVariant={}
+ local function trimVariant(texture,key)
+  local variant=trimVariants[texture]
+  if variant~=nil then return variant end
+  local previous=previousVariant[key]
+  variant=previous and (previous+math.random(1,3))%4 or math.random(0,3)
+  trimVariants[texture]=variant
+  previousVariant[key]=variant
+  return variant
+ end
  local function snapArt(frame,size)
   local scale=frame:GetEffectiveScale()
-  if not scale or scale<=0 then return size end
-  return math.max(1,math.floor(size*UIParent:GetEffectiveScale()+.5))/scale
+  local _, physicalHeight
+  if GetPhysicalScreenSize then _, physicalHeight=GetPhysicalScreenSize() end
+  local parentHeight=UIParent:GetHeight()
+  local parentScale=UIParent:GetEffectiveScale()
+  if physicalHeight and physicalHeight>0 and parentHeight>0 and parentScale>0 and scale and scale>0 then
+   return size*parentHeight*parentScale/(physicalHeight*scale)
+  end
+  return size
+ end
+ local function windowRail()
+  local _,height
+  if GetPhysicalScreenSize then _,height=GetPhysicalScreenSize() end
+  return height and height>0 and math.max(6,math.min(14,2*math.floor(height/288+.5))) or bronzeSize.window
+ end
+ local function headerPlate(wood,crown,frame,anchor,edge,capWidth,capHeight,headerHeight)
+  local unit=snapArt(frame,1)
+  local projection=math.max(15*unit,math.floor(.20*capHeight/unit+.5)*unit)
+  local top=math.max(unit,headerHeight-capHeight+projection)
+  local inset=math.floor(.55*capWidth/unit+.5)*unit
+  local crownInset=math.floor(.12*capWidth/unit+.5)*unit
+  wood:ClearAllPoints()
+  wood:SetPoint("TOPLEFT",anchor,"TOPLEFT",edge+inset,-top)
+  wood:SetPoint("BOTTOMRIGHT",anchor,"TOPRIGHT",-edge-inset,-headerHeight)
+  crown:ClearAllPoints()
+  crown:SetPoint("TOPLEFT",wood,"TOPLEFT",crownInset,0)
+  crown:SetPoint("TOPRIGHT",wood,"TOPRIGHT",-crownInset,0)
+  local crownHeight=math.min(6,windowRail())*unit
+  crown:SetHeight(crownHeight)
+  return -(top+crownHeight+headerHeight-math.floor(windowRail()/2)*unit)/2
+ end
+ local headerTitles={
+  ["Grinding Forever"]={0,956},["Recipe Sources"]={1,876},
+  ["Farming Routes"]={2,914},["Dungeon Journal"]={3,1022},
+ }
+ local function applyHeaderTitle(art,frame,anchor,key,usable,capWidth,centerY)
+  local row,span=unpack(headerTitles[key])
+  local unit=snapArt(frame,1)
+  local width=math.max(unit,math.min(span/4*(18/23)*unit,usable-2*capWidth))
+  art:SetTexture(NEW.."HeaderTitles")
+  art:SetTexCoord(.5/1024,(span-.5)/1024,(row*128+.5)/512,(row*128+127.5)/512)
+  art:SetSize(width,width*128/span)
+  art:ClearAllPoints()
+  art:SetPoint("CENTER",anchor,"TOP",0,centerY)
+ end
+ local function windowDiamond(depth)
+  return math.min(20,math.max(14,2*math.floor(depth*.8+.5)))
  end
  local function rail(texture,kind)
-  local vertical=kind=="LEFT" or kind=="RIGHT"
-  local length=vertical and texture:GetHeight() or texture:GetWidth()
-
-  local repeatCount=length*texture:GetParent():GetEffectiveScale()/(96*UIParent:GetEffectiveScale())
-  texture:SetTexture(WINGLESS.."PatinaRail","REPEAT","REPEAT")
-  if vertical then texture:SetTexCoord(0,1,repeatCount,1,0,0,repeatCount,0)
-  else texture:SetTexCoord(0,repeatCount,0,1) end
+  local variant=railRow[kind]+4*trimVariant(texture,kind)
+  local first,last=(variant*32+.5)/512,(variant*32+31.5)/512
+  texture:SetTexture(NEW.."CutRails")
+  if kind=="LEFT" or kind=="RIGHT" then
+   texture:SetTexCoord(0,first,1,first,0,last,1,last)
+  elseif kind=="BOTTOM" then
+   texture:SetTexCoord(0,1,last,first)
+  else
+   texture:SetTexCoord(0,1,first,last)
+  end
   texture:Show()
+ end
+ local function cutDiamond(texture)
+  local variant=trimVariant(texture,"diamond")
+  texture:SetTexture(NEW.."CutDiamond")
+  texture:SetTexCoord((variant*128+.5)/512,((variant+1)*128-.5)/512,.5/128,127.5/128)
+ end
+ N.BronzeRail=rail
+ N.BronzeDiamond=cutDiamond
+ function N.BronzeWire(texture)
+  texture:SetTexture(NEW.."RouteWire"..trimVariant(texture,"wire"))
  end
 local TITLEART={u=1.0,v=0.642578125,aspect=6.224924012158055}
 local T=ns.VisualPhaseB.Theme
 T.textures.frame=NEW.."BronzeFrame";T.frame=FRAME;T.metrics.corner=20
-T.textures.close=WORKING.."HexClose"
+T.textures.close=NEW.."CutClose"
 T.close={normal={0,.25,0,1},hover={.25,.5,0,1},pressed={.5,.75,0,1}}
 N.arrowSize=100
 local sizeSlider,sizeValue
@@ -1236,7 +1688,7 @@ end
 local function plainStepRow(row)
  row:SetBackdrop(nil);row.plainStepRow=true
  for _,piece in ipairs(row.enamelPieces) do piece:Hide() end
- row.separator=tex(row,nil,"BACKGROUND");row.separator:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",0,0);row.separator:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",0,0);row.separator:SetHeight(1);color(row.separator,.40,.24,.09,.20)
+ row.separator=tex(row,nil,"BACKGROUND");row.separator:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",0,0);row.separator:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",0,0);row.separator:SetHeight(1);rail(row.separator,"TOP");row.separator:SetAlpha(.32)
  row.stepWash=tex(row,nil,"BACKGROUND");row.stepWash:SetAllPoints(row)
  row.stepMarker=tex(row,nil,"ARTWORK");row.stepMarker:SetSize(2,20);row.stepMarker:SetPoint("LEFT",row,"LEFT",2,0);color(row.stepMarker,.02,.45,.38,1)
  function row:UpdateStepVisual()
@@ -1255,7 +1707,8 @@ end
 local function checkbox(b,checked)
  plainMenuOption(b)
  local box=CreateFrame("Frame",nil,b);box:SetSize(20,20);box:SetPoint("LEFT",b,"LEFT",9,0);box:EnableMouse(false)
- local frame=tex(box,CLEAR.."CheckboxFrame","BORDER");frame:SetAllPoints(box)
+ local inside=tex(box,nil,"BACKGROUND");inside:SetAllPoints(box);color(inside,.055,.034,.024,.75)
+ local frame=N.BronzeRectangle(box,2)
  local shadow=tex(box,"Interface\\Buttons\\UI-CheckBox-Check","ARTWORK");shadow:SetSize(16,16);shadow:SetPoint("CENTER",box,"CENTER",1,-1);shadow:SetVertexColor(.22,.11,.02,1)
  local mark=tex(box,"Interface\\Buttons\\UI-CheckBox-Check","OVERLAY");mark:SetSize(14,14);mark:SetPoint("CENTER",box,"CENTER",0,0);mark:SetVertexColor(.98,.78,.39,1)
  b.label:ClearAllPoints();b.label:SetPoint("LEFT",b,"LEFT",37,0);b.label:SetPoint("RIGHT",b,"RIGHT",-8,0);b.label:SetJustifyH("LEFT")
@@ -1266,10 +1719,9 @@ local function checkbox(b,checked)
  return b
 end
 local function menuSkin(frame)
- frame:SetBackdrop({bgFile="Interface\\Buttons\\WHITE8X8",edgeFile="Interface\\Buttons\\WHITE8X8",edgeSize=1,insets={left=2,right=2,top=2,bottom=2}})
- frame:SetBackdropColor(.008,.009,.011,1);frame:SetBackdropBorderColor(.55,.54,.51,1)
- local fill=tex(frame,THEME.."PewterEnamel");fill:SetPoint("TOPLEFT",frame,"TOPLEFT",2,-2);fill:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",-2,2)
- fill:SetTexCoord(0,UIART.panel.u,0,UIART.panel.v);fill:SetVertexColor(.11,.12,.13,1)
+ local fill=tex(frame,nil,"BACKGROUND");fill:SetAllPoints(frame)
+ color(fill,.10,.063,.037,1)
+ N.BronzeRectangle(frame,2)
 end
 -- Public world X points north, world Y points west.
 function N.Offset(x,y) local step=session:Current();return x+(step and step.dx or 0),y+(step and step.dy or 0) end
@@ -1419,32 +1871,48 @@ local function layout()
  local baseAspect=N.mode=="compact"and 496/640 or 1205.04/1000
  -- Clamp elongation at the readable minimum width, before fitting to the screen.
  local readable=(N.mode=="compact"and 210 or 563.625)/(UIParent:GetEffectiveScale()or 1)
- local screenMinimum=math.min(readable,UIParent:GetWidth()*.94)
- local heightLimit=UIParent:GetHeight()*.94*baseAspect/screenMinimum
+ local screenMinimum=math.min(readable,UIParent:GetWidth()*.90)
+ local heightLimit=UIParent:GetHeight()*.90*baseAspect/screenMinimum
  N.heightRatio=math.min(N.heightRatio or 1,heightLimit)
  local minimumRatio=N.mode=="compact" and N.fieldGuideMinimumHeight and N.fieldGuideMinimumHeight/640 or .7
  N.heightRatio=math.max(math.min(minimumRatio,heightLimit),math.min(heightLimit,N.mode=="compact"and 2.4 or 2.8,N.heightRatio or 1));normalAspect=baseAspect/N.heightRatio
- local maxW=math.min(UIParent:GetWidth()*.94,UIParent:GetHeight()*.94*normalAspect)
+ local maxW=math.min(UIParent:GetWidth()*.90,UIParent:GetHeight()*.90*normalAspect)
  -- Normal mode keeps its three-column layout; prevent unreadable whole-scene shrink.
  local uiScale=safeNumber(UIParent.GetEffectiveScale and UIParent:GetEffectiveScale(),.1,5) or 1
  if N.mode~="compact"then maxW=math.min(maxW,845.4375/uiScale)end
  local minW=math.min((N.mode=="compact"and 210 or 563.625)/uiScale,maxW)
- N.minimumWidthPixels=N.mode=="compact"and 210 or 563.625;N.minimumWidth=minW;N.readabilityScreenLimited=maxW*uiScale<N.minimumWidthPixels
- local visibleWidth=math.min(maxW,math.max(minW,N.dimensions and N.dimensions[1] or math.min((N.mode=="compact"and 496 or 563.625)/uiScale,UIParent:GetWidth()*.90)))
+ if N.mode=="compact" then
+  local unit=snapArt(host,1)
+  minW=math.min(380*unit,maxW);maxW=math.max(minW,math.min(540*unit,maxW))
+ end
+ N.minimumWidthPixels=N.mode=="compact"and 380 or 563.625;N.minimumWidth=minW;N.readabilityScreenLimited=maxW*uiScale<N.minimumWidthPixels
+ local visibleWidth=math.min(maxW,math.max(minW,N.dimensions and N.dimensions[1] or math.min(N.mode=="compact" and snapArt(host,440) or 563.625/uiScale,UIParent:GetWidth()*.90)))
  local visibleHeight=visibleWidth/normalAspect
  if visibleWidth*uiScale<(N.mode=="compact"and 200 or 420) or visibleHeight*uiScale<(N.mode=="compact"and 130 or 200) then host:Hide();layingOut=false;return false end
- host:SetSize(visibleWidth,visibleHeight)
+ local unit=snapArt(host,1)
+ if N.mode=="compact" then
+  local p=bronzeSize.steps
+  local maxWidth=math.min(p[5],math.floor(UIParent:GetWidth()*.9/unit))
+  local maxHeight=math.min(p[6],math.floor(UIParent:GetHeight()*.9/unit)-(bronzeSize.animalHeight-bronzeSize.header))
+  local minWidth,minHeight=math.min(p[1],maxWidth),math.min(p[2],maxHeight)
+  visibleWidth=math.max(minWidth,math.min(maxWidth,N.dimensions and N.dimensions[1]/unit or p[3]))*unit
+  visibleHeight=math.max(minHeight,math.min(maxHeight,N.dimensions and N.dimensions[2]/unit or p[4]))*unit
+  minW,maxW=minWidth*unit,maxWidth*unit
+  if host.SetResizeBounds then host:SetResizeBounds(minW,minHeight*unit,maxW,maxHeight*unit) end
+ end
+ host:SetSize(math.floor(visibleWidth/unit+.5)*unit,math.floor(visibleHeight/unit+.5)*unit)
+ visibleWidth,visibleHeight=host:GetWidth(),host:GetHeight()
  if N.dimensions then
   N.dimensions={visibleWidth,visibleHeight}
   if ns.db then ns.db.normalFrameSize={visibleWidth,visibleHeight} end
  end
- if host.SetResizeBounds then host:SetResizeBounds(minW,minW/normalAspect,maxW,maxW/normalAspect) end
- local w=N.mode=="compact"and 496 or 1205.04;local h=w/normalAspect
+ if N.mode~="compact" and host.SetResizeBounds then host:SetResizeBounds(minW,minW/normalAspect,maxW,maxW/normalAspect) end
+ local w=N.mode=="compact"and 496 or 1205.04;local h=visibleHeight*w/visibleWidth
  root:SetSize(w,h);root:SetScale(visibleWidth/w);N.layoutScale=visibleWidth/w
  root:ClearAllPoints();root:SetPoint("TOPLEFT",host,"TOPLEFT",0,0)
  local gap=0;local left=388;local right=484;local center=w-(left-4)-(right-4)-16
  if N.mode=="compact"then left=4;right=4;center=w-16 end
- local top=N.mode=="compact"and 145 or 170;local bh=h-top-10
+ local top=snapArt(root,bronzeSize.header+8);local bh=h-top-10
  local p=root.panels
  p[1]:ClearAllPoints();p[1]:SetPoint("TOPLEFT",root,"TOPLEFT",8,-top);p[1]:SetSize(left-4,bh)
  p[2]:ClearAllPoints();p[2]:SetPoint("TOPLEFT",p[1],"TOPRIGHT",gap,0);p[2]:SetSize(center,bh)
@@ -1462,7 +1930,7 @@ local function layout()
  p[1].phaseBBorder.pieces.RIGHT:Hide();p[2].phaseBBorder.pieces.LEFT:Hide()
  p[2].phaseBBorder.pieces.RIGHT:Hide();p[3].phaseBBorder.pieces.LEFT:Hide()
  for i,divider in ipairs(root.dividers) do
-  divider:ClearAllPoints();divider:SetPoint("TOP",p[i],"TOPRIGHT",0,0);divider:SetSize(9.34875,bh-4)
+  divider:ClearAllPoints();divider:SetPoint("TOP",p[i],"TOPRIGHT",0,0);divider:SetSize(snapArt(root,bronzeSize.divider),bh-4)
   for _,piece in pairs(divider.phaseBBorder.pieces) do piece:Hide() end
   divider.rail:SetAllPoints(divider);divider.rail:SetTexCoord(unpack(FRAME.rail))
  end
@@ -1482,14 +1950,14 @@ local function layout()
    strip:SetWidth(panel:GetWidth()-12)
   end
  end
- local junction=snapArt(root,15);N.junctionSize=junction
+ local junction=snapArt(root,windowDiamond(windowRail()));N.junctionSize=junction
  if N.close then N.close.phaseBClose.texture:SetSize(junction,junction) end
  local junctionX={9,p[1]:GetWidth()+8,p[1]:GetWidth()+p[2]:GetWidth()+8,w-9}
  local index=1
  for row=1,2 do for column=1,4 do
   if not (row==1 and column==4) then
    local connector=root.connectors[index];connector:SetSize(junction,junction);connector:ClearAllPoints()
-   connector:SetPoint("CENTER",root,"TOPLEFT",junctionX[column],row==1 and -top-6 or -h+9)
+   connector:SetPoint("CENTER",root,"TOPLEFT",junctionX[column],row==1 and -snapArt(root,bronzeSize.header) or -h+9)
    connector.junctionRow=row;connector.junctionColumn=column;index=index+1
   end
  end end
@@ -1505,7 +1973,7 @@ local function layout()
    local t=root.shoulders[shoulder];shoulder=shoulder+1
    local length=isCorner and 21.5 or 12.5;local depth=isCorner and 4.5 or 3.25
    t:SetTexture(WORKING..(isCorner and "TripleShoulder" or "SingleShoulder"))
-   local x,y=junctionX[column],row==1 and -top-6 or -h+9
+   local x,y=junctionX[column],row==1 and -snapArt(root,bronzeSize.header) or -h+9
    t:ClearAllPoints()
    if direction=="RIGHT" then t:SetSize(length,depth);t:SetPoint("LEFT",root,"TOPLEFT",x,y);t:SetTexCoord(0,1,0,1)
    elseif direction=="LEFT" then t:SetSize(length,depth);t:SetPoint("RIGHT",root,"TOPLEFT",x,y);t:SetTexCoord(1,0,0,1)
@@ -1520,47 +1988,33 @@ local function layout()
  local function strip(name,x,y,width,height)
   local t=outer[name];t:ClearAllPoints();t:SetPoint("TOPLEFT",root,"TOPLEFT",x,y);t:SetSize(width,height);rail(t,name)
  end
- local depth=snapArt(root,6)
- strip("TOP",9,-top-6+depth/2,w-18,depth)
+ local depth=snapArt(root,windowRail())
+ strip("TOP",9,-snapArt(root,bronzeSize.header)+depth/2,w-18,depth)
  strip("BOTTOM",9,-h+9+depth/2,w-18,depth)
- strip("LEFT",9-depth/2,-top-6,depth,h-top-15)
- strip("RIGHT",w-9-depth/2,-top-6,depth,h-top-15)
+ strip("LEFT",9-depth/2,-snapArt(root,bronzeSize.header),depth,h-snapArt(root,bronzeSize.header)-9)
+ strip("RIGHT",w-9-depth/2,-snapArt(root,bronzeSize.header),depth,h-snapArt(root,bronzeSize.header)-9)
  for _,divider in ipairs(root.dividers) do rail(divider.rail,"LEFT") end
- -- Source alpha/proportions preserved: complete sculptures sit above the rail.
- local cw=N.mode=="compact"and 160 or 194;local capHeight=cw*282/482
- -- Clamp the visible sculpture tops, not the obsolete transparent header space.
- -- Clamp offsets use host units; artwork dimensions above use canonical scene units.
- local topBlank=math.max(0,top+4-capHeight)*N.layoutScale
- N.visibleTopInset=topBlank
- if host.SetClampRectInsets then host:SetClampRectInsets(0,0,-topBlank,0) end
+ local headerHeight=snapArt(host,bronzeSize.header)
+ local headerUnit=snapArt(host,1)
+ local woodWidth=host:GetWidth()-20*headerUnit
+ local capWidth,capHeight=bronzeSize.animalWidth*headerUnit,bronzeSize.animalHeight*headerUnit
+ if host.SetClampRectInsets then host:SetClampRectInsets(0,0,math.min(0,headerHeight-capHeight),0) end
+ local centerY=headerPlate(root.wood,root.headerTopRail,host,host,10*headerUnit,capWidth,capHeight,headerHeight)
  for i,cap in ipairs(root.endcaps) do
-  cap:SetSize(cw,capHeight);cap:ClearAllPoints()
-  if N.mode=="compact"then cap:SetPoint("BOTTOM",p[2],i==1 and "TOPLEFT"or "TOPRIGHT",i==1 and cw/2 or -cw/2,-4)
-  else cap:SetPoint("BOTTOM",p[i==1 and 1 or 2],"TOPRIGHT",0,-4)end
+  local point=i==1 and "BOTTOMLEFT" or "BOTTOMRIGHT"
+  cap:SetSize(capWidth,capHeight);cap:ClearAllPoints()
+  cap:SetPoint(point,host,i==1 and "TOPLEFT" or "TOPRIGHT",i==1 and 10*headerUnit or -10*headerUnit,-headerHeight)
  end
- -- Lower the wood behind the lower bodies, rather than compressing the animals.
- local woodInset=cw*.15;local headerHeight=40
- root.wood:ClearAllPoints();root.wood:SetPoint("TOPLEFT",p[2],"TOPLEFT",woodInset,headerHeight-3)
- root.wood:SetPoint("BOTTOMRIGHT",p[2],"TOPRIGHT",-woodInset,-3)
- root.bannerFrame:ClearAllPoints();root.bannerFrame:SetPoint("TOPLEFT",root.wood,"TOPLEFT",-2,2)
- root.bannerFrame:SetPoint("BOTTOMRIGHT",root.wood,"BOTTOMRIGHT",2,-2)
- C.LayoutBorder(root.bannerFrame,7)
- for name,piece in pairs(root.bannerFrame.phaseBBorder.pieces) do
-  piece:Hide()
- end
- root.headerTopRail:ClearAllPoints();root.headerTopRail:SetPoint("BOTTOMLEFT",root.wood,"TOPLEFT",0,-2.325625)
- root.headerTopRail:SetPoint("BOTTOMRIGHT",root.wood,"TOPRIGHT",0,-2.325625);root.headerTopRail:SetHeight(9.34875);rail(root.headerTopRail,"TOP")
+ rail(root.headerTopRail,"TOP")
  root.titleMetal:Hide();root.foreverCrest:Hide();title:Hide()
- local titleSize=math.min(38,headerHeight*.62)
- for _,f in ipairs({root.titleLeft,root.titleRight})do f:SetFont("Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf",titleSize,"");f:SetTextColor(.93,.73,.37);f:SetHeight(headerHeight);f:SetWidth(230)end
- root.headerEmblem:ClearAllPoints();root.headerEmblem:SetPoint("CENTER",root.wood,"CENTER",0,0);root.headerEmblem:SetSize(headerHeight*.88,headerHeight*.88)
- root.titleLeft:ClearAllPoints();root.titleLeft:SetPoint("RIGHT",root.headerEmblem,"LEFT",-8,0);root.titleLeft:SetJustifyH("RIGHT")
- root.titleRight:ClearAllPoints();root.titleRight:SetPoint("LEFT",root.headerEmblem,"RIGHT",8,0)
- N.headerHeight=headerHeight;root.headerDrag:ClearAllPoints();root.headerDrag:SetHeight(headerHeight);root.headerDrag:SetAllPoints(root.wood)
- root.backdrop:ClearAllPoints();root.backdrop:SetPoint("TOPLEFT",root,"TOPLEFT",9,-top-6)
+ applyHeaderTitle(root.headerTitleArt,host,host,"Grinding Forever",woodWidth,capWidth,centerY)
+ root.headerDrag:ClearAllPoints();root.headerDrag:SetAllPoints(root.wood)
+ N.headerHeight=headerHeight
+ root.backdrop:ClearAllPoints();root.backdrop:SetPoint("TOPLEFT",root,"TOPLEFT",9,-snapArt(root,bronzeSize.header))
  root.backdrop:SetPoint("BOTTOMRIGHT",root,"BOTTOMRIGHT",-9,9)
  -- Keep the supplied fine grain near native pixel scale across one shared material field.
- local bw,bh=w-18,h-top-15;local tileW,tileH=534,534;local tileIndex=0
+ local seam=snapArt(root,bronzeSize.header)
+ local bw,bh=w-18,h-seam-9;local tileW,tileH=534,534;local tileIndex=0
  local u0,u1=48/2048,1206/2048;local v0,v1=48/2048,1206/2048
  root.leatherTiles=root.leatherTiles or {}
  for row=0,math.ceil(bh/tileH)-1 do for column=0,math.ceil(bw/tileW)-1 do
@@ -1570,11 +2024,11 @@ local function layout()
   local us=column%2==0 and u0 or u1;local vs=row%2==0 and v0 or v1
   local ue=us+(column%2==0 and 1 or -1)*(u1-u0)*width/tileW
   local ve=vs+(row%2==0 and 1 or -1)*(v1-v0)*height/tileH
-  piece:ClearAllPoints();piece:SetPoint("TOPLEFT",root,"TOPLEFT",9+column*tileW,-top-6-row*tileH);piece:SetSize(width,height)
+  piece:ClearAllPoints();piece:SetPoint("TOPLEFT",root,"TOPLEFT",9+column*tileW,-seam-row*tileH);piece:SetSize(width,height)
   piece:SetTexCoord(us,ue,vs,ve);piece:SetVertexColor(.88,.76,.85,1);piece:Show()
  end end
  for i=tileIndex+1,#root.leatherTiles do root.leatherTiles[i]:Hide() end
- N.close:ClearAllPoints();N.close:SetPoint("CENTER",root,"TOPLEFT",w-9,-top-6)
+ N.close:ClearAllPoints();N.close:SetPoint("CENTER",root,"TOPLEFT",w-9,-seam)
  root.controls:ClearAllPoints();root.controls:SetPoint("BOTTOMLEFT",p[2],"BOTTOMLEFT",30,32)
  root.controls:SetPoint("BOTTOMRIGHT",p[2],"BOTTOMRIGHT",-30,32);root.controls:SetHeight(40)
  root.modeButton.label:SetText(N.mode=="compact"and "Normal"or "Compact")
@@ -1602,10 +2056,7 @@ local function layout()
  for _,divider in ipairs(root.dividers)do divider:SetShown(N.mode=="normal")end
  if N.mode=="compact"then
   for i,c in ipairs(root.connectors)do c:SetShown(i==1 or i==3 or i==4)end
-  root.connectors[1]:ClearAllPoints();root.connectors[1]:SetPoint("CENTER",root,"TOPLEFT",9,-top-6)
-  root.connectors[3]:ClearAllPoints();root.connectors[3]:SetPoint("CENTER",root,"TOPLEFT",9,-h+9)
-  root.connectors[4]:ClearAllPoints();root.connectors[4]:SetPoint("CENTER",root,"TOPLEFT",w-9,-h+9)
-  for _,t in ipairs(root.shoulders)do t:Hide()end
+     for _,t in ipairs(root.shoulders)do t:Hide()end
  else for _,c in ipairs(root.connectors)do c:Show()end;for _,t in ipairs(root.shoulders)do t:Show()end end
  if root.heading.SetMaxLines then root.heading:SetMaxLines(N.mode=="compact"and 2 or 0)end;local headingFont=select(1,root.heading:GetFont());root.heading:SetFont(headingFont,(math.max(18,math.min(26,bodyWidth/24)))+1,"")
  reflowBody()
@@ -1621,7 +2072,7 @@ local function layout()
  if root.actionDivider then
   root.actionDivider:ClearAllPoints();root.actionDivider:SetPoint("BOTTOMLEFT",root.controls,"TOPLEFT",0,12);root.actionDivider:SetPoint("BOTTOMRIGHT",root.controls,"TOPRIGHT",0,12);root.actionDivider:SetHeight(1)
  end
- if root.recipeMap then root.recipeMap:SetHeight(math.max(100,math.min((p[3]:GetWidth()-72)/1.5+16,bh*.44)));C.LayoutBorder(root.recipeMap,14) end
+ if root.recipeMap then root.recipeMap:SetHeight(math.max(100,math.min((p[3]:GetWidth()-72)/1.5+16,bh*.44))) end
  if N.RefreshRecipes then N.RefreshRecipes();N.UpdateMapView() end
  if N.Refresh then N.Refresh(true) end
  if ns.ForeverUI and ns.ForeverUI.Layout then ns.ForeverUI.Layout()end
@@ -1675,10 +2126,10 @@ function N.Refresh(skipTick)
   body:SetText(node and(N.mode=="compact"and not N.compactExpanded and N.CompactSummary(node)or node.body)or "Choose All or another filter to see remaining steps.")
   root.compactDetails.label:SetText(N.compactExpanded and "Less"or "Details")
  else
-  root.listNote:SetText("Forever guide preparation")
-  stepLabel:SetText("Quest guide authoring")
-  root.heading:SetText("Guide unavailable for this character")
-  body:SetText("Your Forever Factoruide guide is pending. Profession and collection recommendations use verified Forever sources.")
+  root.listNote:SetText("Quest steps")
+  stepLabel:SetText("Questing")
+  root.heading:SetText("No quest steps available")
+  body:SetText("Check your quest log or use Fresh Steps in another questing area.")
  end
  for _,b in ipairs({root.back,root.stepButton,root.forward})do b:EnableMouse(P.active or ns.FarmingPlanner and ns.FarmingPlanner.route~=nil);b:SetAlpha((P.active or ns.FarmingPlanner and ns.FarmingPlanner.route)and 1 or .45)end
  if root.done then root.done:SetShown(node~=nil and node.kind~='objective' and node.kind~='accept' and node.kind~='turnin') end
@@ -2039,27 +2490,28 @@ local function ensure()
  local backdrop=root:CreateTexture(nil,"BACKGROUND");backdrop:SetPoint("TOPLEFT",root,"TOPLEFT",10,-60)
  root.backdrop=backdrop
  backdrop:SetPoint("BOTTOMRIGHT",root,"BOTTOMRIGHT",-10,10);color(backdrop,.16,.095,.055,1) -- Dark-brown fallback beneath the native-scale shared leather tiles.
- root.wood=tex(root,AS.."Wood");root.wood:SetTexCoord(0,1254/2048,0,1254/2048)
+ root.wood=tex(host,AS.."Wood");root.wood:SetTexCoord(0,1254/2048,0,1254/2048)
  root.bannerFrame=CreateFrame("Frame",nil,root);root.bannerFrame:EnableMouse(false);C.Decorate(root.bannerFrame,14)
- root.headerTopRail=tex(root,NEW.."BronzeFrame","ARTWORK");root.headerTopRail:SetTexCoord(250/2048,1000/2048,84/2048,174/2048)
+ root.headerTopRail=tex(host,NEW.."BronzeFrame","ARTWORK");root.headerTopRail:SetTexCoord(250/2048,1000/2048,84/2048,174/2048)
  root.titleMetal=tex(root,DECOR.."MetalTitle","OVERLAY");root.titleMetal:SetTexCoord(0,TITLEART.u,0,TITLEART.v)
  local junctionLayer=CreateFrame("Frame",nil,root);junctionLayer:SetAllPoints(root);junctionLayer:SetFrameLevel(root:GetFrameLevel()+8);junctionLayer:EnableMouse(false)
  root.shoulders={}
  for i=1,20 do root.shoulders[i]=tex(junctionLayer,WORKING.."SingleShoulder","ARTWORK") end
  root.connectors={}
- for i=1,7 do root.connectors[i]=tex(junctionLayer,WORKING.."FacetedHex","OVERLAY") end
+ for i=1,7 do
+  local connector=tex(junctionLayer,nil,"OVERLAY");cutDiamond(connector);root.connectors[i]=connector
+ end
  root.foreverCrest=tex(junctionLayer,WINGLESS.."Infinity","OVERLAY");root.foreverCrest:SetTexCoord(0,1,0,0.84765625)
  root.endcaps={}
- local capsLayer=CreateFrame("Frame",nil,root);capsLayer:SetAllPoints(root);capsLayer:EnableMouse(false)
+ local capsLayer=CreateFrame("Frame",nil,host);capsLayer:SetAllPoints(host);capsLayer:EnableMouse(false)
  capsLayer:SetFrameLevel(root:GetFrameLevel()+5)
- for i,side in ipairs({"Left","Right"}) do
-  local cap=tex(capsLayer,THEME..(i==1 and "AllianceGryphon" or "HordeWyvern"),"OVERLAY")
-  cap:SetTexCoord(i==1 and 0 or 482/512,i==1 and 482/512 or 0,0,282/512)
-  cap:SetVertexColor(1,1,1,1) -- Original clean-source pixels; bronze/gold shading only, right source mirrored by UV.
+ for i=1,2 do
+  local cap=tex(capsLayer,nil,"OVERLAY")
+  C.HeaderAnimal(cap,i)
   root.endcaps[i]=cap
  end
  title=text(root,34,"Grinding Forever");title:SetJustifyH("CENTER")
- local drag=CreateFrame("Frame",nil,root);root.headerDrag=drag;drag:SetPoint("TOPLEFT",root,"TOPLEFT",190,-60)
+ local drag=CreateFrame("Frame",nil,host);root.headerDrag=drag;drag:SetPoint("TOPLEFT",root,"TOPLEFT",190,-60)
  drag:SetPoint("TOPRIGHT",root,"TOPRIGHT",-190,-60);drag:SetHeight(100);drag:EnableMouse(true);drag:RegisterForDrag("LeftButton")
  drag:SetScript("OnDragStart",function() host:StartMoving() end)
  drag:SetScript("OnDragStop",function()
@@ -2080,8 +2532,7 @@ local function ensure()
  left.fill:Hide();right.fill:Hide();left.leatherLift:Hide();right.leatherLift:Hide() -- One shared chestnut surface continues beneath the parchment alpha.
  if N.sideMaterial=="parchment" then for _,panel in ipairs({left,right}) do panel.fill:SetTexture(AS.."Parchment");panel.fill:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048);panel.fill:SetVertexColor(1,1,1,1);panel.fill:Show() end end
  root.panels={left,middle,right}
- root.titleLeft=text(root,36,"Grinding");root.titleRight=text(root,36,"Forever")
- root.headerEmblem=tex(root,KIT.."ForeverEmblem","OVERLAY")
+ root.headerTitleArt=tex(host,nil,"OVERLAY")
  root.dividers={}
  for i=1,2 do local d=CreateFrame("Frame",nil,root);d:EnableMouse(false);d:SetFrameLevel(root:GetFrameLevel()+4);C.Decorate(d,9);d.rail=tex(d,NEW.."BronzeFrame","ARTWORK");root.dividers[i]=d end
  local play=dropdown(btn(left,"Playstyle",150,function() if playMenu:IsShown() then playMenu:Hide() else playMenu:Show() end end))
@@ -2138,28 +2589,28 @@ local function ensure()
  N.bodyScroll=bodyScroll
  status=text(middle,14,"");N.destinationStatus=status;status:SetTextColor(.23,.14,.055);status:SetPoint("BOTTOMLEFT",middle,"BOTTOMLEFT",40,82)
  root.compactNext=text(middle,19,"",true);root.compactNext:Hide()
- root.compactDetails=btn(middle,"Details",74,function()N.compactExpanded=not N.compactExpanded;N.Refresh(true)end);root.compactDetails:SetHeight(28);root.compactDetails:Hide()
+ root.compactDetails=N.PlainButton(middle,"Details",74,function()N.compactExpanded=not N.compactExpanded;N.Refresh(true)end);root.compactDetails:SetHeight(28);root.compactDetails:Hide()
  root.compactNextHit=CreateFrame("Button",nil,middle);root.compactNextHit:SetAllPoints(root.compactNext);root.compactNextHit:EnableMouse(true)
  local nextWash=tex(root.compactNextHit,nil,"BACKGROUND");nextWash:SetAllPoints(root.compactNextHit);color(nextWash,.16,.10,.035,.12);nextWash:Hide()
  root.compactNextHit:SetScript("OnEnter",function()nextWash:Show()end);root.compactNextHit:SetScript("OnLeave",function()nextWash:Hide()end)
  root.compactNextHit:SetScript("OnClick",function()if root.compactNextID then session.index=root.compactNextID;activate();N.Refresh()end end)
  root.controls=CreateFrame("Frame",nil,middle)
- root.actionDivider=tex(middle,nil,"ARTWORK");color(root.actionDivider,.60,.38,.14,.55)
- root.done=btn(middle,"Done",90,function()P.Done();N.Resync()end);root.done:SetPoint("BOTTOMLEFT",middle,"BOTTOMLEFT",16,60)
- root.skip=btn(middle,"Skip",90,function()P.Skip();N.Resync()end);root.skip:SetPoint("LEFT",root.done,"RIGHT",8,0)
- root.back=arrowButton(btn(root.controls,"",38,function() N.Move(-1) end),false);root.back:SetPoint("LEFT",root.controls,"LEFT",0,0)
- root.stepButton=btn(root.controls,"Step",90,N.Resync);root.stepButton:SetPoint("LEFT",root.back,"RIGHT",4,0)
+ root.actionDivider=tex(middle,nil,"ARTWORK");N.BronzeRail(root.actionDivider,"TOP");root.actionDivider:SetAlpha(.58)
+ root.done=N.WoodButton(middle,"Done",90,function()P.Done();N.Resync()end);root.done:SetPoint("BOTTOMLEFT",middle,"BOTTOMLEFT",16,60)
+ root.skip=N.WoodButton(middle,"Skip",90,function()P.Skip();N.Resync()end);root.skip:SetPoint("LEFT",root.done,"RIGHT",8,0)
+ root.back=arrowButton(N.PlainButton(root.controls,"",38,function() N.Move(-1) end),false);root.back:SetPoint("LEFT",root.controls,"LEFT",0,0)
+ root.stepButton=N.WoodButton(root.controls,"Step",90,N.Resync);root.stepButton:SetPoint("LEFT",root.back,"RIGHT",4,0)
  local enter=root.stepButton:GetScript("OnEnter");local leave=root.stepButton:GetScript("OnLeave")
  root.stepButton:SetScript("OnEnter",function(self)
   if enter then enter(self) end
   N.ShowInfoTooltip(self,"Resync completed and upcoming steps")
  end)
  root.stepButton:SetScript("OnLeave",function(self) if leave then leave(self) end;N.HideInfoTooltip() end)
- root.forward=arrowButton(btn(root.controls,"",38,function() N.Move(1) end),true);root.forward:SetPoint("LEFT",root.stepButton,"RIGHT",4,0)
- root.reset=btn(root.controls,"Reset",76,N.Reset);root.reset:SetPoint("LEFT",root.forward,"RIGHT",6,0)
- root.settings=btn(root.controls,"Settings",102,function() if settings:IsShown() then settings:Hide() else settings:Show() end end)
+ root.forward=arrowButton(N.PlainButton(root.controls,"",38,function() N.Move(1) end),true);root.forward:SetPoint("LEFT",root.stepButton,"RIGHT",4,0)
+ root.reset=N.WoodButton(root.controls,"Reset",76,N.Reset);root.reset:SetPoint("LEFT",root.forward,"RIGHT",6,0)
+ root.settings=N.WoodButton(root.controls,"Settings",102,function() if settings:IsShown() then settings:Hide() else settings:Show() end end)
  root.settings:SetPoint("RIGHT",root.controls,"RIGHT",0,0)
- root.modeButton=btn(root.controls,"Compact",100,function()N.SetMode(N.mode=="compact"and "normal"or "compact")end)
+ root.modeButton=N.PlainButton(root.controls,"Compact",100,function()N.SetMode(N.mode=="compact"and "normal"or "compact")end)
  settings=CreateFrame("Frame",nil,middle,"BackdropTemplate");settings:SetSize(340,396)
  settings:SetPoint("BOTTOMRIGHT",root.settings,"TOPRIGHT",0,8);settings:SetFrameStrata("TOOLTIP");settings:SetFrameLevel(host:GetFrameLevel()+40)
  menuSkin(settings)
@@ -2167,7 +2618,7 @@ local function ensure()
  for _,v in ipairs({{'autoFlightToggle','Automatically Take Guide Flights','autoFlights'},{'autoAcceptToggle','Automatically Accept Quests','autoAcceptQuests'},{'autoTurninToggle','Automatically Turn In Quests','autoTurnInQuests'}})do
   local key=v[3];local b=checkbox(btn(settings,v[2],308,function()local d=ns.Forever.db;d[key]=not d[key];N[v[1]]:SetCheckedVisual(d[key]==true)end),ns.Forever.db and ns.Forever.db[key]==true);N[v[1]]=b
  end
- local farming=btn(settings,"Plan farming route",308,function()local f=ns.FarmingPlanner;if f then if f.route then f.Stop("Quest guide resumed.")else local ok,why=f.StartCurrent();if not ok then ns.Print(why)end end end end)
+ local farming=N.PlainButton(settings,"Plan farming route",308,function()local f=ns.FarmingPlanner;if f then if f.route then f.Stop("Quest guide resumed.")else local ok,why=f.StartCurrent();if not ok then ns.Print(why)end end end end,true)
  farming:SetPoint("BOTTOMLEFT",settings,"BOTTOMLEFT",16,58);N.farmButton=farming
  settings:Hide();N.settingsFrame=settings;N.sizeSlider=sizeSlider
  local search=CreateFrame("EditBox",nil,right,"BackdropTemplate");root.recipeSearch=search
@@ -2221,7 +2672,10 @@ local function ensure()
  zoneMenu:EnableMouseWheel(true);zoneMenu:SetScript("OnMouseWheel",function(_,delta) N.ScrollZones(-delta*3) end);zoneMenu:Hide();N.zoneMenu=zoneMenu
  N.RefreshZoneMenu()
  zone:SetPoint("TOPLEFT",right,"TOPLEFT",28,-30)
- local map=inset(right,AS.."Parchment",14);map.fill:SetTexCoord(0,1254/2048,0,1254/2048);map:SetPoint("TOPLEFT",right,"TOPLEFT",28,-124)
+ local map=CreateFrame("Frame",nil,right);map:EnableMouse(false)
+ map.fill=tex(map,AS.."Parchment");map.fill:SetPoint("TOPLEFT",8,-8);map.fill:SetPoint("BOTTOMRIGHT",-8,8)
+ N.BronzeRectangle(map)
+ map.fill:SetTexCoord(0,1254/2048,0,1254/2048);map:SetPoint("TOPLEFT",right,"TOPLEFT",28,-124)
  map:SetPoint("TOPRIGHT",right,"TOPRIGHT",-28,-124);root.recipeMap=map
  local mapLabel=text(map,15,"Zone map unavailable\n\nNo recipe source selected",true);mapLabel:SetPoint("TOPLEFT",map,"TOPLEFT",18,-24)
  mapLabel:SetPoint("BOTTOMRIGHT",map,"BOTTOMRIGHT",-18,18);mapLabel:SetJustifyH("CENTER");root.mapLabel=mapLabel
@@ -2250,11 +2704,11 @@ local function ensure()
  root.infoTooltip=CreateFrame("Frame",nil,root,"BackdropTemplate");root.infoTooltip:SetSize(280,40);root.infoTooltip:SetFrameStrata("TOOLTIP");root.infoTooltip:SetFrameLevel(host:GetFrameLevel()+80);root.infoTooltip:SetClampedToScreen(true);menuSkin(root.infoTooltip)
  root.infoTooltip.text=text(root.infoTooltip,14,"");root.infoTooltip.text:SetPoint("TOPLEFT",root.infoTooltip,"TOPLEFT",10,-10);root.infoTooltip.text:SetPoint("TOPRIGHT",root.infoTooltip,"TOPRIGHT",-10,-10);root.infoTooltip:Hide()
  N.dropdownMenus={{root.searchPopup,root.recipeSearch},{playMenu,play},{viewMenu,root.viewButton},{zoneMenu,zone},{sourceMenu,root.sourceButton},{professionMenu,root.professionButton}}
- ensureArrow();N.frame=host;N.scene=root;layout();C.LayoutBorder(map,14)
+ ensureArrow();N.frame=host;N.scene=root;layout()
  N.resizeHandles={}
  local function finishResize()
   host:StopMovingOrSizing();N.resizing=false
-  N.dimensions={host:GetWidth(),host:GetHeight()};N.modeDimensions[N.mode]=N.dimensions
+  N.dimensions={host:GetWidth(),host:GetHeight()};layout();N.modeDimensions[N.mode]=N.dimensions
   if ns.db then
    ns.db.normalModeSizes=ns.db.normalModeSizes or {};ns.db.normalModeSizes[N.mode]={host:GetWidth(),host:GetHeight()};ns.db.normalModeHeightRatios=ns.db.normalModeHeightRatios or {};ns.db.normalModeHeightRatios[N.mode]=N.heightRatio or 1
    local p,_,rp,x,y=host:GetPoint(1)
@@ -2265,12 +2719,6 @@ local function ensure()
  for _,side in ipairs({"BOTTOMLEFT","BOTTOMRIGHT"}) do
   local grip=CreateFrame("Button",nil,host);grip:SetSize(42,42);grip:SetPoint(side,host,side,0,0)
   grip:SetFrameStrata(host:GetFrameStrata());grip:SetFrameLevel(host:GetFrameLevel()+15);grip:EnableMouse(true);grip:RegisterForDrag("LeftButton")
-  if N.fieldGuideMinimumHeight then
-   local handle=grip:CreateTexture(nil,"ARTWORK")
-   handle:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up");handle:SetSize(16,16)
-   handle:SetPoint(side,grip,side,side=="BOTTOMLEFT" and 5 or -5,5)
-   if side=="BOTTOMLEFT" then handle:SetTexCoord(1,0,0,1) end
-  end
   local function beginResize()
    if N.resizing then return end
    local x=side=="BOTTOMLEFT" and host:GetRight() or host:GetLeft();local y=host:GetTop()
@@ -2296,7 +2744,7 @@ local function ensure()
    width=math.max(minimum,width)
    local minimumRatio=N.mode=="compact" and N.fieldGuideMinimumHeight and N.fieldGuideMinimumHeight/640 or .7
    N.heightRatio=math.max(minimumRatio,math.min(N.mode=="compact"and 2.4 or 2.8,height/(width/baseAspect)))
-   N.dimensions={width,(width/baseAspect)*N.heightRatio};layout()
+   N.dimensions={width,N.mode=="compact" and height or (width/baseAspect)*N.heightRatio};layout()
   end)
   grip:SetScript("OnDragStop",finishResize);grip:SetScript("OnMouseUp",function() if N.resizing then finishResize() end end)
   N.resizeHandles[side]=grip
@@ -2305,7 +2753,7 @@ local function ensure()
   if layingOut or not N.resizing then return end
   local start=N.resizeStart
   if not N.resizeCursor then return end
-  N.dimensions={w,w/normalAspect};layout()
+  N.dimensions={w,N.mode=="compact" and h or w/normalAspect};layout()
  end)
  host:SetScript("OnHide",function() playMenu:Hide();viewMenu:Hide();settings:Hide();if zoneMenu then zoneMenu:Hide() end;if sourceMenu then sourceMenu:Hide() end;if professionMenu then professionMenu:Hide() end;if root.searchPopup then root.searchPopup:Hide();root.recipeSearch:ClearFocus() end;N.HideInfoTooltip() end)
 end
@@ -2458,6 +2906,44 @@ end)
 
 
 N.MakeButton=btn;N.MakeText=text;N.PlainOption=plainMenuOption;N.MakeCheckbox=checkbox
+function N.PlainButton(parent, caption, width, onClick, light)
+ local button=CreateFrame("Button",nil,parent)
+ button:SetSize(width,36)
+ button.label=text(button,14,caption,not light)
+ button.label:SetAllPoints()
+ button.label:SetJustifyH("CENTER");button.label:SetJustifyV("MIDDLE")
+ button.label:SetWordWrap(false)
+ local hover=button:CreateTexture(nil,"HIGHLIGHT")
+ hover:SetAllPoints();hover:SetColorTexture(.08,.35,.30,.14)
+ if onClick then
+  button:SetScript("OnClick",function(_,key)if not key or key=="LeftButton" then onClick() end end)
+ end
+ fit(button)
+ return button
+end
+
+function N.UnderlineControl(button, selectedOnly)
+ local line=button:CreateTexture(nil,"ARTWORK")
+ if button.woodFace then
+  line:SetPoint("BOTTOMLEFT",button.woodFace,"BOTTOMLEFT",N.PixelSize(button,6),N.PixelSize(button,2))
+  line:SetPoint("BOTTOMRIGHT",button.woodFace,"BOTTOMRIGHT",-N.PixelSize(button,6),N.PixelSize(button,2))
+ else
+  line:SetPoint("BOTTOMLEFT",5,1);line:SetPoint("BOTTOMRIGHT",-5,1)
+ end
+ line:SetHeight(N.PixelSize(button,selectedOnly and 2 or 1))
+ if selectedOnly then
+  line:SetColorTexture(.12,.38,.31,.75)
+  local wash=button:CreateTexture(nil,"BACKGROUND",nil,1)
+  wash:SetAllPoints(button.woodFace or button);wash:SetColorTexture(.12,.38,.31,.10)
+  button.selectionLine=line
+  function button:SetSelected(active)
+   line:SetShown(active);wash:SetShown(active)
+  end
+  button:SetSelected(false)
+ else
+  rail(line,"TOP");line:SetAlpha(.64)
+ end
+end
 function N.ControlArrow(parent,direction,side)
  local glyph=tex(parent,"Interface\\AddOns\\GrindingForever\\Media\\ControlTriangleRight","OVERLAY")
  glyph:SetSize(11,11)
@@ -2485,6 +2971,7 @@ function N.RecoverPanels()
   else panel:SetPoint("CENTER",UIParent,"CENTER") end
   panel:SetSize(math.min(defaults.width,UIParent:GetWidth()-32),math.min(defaults.height,UIParent:GetHeight()-60))
   if defaults.resize then defaults.resize() end
+  if defaults.compass and panel.gfSaveFrame then panel.gfSaveFrame() end
  end
 end
 local windowLevels={dungeons=20,farming=40,recipes=60,steps=80}
@@ -2505,7 +2992,7 @@ function N.LiveLayout(frame, callback)
   else callback() end
  end)
 end
-function N.BronzeRectangle(parent)
+function N.BronzeRectangle(parent,pixels)
  local trim=CreateFrame("Frame",nil,parent)
  trim:SetAllPoints(parent)
  trim:SetFrameLevel(parent:GetFrameLevel()+1)
@@ -2513,36 +3000,129 @@ function N.BronzeRectangle(parent)
  for _,side in ipairs({"TOP","BOTTOM","LEFT","RIGHT"}) do
   local edge=trim:CreateTexture(nil,"OVERLAY")
   local horizontal=side=="TOP" or side=="BOTTOM"
+  local depth=snapArt(parent,pixels or bronzeSize.panel)
   if horizontal then
-   edge:SetPoint(side.."LEFT");edge:SetPoint(side.."RIGHT");edge:SetHeight(2)
+   edge:SetPoint(side.."LEFT");edge:SetPoint(side.."RIGHT");edge:SetHeight(depth)
   else
-   edge:SetPoint("TOP"..side,trim,"TOP"..side,0,-2)
-   edge:SetPoint("BOTTOM"..side,trim,"BOTTOM"..side,0,2)
-   edge:SetWidth(2)
+   edge:SetPoint("TOP"..side,trim,"TOP"..side,0,-depth)
+   edge:SetPoint("BOTTOM"..side,trim,"BOTTOM"..side,0,depth)
+   edge:SetWidth(depth)
   end
-  local light=side=="TOP" or side=="LEFT"
-  edge:SetColorTexture(light and .83 or .53,light and .60 or .32,light and .33 or .14,1)
+  rail(edge,side)
  end
  return trim
+end
+function N.WoodButton(parent, caption, width, onClick)
+ local button=N.PlainButton(parent,caption,width,onClick)
+ local unit=snapArt(button,1)
+ local face=CreateFrame("Frame",nil,button)
+ face:SetFrameLevel(button:GetFrameLevel());face:EnableMouse(false)
+ face:SetPoint("TOPLEFT",button,"TOPLEFT",2*unit,-3*unit)
+ face:SetPoint("BOTTOMRIGHT",button,"BOTTOMRIGHT",-2*unit,3*unit)
+ local wood=tex(face,AS.."Wood","BACKGROUND")
+ wood:SetAllPoints(face);wood:SetTexCoord(.10,.56,.11,.37)
+ wood:SetVertexColor(.84,.80,.76)
+ N.BronzeRectangle(face,2)
+ button.woodFace=wood
+ button.label:SetTextColor(245/255,223/255,174/255)
+ button.label:SetShadowColor(.07,.04,.025,1)
+ button.label:SetShadowOffset(unit,-unit)
+ button:SetScript("OnEnter",function()wood:SetVertexColor(1,.98,.94)end)
+ button:SetScript("OnLeave",function()wood:SetVertexColor(.84,.80,.76)end)
+ button:SetScript("OnMouseDown",function(_,key)
+  if key=="LeftButton" then wood:SetVertexColor(.69,.66,.63) end
+ end)
+ button:SetScript("OnMouseUp",function(self)
+  if self:IsMouseOver() then wood:SetVertexColor(1,.98,.94) else wood:SetVertexColor(.84,.80,.76) end
+ end)
+ button:SetScript("OnHide",function()wood:SetVertexColor(.84,.80,.76)end)
+ return button
+end
+
+N.PixelSize=snapArt
+function N.HeaderSize(frame) return snapArt(frame,bronzeSize.header) end
+local profiles={
+ ["Recipe"]={400,560,480,720,544,816},
+ ["Farming"]={400,560,480,720,560,840},
+ [""]={708,472,1160,774,1160,900},
+ detail={780,386,1140,550,1590,748},
+ compass={384,62,700,70,1000,124},
+}
+function N.ApplySizeProfile(frame,key)
+ local p=profiles[key] or profiles[""]
+ local unit=snapArt(frame,1)
+ local maxW=math.min(p[5],math.floor(UIParent:GetWidth()*.9/unit))
+ local decoration=key=="compass" and 0 or bronzeSize.animalHeight-bronzeSize.header
+ local maxH=math.min(p[6],math.floor(UIParent:GetHeight()*.9/unit)-decoration)
+ local minW,minH=math.min(p[1],maxW),math.min(p[2],maxH)
+ if frame.SetResizeBounds then frame:SetResizeBounds(minW*unit,minH*unit,maxW*unit,maxH*unit)
+ else
+  if frame.SetMinResize then frame:SetMinResize(minW*unit,minH*unit) end
+  if frame.SetMaxResize then frame:SetMaxResize(maxW*unit,maxH*unit) end
+ end
+ return unit,p,minW,minH,maxW,maxH
+end
+function N.SnapPanel(frame)
+ local unit=snapArt(frame,1)
+ local function round(value) return math.floor(value/unit+.5)*unit end
+ local width,height=round(frame:GetWidth()),round(frame:GetHeight())
+ if width~=frame:GetWidth() or height~=frame:GetHeight() then frame:SetSize(width,height) end
+ local point,relative,relativePoint,x,y=frame:GetPoint(1)
+ if point and x and y and (x~=round(x) or y~=round(y)) then
+  frame:ClearAllPoints()
+  frame:SetPoint(point,relative or UIParent,relativePoint or point,round(x),round(y))
+ end
+end
+local function tileMaterial(frame, anchor, sample, width, height, u0, u1, resizeFrame)
+ local tiles={}
+ local function layoutTiles()
+  local w,h=anchor:GetWidth(),anchor:GetHeight()
+  local unit=snapArt(frame,1)
+  local tw,th=width*unit,height*unit
+  local index=0
+  for y=0,math.ceil(h/th)-1 do
+   for x=0,math.ceil(w/tw)-1 do
+    index=index+1
+    local piece=tiles[index]
+    if not piece then
+     piece=tex(frame,sample,"BACKGROUND")
+     piece:SetDrawLayer("BACKGROUND",2)
+     tiles[index]=piece
+    end
+    local pw,ph=math.min(w-x*tw,tw),math.min(h-y*th,th)
+    local du,dv=(u1-u0)*pw/tw,(u1-u0)*ph/th
+    local u,v=x%2==0 and u0 or u1,y%2==0 and u0 or u1
+    piece:ClearAllPoints()
+    piece:SetPoint("TOPLEFT",anchor,"TOPLEFT",x*tw,-y*th)
+    piece:SetSize(pw,ph)
+    piece:SetTexCoord(u,u+(x%2==0 and du or -du),v,v+(y%2==0 and dv or -dv))
+    piece:Show()
+   end
+  end
+  for i=index+1,#tiles do tiles[i]:Hide() end
+ end
+ (resizeFrame or frame):HookScript("OnSizeChanged",layoutTiles)
+ frame:HookScript("OnShow",layoutTiles)
+ layoutTiles()
 end
 function N.PanelChrome(frame, title, minimumWidth, minimumHeight, resize)
  if minimumWidth then panelDefaults[frame]={width=frame:GetWidth(),height=frame:GetHeight(),resize=resize,compass=not title} end
  local compass=not title
  if compass then
   local fill=frame:CreateTexture(nil,"BACKGROUND",nil,-1)
-  fill:SetPoint("TOPLEFT",5,-5);fill:SetPoint("BOTTOMRIGHT",-5,5);fill:SetColorTexture(.18,.095,.05,.25)
+  fill:SetPoint("TOPLEFT",5,-5);fill:SetPoint("BOTTOMRIGHT",-5,5);fill:SetColorTexture(.18,.095,.05,0)
  end
  local base=tex(frame,EXPLORER..(compass and "BaseWood" or "BaseParchment"),"BACKGROUND")
  if compass then base:SetPoint("TOPLEFT",5,-5);base:SetPoint("BOTTOMRIGHT",-5,5) else base:SetPoint("TOPLEFT",0,-39);base:SetPoint("BOTTOMRIGHT",0,0)end
  if compass then base:SetTexCoord(0,1254/2048,0,1254/2048)else base:SetTexCoord(0,1254/2048,0,1254/2048)end
- if compass then base:SetAlpha(.82) else base:SetVertexColor(.57,.43,.32) end
+ if compass then base:SetAlpha(.2) else base:SetVertexColor(.57,.43,.32) end
  local layer=CreateFrame("Frame",nil,frame)
  layer:SetAllPoints();layer:SetFrameLevel(frame:GetFrameLevel()+2);layer:EnableMouse(false)
  local edges,hexagons={},{}
- local topInset=compass and 5 or 39
+ local topInset=snapArt(frame,compass and 8 or bronzeSize.header)
  for _,corner in ipairs({"TOPLEFT","TOPRIGHT","BOTTOMLEFT","BOTTOMRIGHT"})do
-  local t=tex(layer,WORKING.."FacetedHex","OVERLAY")
-  t:SetPoint("CENTER",frame,corner,corner:find("LEFT") and 5 or -5,corner:find("TOP") and -topInset or 5)
+  local t=tex(layer,nil,"OVERLAY");cutDiamond(t)
+  t:SetPoint("CENTER",frame,corner,(corner:find("LEFT") and 1 or -1)*snapArt(frame,10),corner:find("TOP") and -topInset or snapArt(frame,10))
   hexagons[#hexagons+1]=t
  end
  for _,side in ipairs({"TOP","BOTTOM","LEFT","RIGHT"})do
@@ -2558,94 +3138,137 @@ function N.PanelChrome(frame, title, minimumWidth, minimumHeight, resize)
    t:SetPoint("TOP",hexagons[2],"CENTER");t:SetPoint("BOTTOM",hexagons[4],"CENTER")
   end
  end
+ if compass and minimumWidth then
+  base:Hide()
+  local segments={}
+  for i=1,1 do
+   segments[i]=tex(frame,NEW.."RusticCompassWood"..i,"BACKGROUND")
+   segments[i]:SetAlpha(.2)
+  end
+  local function cropWood()
+   local unit=snapArt(frame,1)
+   local width=math.max(0,frame:GetWidth()/unit-10)
+   for i,segment in ipairs(segments) do
+    local offset=(i-1)*1024
+    local visible=math.min(1024,width-offset)
+    segment:SetShown(visible>0)
+    if visible>0 then
+     segment:ClearAllPoints()
+     segment:SetPoint("TOPLEFT",frame,"TOPLEFT",(5+offset)*unit,-5*unit)
+     segment:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",(5+offset)*unit,5*unit)
+     segment:SetWidth(visible*unit)
+     segment:SetTexCoord(0,visible/1024,0,1)
+    end
+   end
+  end
+  frame:HookScript("OnSizeChanged",cropWood)
+  frame:HookScript("OnShow",cropWood)
+  cropWood()
+ end
  local function trim()
-  local hex=snapArt(frame,15)
-  local depth=snapArt(frame,6)
+  local railSize=compass and bronzeSize.window or windowRail()
+  local hex=snapArt(frame,windowDiamond(railSize))
+  local depth=snapArt(frame,railSize)
   for _,t in ipairs(hexagons)do t:SetSize(hex,hex)end
   for side,t in pairs(edges)do
    if side=="TOP" or side=="BOTTOM" then t:SetHeight(depth)else t:SetWidth(depth)end
    rail(t,side)
+   if compass and (side=="LEFT" or side=="RIGHT") then t:Hide() end
   end
  end
- frame:HookScript("OnSizeChanged",trim);trim()
+ frame:HookScript("OnSizeChanged",trim);frame:HookScript("OnShow",trim);trim()
  if compass then
   if not minimumWidth then return end
   frame:SetResizable(true)
-  if frame.SetResizeBounds then frame:SetResizeBounds(minimumWidth,minimumHeight,math.max(minimumWidth,UIParent:GetWidth()-48),104) end
+  local unit,p,minW,minH,maxW,maxH=N.ApplySizeProfile(frame,"compass")
+  frame:SetSize(math.max(minW,math.min(p[3],maxW))*unit,math.max(minH,math.min(p[4],maxH))*unit)
+  panelDefaults[frame].width,panelDefaults[frame].height=frame:GetWidth(),frame:GetHeight()
   local grip=CreateFrame("Button",nil,frame)
-  grip:SetSize(18,18);grip:SetFrameLevel(layer:GetFrameLevel()+1);grip:SetPoint("CENTER",hexagons[4],"CENTER")
+  grip:SetSize(snapArt(frame,bronzeSize.hit),snapArt(frame,bronzeSize.hit));grip:SetFrameLevel(layer:GetFrameLevel()+1);grip:SetPoint("CENTER",hexagons[4],"CENTER")
   grip:SetScript("OnMouseDown",function(_,button)if button=="LeftButton" then frame:StartSizing("BOTTOMRIGHT") end end)
-  grip:SetScript("OnMouseUp",function()frame:StopMovingOrSizing() end)
+  grip:SetScript("OnMouseUp",function()frame:StopMovingOrSizing();N.SnapPanel(frame);if frame.gfSaveFrame then frame.gfSaveFrame() end end)
   grip:SetScript("OnHide",function()frame:StopMovingOrSizing() end)
   return
  end
 
  -- Keep the full text area on the light surface, inside the metal rails.
  local under=frame:CreateTexture(nil,"BACKGROUND",nil,1)
- under:SetPoint("TOPLEFT",5,-39);under:SetPoint("BOTTOMRIGHT",-5,5)
+ under:SetPoint("TOPLEFT",snapArt(frame,10),-topInset);under:SetPoint("BOTTOMRIGHT",-snapArt(frame,10),snapArt(frame,10))
  under:SetColorTexture(.92,.75,.50,1)
- local paper=frame:CreateTexture(nil,"BACKGROUND",nil,2)
- paper:SetAllPoints(under);paper:SetTexture(AS.."Parchment")
- paper:SetTexCoord(48/2048,1206/2048,48/2048,1206/2048)
+ local parchment=tex(frame,AS.."Parchment","BACKGROUND")
+ parchment:SetDrawLayer("BACKGROUND",2)
+ parchment:SetAllPoints(under)
+ parchment:SetTexCoord(96/2048,1158/2048,96/2048,1158/2048)
  local header=CreateFrame("Frame",nil,frame)
- header:SetPoint("TOPLEFT",7,0);header:SetPoint("TOPRIGHT",-7,0);header:SetHeight(39)
  local wood=tex(header,AS.."Wood","BACKGROUND")
- wood:SetPoint("TOPLEFT",header,"TOPLEFT",56,0);wood:SetPoint("BOTTOMRIGHT",header,"BOTTOMRIGHT",-56,0)
  local crown=tex(header,nil,"BORDER")
- crown:SetPoint("TOPLEFT",wood,"TOPLEFT",0,0);crown:SetPoint("TOPRIGHT",wood,"TOPRIGHT",0,0)
- local function trimCrown() crown:SetHeight(snapArt(frame,6));rail(crown,"TOP") end
- frame:HookScript("OnSizeChanged",trimCrown);trimCrown()
- wood:SetTexCoord(0,1254/2048,0,1254/2048)
- for index, asset in ipairs({"AllianceGryphon","HordeWyvern"}) do
+ local caps={}
+ for index=1,2 do
   local left=index==1
-  local cap=tex(header,THEME..asset,"OVERLAY")
+  local cap=tex(header,nil,"OVERLAY")
+  C.HeaderAnimal(cap,index)
   local side=left and "BOTTOMLEFT" or "BOTTOMRIGHT"
   cap:SetPoint(side,header,side,0,0)
-  cap:SetSize(148,148*282/482)
-  cap:SetTexCoord(left and 0 or 482/512,left and 482/512 or 0,0,282/512)
+  caps[index]=cap
  end
- local titleText=text(header,20,type(title)=="table" and "" or title)
- titleText:SetPoint("LEFT",92,0);titleText:SetPoint("RIGHT",-92,0)
- titleText:SetJustifyH("CENTER");titleText:SetTextColor(.93,.73,.37);titleText:SetWordWrap(false)
- if type(title)=="table" then
-  local emblem=tex(header,KIT.."ForeverEmblem","OVERLAY")
-  emblem:SetPoint("CENTER",header,"CENTER");emblem:SetSize(32,32)
-  for index, label in ipairs(title) do
-   local part=text(header,20,label)
-   part:SetTextColor(.93,.73,.37)
-   if index==1 then part:SetPoint("RIGHT",emblem,"LEFT",-8,0)
-   else part:SetPoint("LEFT",emblem,"RIGHT",8,0) end
+ local titleKey=type(title)=="table" and table.concat(title," ") or title
+ local titleArt=headerTitles[titleKey] and tex(header,nil,"OVERLAY")
+ local titleText
+ if not titleArt then
+  titleText=text(header,snapArt(frame,bronzeSize.title),titleKey)
+  titleText:SetJustifyH("CENTER");titleText:SetTextColor(232/255,218/255,176/255);titleText:SetWordWrap(false)
+ end
+ local function layoutHeader()
+  local unit=snapArt(frame,1)
+  local height=bronzeSize.header*unit
+  header:ClearAllPoints()
+  header:SetPoint("TOPLEFT",frame,"TOPLEFT",7*unit,0)
+  header:SetPoint("TOPRIGHT",frame,"TOPRIGHT",-7*unit,0)
+  header:SetHeight(height)
+  local width=frame:GetWidth()-14*unit
+  local capWidth,capHeight=bronzeSize.animalWidth*unit,bronzeSize.animalHeight*unit
+  for _,cap in ipairs(caps) do cap:SetSize(capWidth,capHeight) end
+  local centerY=headerPlate(wood,crown,frame,header,0,capWidth,capHeight,height)
+  rail(crown,"TOP")
+  if titleArt then
+   applyHeaderTitle(titleArt,frame,header,titleKey,width,capWidth,centerY)
+  else
+   titleText:ClearAllPoints();titleText:SetPoint("CENTER",header,"TOP",0,centerY)
+   titleText:SetSize(math.max(unit,width-2*capWidth),height)
   end
+  if frame.SetClampRectInsets then frame:SetClampRectInsets(0,0,math.min(0,height-capHeight),0) end
  end
+ frame:HookScript("OnSizeChanged",layoutHeader);frame:HookScript("OnShow",layoutHeader)
+ layoutHeader()
+ wood:SetAlpha(0)
+ tileMaterial(header,wood,AS.."Wood",380,bronzeSize.header,0,1254/2048,frame)
  header:EnableMouse(true);header:RegisterForDrag("LeftButton")
  frame:SetMovable(true);frame:SetResizable(true);frame:SetClampedToScreen(true)
  header:SetScript("OnDragStart",function()frame:StartMoving()end)
- header:SetScript("OnDragStop",function()frame:StopMovingOrSizing()end)
+ header:SetScript("OnDragStop",function()frame:StopMovingOrSizing();N.SnapPanel(frame)end)
 
- if frame.SetResizeBounds then
-  frame:SetResizeBounds(minimumWidth,minimumHeight,math.max(minimumWidth,math.min(1150,UIParent:GetWidth()-32)),math.max(minimumHeight,math.min(940,UIParent:GetHeight()-32)))
- elseif frame.SetMinResize then
-  frame:SetMinResize(minimumWidth,minimumHeight)
- end
+ local unit,profile,minW,minH,maxW,maxH=N.ApplySizeProfile(frame,type(title)=="table" and title[1] or title)
+ frame:SetSize(math.max(minW,math.min(profile[3],maxW))*unit,math.max(minH,math.min(profile[4],maxH))*unit)
+ panelDefaults[frame].width,panelDefaults[frame].height=frame:GetWidth(),frame:GetHeight()
  local handle=CreateFrame("Button",nil,frame)
- handle:SetSize(22,22);handle:SetPoint("BOTTOMRIGHT",0,0);handle:SetFrameLevel(frame:GetFrameLevel()+10)
+ handle:SetSize(snapArt(frame,bronzeSize.hit),snapArt(frame,bronzeSize.hit));handle:SetPoint("BOTTOMRIGHT",0,0);handle:SetFrameLevel(frame:GetFrameLevel()+10)
  handle:ClearAllPoints();handle:SetPoint("CENTER",hexagons[4],"CENTER")
  handle:SetScript("OnMouseDown",function(_,button)
   if button=="LeftButton"then frame:StartSizing("BOTTOMRIGHT")end
  end)
  handle:SetScript("OnMouseUp",function(_,button)
-  if button=="LeftButton"then frame:StopMovingOrSizing();if resize then resize()end end
+  if button=="LeftButton"then frame:StopMovingOrSizing();N.SnapPanel(frame);if resize then resize()end end
  end)
  handle:SetScript("OnHide",function()frame:StopMovingOrSizing()end)
  local close=C.Close(frame,function()frame:Hide()end)
- close:ClearAllPoints();close:SetPoint("CENTER",hexagons[2],"CENTER");close:SetSize(22,22)
+ close:ClearAllPoints();close:SetPoint("CENTER",hexagons[2],"CENTER");close:SetSize(snapArt(frame,bronzeSize.hit),snapArt(frame,bronzeSize.hit))
  hexagons[2]:Hide()
  local function sizeClose()
   local size=hexagons[2]:GetWidth()
   close.phaseBClose.texture:SetSize(size,size)
  end
- frame:HookScript("OnSizeChanged",sizeClose);sizeClose()
- return titleText, header
+ frame:HookScript("OnSizeChanged",sizeClose);frame:HookScript("OnShow",sizeClose);sizeClose()
+ return titleText or titleArt, header
 end
 N.WorkflowBody=function()return body,bodyScroll,stepLabel,bodyContent,status end
 N.WorkflowLive=liveObjective
@@ -2672,9 +3295,9 @@ local function switch(parent,labels,callback)
  end
  local outer=track:CreateTexture(nil,'BACKGROUND');outer:SetPoint('LEFT',14,0);outer:SetSize(36,28);outer:SetColorTexture(.57,.36,.13,1)
  for _,side in ipairs({'LEFT','RIGHT'})do local cap=circle(track,28,'BACKGROUND',nil,{.57,.36,.13,1});cap:SetPoint(side,track,side,0,0)end
- local inner=track:CreateTexture(nil,'BORDER');inner:SetPoint('LEFT',14,0);inner:SetSize(36,24);inner:SetTexture(AS..'CrestPatinaRail');inner:SetVertexColor(.22,.18,.12,1)
- for _,side in ipairs({'LEFT','RIGHT'})do local cap=circle(track,24,'BORDER',AS..'CrestPatinaRail');cap:SetVertexColor(.22,.18,.12,1);cap:SetPoint(side,track,side,side=='LEFT'and 2 or-2,0)end
- f.thumb=circle(track,24,'OVERLAY',AS..'CrestPatinaRail');f.thumb:SetVertexColor(1,.87,.59,1)
+ local inner=track:CreateTexture(nil,'BORDER');inner:SetPoint('LEFT',14,0);inner:SetSize(36,24);N.BronzeRail(inner,"TOP");inner:SetVertexColor(.48,.48,.48,1)
+ for _,side in ipairs({'LEFT','RIGHT'})do local cap=circle(track,24,'BORDER',nil,{.15,.09,.055,1});cap:SetPoint(side,track,side,side=='LEFT'and 2 or-2,0)end
+ f.thumb=track:CreateTexture(nil,'OVERLAY');f.thumb:SetSize(24,24);N.BronzeDiamond(f.thumb)
  for i,label in ipairs(labels)do local b=CreateFrame('Button',nil,f);b:SetHeight(32);b:SetPoint(i==1 and'LEFT'or'RIGHT',f,i==1 and'LEFT'or'RIGHT',0,0);b.label=text(b,17,label,true);b.label:SetWordWrap(false);b.label:SetJustifyH('CENTER');b.label:SetPoint('CENTER');b:SetScript('OnClick',function()callback(label);f:Select(label)end);b:SetScript('OnEnter',function()b.label:SetTextColor(.02,.22,.20,1)end);b:SetScript('OnLeave',function()f:Select(f.value)end);f.buttons[i]=b end
  function f:Select(value)self.value=value;self.thumb:ClearAllPoints();self.thumb:SetPoint('CENTER',track,'LEFT',value==labels[1]and 14 or 50,0);for i,b in ipairs(self.buttons)do b.label:SetTextColor(labels[i]==value and .09 or .25,labels[i]==value and .055 or .15,labels[i]==value and .025 or .075,1)end end
  function f:Fit(width)self:SetWidth(width);for _,b in ipairs(self.buttons)do b:SetWidth(math.max(35,(width-80)/2))end end
@@ -2822,6 +3445,7 @@ local function refresh()
   ns.ProfessionGuide.dirty=false;ns.NormalUI.Resync()
  else ns.ProfessionGuide.dirty=true end
 end
+local partyBagCheckElapsed,recipeVendorCheckElapsed=0,0
 ns.GatheringObserver={ready=true,enabled=false,Initialize=function()end,Update=function()end}
 local function initialize()
  if started then return end
@@ -2835,7 +3459,7 @@ local function initialize()
  for _,r in pairs(copy(d.recipes or{},0))do E.IndexRecipe(r)end
  E.ReadZones();E.RefreshCatalog();E.Snapshot();started=true;ns.Retail.ready=true;ns.Retail.storageWritable=true
  ns.UI.Showcase.Login();ns.SendMessage('GF_LOADED');ns.SendMessage('GF_LOGIN');if ns.ForeverUI then ns.ForeverUI.Layout();ns.ForeverUI.SetPane(d.pane or'Recipes')end
- ns.Print('Forever tester build 37 loaded.')
+ ns.Print('Forever Farming Routes tester build loaded.')
  E.Record('login',{client=version,build=build})
 end
 local function save()
@@ -2873,29 +3497,67 @@ local function hookTooltips()
  end
 end
 for _,event in ipairs({'PLAYER_LOGIN','PLAYER_ENTERING_WORLD','PLAYER_LOGOUT','ADDON_LOADED','QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','GOSSIP_SHOW','GOSSIP_CLOSED','QUEST_DETAIL','QUEST_LOG_UPDATE','UNIT_QUEST_LOG_CHANGED','SKILL_LINES_CHANGED','TRADE_SKILL_SHOW','TRADE_SKILL_LIST_UPDATE','CRAFT_SHOW','CRAFT_UPDATE','TRAINER_SHOW','TRAINER_UPDATE','MERCHANT_SHOW','LOOT_OPENED','CHAT_MSG_LOOT','UNIT_SPELLCAST_SUCCEEDED','UNIT_AURA','PLAYER_LEVEL_UP','BAG_UPDATE_DELAYED','UPDATE_FACTION','PLAYER_TALENT_UPDATE','TAXIMAP_OPENED'})do call(frame.RegisterEvent,frame,event)end
+for _,event in ipairs({'PLAYER_REGEN_DISABLED','PLAYER_REGEN_ENABLED','PLAYER_UPDATE_RESTING','PLAYER_DEAD','PLAYER_ALIVE','PLAYER_UNGHOST','GROUP_ROSTER_UPDATE',
+ 'MERCHANT_UPDATE','MERCHANT_CLOSED','PLAYER_MONEY','ZONE_CHANGED','ZONE_CHANGED_NEW_AREA'})do
+ call(frame.RegisterEvent,frame,event)
+end
 frame:SetScript('OnEvent',function(_,event,...)
  if event=='PLAYER_LOGIN'then initialize();hookTooltips();return end
  if event=='PLAYER_LOGOUT'then save();return end
  if not started then return end
+ if event=='PLAYER_ENTERING_WORLD'then E.ClearPartyBags() end
  if event=='ADDON_LOADED'then local name=...;if name=='ForeverDungeonJournal'or name=='AtlasLootClassic'then E.RefreshCatalog();if ns.ForeverUI then ns.ForeverUI.SetPane(E.db.pane or'Recipes')end end;return end
- if event=='UNIT_AURA'or event=='UNIT_SPELLCAST_SUCCEEDED'then local unit=...;if unit~='player'then return end end
+ if event=='UNIT_AURA'then
+  if (...)=='player' and E.CheckEnhancementAuras()then ns.ProfessionGuide.dirty=true end
+  return
+ end
+ if event=='PLAYER_REGEN_DISABLED'or event=='PLAYER_REGEN_ENABLED'or event=='PLAYER_UPDATE_RESTING'or
+    event=='PLAYER_DEAD'or event=='PLAYER_ALIVE'or event=='PLAYER_UNGHOST'or event=='GROUP_ROSTER_UPDATE'then
+  ns.ProfessionGuide.dirty=true
+  return
+ end
+ if event=='UNIT_SPELLCAST_SUCCEEDED'then
+  local unit,_,spellID=...
+  if not E.Public(unit) or not E.Public(spellID)then return end
+  if unit~='player'then
+   if E.ObservePartyBag(unit,spellID)then ns.ProfessionGuide.dirty=true end
+   return
+  end
+ end
  if event=='LOOT_OPENED'and E.db.collect then E.ObserveLoot()
  elseif event=='TRAINER_SHOW'or event=='TRAINER_UPDATE'then E.ObserveTrainer()
- elseif event=='MERCHANT_SHOW'then E.ObserveMerchant()
+ elseif event=='MERCHANT_SHOW'or event=='MERCHANT_UPDATE'then E.ObserveMerchant(event=='MERCHANT_SHOW')
+ elseif event=='MERCHANT_CLOSED'then E.activeRecipeMerchant=nil
+ elseif (event=='BAG_UPDATE_DELAYED'or event=='PLAYER_MONEY') and E.activeRecipeMerchant then E.ObserveMerchant()
  elseif event=='TRADE_SKILL_SHOW'or event=='TRADE_SKILL_LIST_UPDATE'or event=='CRAFT_SHOW'or event=='CRAFT_UPDATE'then E.ReadBook()
  elseif event=='QUEST_ACCEPTED'then local a,b=...;E.Record('quest-accepted',{questID=b or a})
  elseif event=='QUEST_TURNED_IN'then local id=...;E.Record('quest-turned-in',{questID=id})
+ elseif event=='QUEST_REMOVED' and ns.QuestProcedures then
+  local id=...
+  if E.Public(id) and type(id)=='number' then ns.QuestProcedures.ResetQuest(id) end
  elseif event=='TAXIMAP_OPENED'then E.ObserveTaxi();if E.AutoGuideFlight then E.AutoGuideFlight()end
  elseif event=='CHAT_MSG_LOOT'then local message=...;local id=E.ItemID(message);local gathering=E.lastGather and E.Time()-E.lastGather.time<20;E.Record(gathering and'gathered-item'or'loot-message',{itemID=id,profession=gathering and E.lastGather.profession or nil,quantity=type(message)=='string'and tonumber(message:match('x(%d+)'))or nil})
  elseif event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;local profession=({[7620]='Fishing',[2575]='Mining',[2366]='Herbalism',[8613]='Skinning'})[id];if profession then E.lastGather={time=E.Time(),profession=profession};E.Record('gather-success',{spellID=id,profession=profession})elseif E.known[id]then E.Record('craft-completed',{spellID=id})end
  end
  -- Loot observations are recorded above. Inventory changes queue their own refresh.
- if event=='LOOT_OPENED'or event=='CHAT_MSG_LOOT'or event=='UNIT_AURA'then return end
+ if event=='LOOT_OPENED'or event=='CHAT_MSG_LOOT'then return end
  if event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;if not E.known[id]and not({[7620]=true,[2575]=true,[2366]=true,[8613]=true})[id]then return end end
  dirty=true;refreshTrigger=event
 end)
 frame:SetScript('OnUpdate',function(_,dt)
  if started and E.flightPending then E.CheckFlight()end
+ if started then
+  partyBagCheckElapsed=partyBagCheckElapsed+dt
+  if partyBagCheckElapsed>=1 then
+   partyBagCheckElapsed=0
+   if E.CheckPartyBagReminder()then ns.ProfessionGuide.dirty=true end
+  end
+  recipeVendorCheckElapsed=recipeVendorCheckElapsed+dt
+  if recipeVendorCheckElapsed>=2 then
+   recipeVendorCheckElapsed=0
+   if E.CheckRecipeVendorPosition()then ns.ProfessionGuide.dirty=true end
+  end
+ end
  if not started or not dirty then return end;waited=waited+dt;if waited<.5 then return end;waited=0;dirty=false
  E.WithSnapshot(refresh)
 end)
@@ -2913,13 +3575,8 @@ end)(ADDON,GF)
 ;(function(...)
 -- GF-owned adaptive planning. Data is separate; no third-party addon runtime required.
 local _,ns=...;local E,D=ns.Forever,ns.ForeverQuestData
+local locations=ns.QuestLocationEvidence or {}
 local Q={data=D,revision=1};ns.ForeverQuestPlanner=Q
--- Calvin Montague: prefer the catalog spawn corroborated by live acceptance.
-for _,a in pairs(D.actions)do
- if a.quest==8 and a.kind=='accept'and a.target and a.target.id==6784 then
-  for _,loc in ipairs(D.spawns['npc:6784']or{})do if loc.mapID==1420 then a.map={ui_map=loc.mapID,x=loc.x,y=loc.y};break end end
- end
-end
 -- Forever quest 96899 opens after The Cult of the Damned is turned in.
 local bandarion=D.quests[96899]
 if bandarion and D.quests[96897] and not next(bandarion.prerequisites or {})then
@@ -2930,7 +3587,6 @@ for id,q in pairs(D.quests)do for _,pre in ipairs(q.prerequisites or{})do if pre
 local raceBits={Human=1,Orc=2,Dwarf=4,NightElf=8,Scourge=16,Undead=16,Tauren=32,Gnome=64,Troll=128}
 local classBits={WARRIOR=1,PALADIN=2,HUNTER=4,ROGUE=8,PRIEST=16,SHAMAN=64,MAGE=128,WARLOCK=256,DRUID=1024}
 local function mask(m,b)return not m or m==0 or b and math.floor(m/b)%2==1 end
-local function norm(s)return tostring(s or''):lower():gsub('[^%a]',''):gsub('scourge','undead')end
 local function qs(id,s)
  if Q.stateOwner~=s then Q.stateOwner=s;Q.states={}end
  if not Q.states[id]then Q.states[id]=s.quests[id]or(s.completed[id]and{rewarded=true})or E.QuestState(id)or{}end
@@ -2956,11 +3612,14 @@ function Q.AllowsQuest(id,faction,fact)
  if fact and (fact.faction=='Alliance' or fact.faction=='Horde') and fact.faction~=faction then return false end
  return not fact or not(fact.side==1 and faction~='Alliance' or fact.side==2 and faction~='Horde')
 end
-local function offeredNow(id)
- for _,q in ipairs(E.Call(C_GossipInfo and C_GossipInfo.GetAvailableQuests)or{})do
-  if E.Public(q.questID)and q.questID==id then return true end
+local function offeredNow(id,s)
+ if Q.offerState~=s then
+  Q.offerState=s;Q.offered={}
+  for _,q in ipairs(E.Call(C_GossipInfo and C_GossipInfo.GetAvailableQuests) or {})do
+   if E.Public(q.questID) and type(q.questID)=='number' then Q.offered[q.questID]=true end
+  end
  end
- return false
+ return Q.offered[id]==true
 end
 local pvpZones={ [3277]=true,[3358]=true,[2597]=true,[3820]=true,[4384]=true,[4710]=true,[5031]=true }
 local function isPvPQuest(q)
@@ -2977,14 +3636,14 @@ function Q.Eligible(id,s)
  -- Live acceptance is stronger evidence than incomplete custom-race metadata.
  if live.inLog==true then return true end
  local profession=Q.professionQuests[id]
- if profession then local skill=s.skills and s.skills[profession];if not skill or not E.Public(skill.rank)or type(skill.rank)~='number'or skill.rank<=0 or not offeredNow(id)then return false end end
- if (id==76156 or id==76160 or id==76240) and s.class~='ROGUE' and not offeredNow(id) then return false end
+ if profession then local skill=s.skills and s.skills[profession];if not skill or not E.Public(skill.rank)or type(skill.rank)~='number'or skill.rank<=0 or not offeredNow(id,s)then return false end end
+ if (id==76156 or id==76160 or id==76240) and s.class~='ROGUE' and not offeredNow(id,s) then return false end
  if not mask(q.classes,classBits[s.class])then return false end
  local rb=raceBits[s.race]
- if rb then if not mask(q.races,rb)then return false end
- elseif q.races and q.races~=0 then
-  local profile=Q.Profile(s);if not(profile and Q.profileQuests[profile]and Q.profileQuests[profile][id])then return false end
+ if not rb and E.Public(s.raceId) and type(s.raceId)=='number' and s.raceId>=1 and s.raceId<=53 and s.raceId%1==0 then
+  rb=2^(s.raceId-1)
  end
+ if not mask(q.races,rb) and not offeredNow(id,s)then return false end
  for _,later in ipairs(Q.breadcrumbs[id]or{})do local nextState=qs(later,s);if nextState.inLog or nextState.rewarded==true or nextState.rewarded==1 or s.completed[later]then return false end end
  if q.min_level and q.min_level>s.level then return false end
  local any,all,hasAny=false,true,false
@@ -2995,30 +3654,13 @@ function Q.Eligible(id,s)
  end end
  return all and(not hasAny or any)and not q.repeatable
 end
-function Q.Profile(s)
- local race=norm(s.race)
- for _,p in ipairs(D.profiles)do
-  local match=norm(p.race)==race or race:find('skyborne',1,true)and p.race:find('skyborne',1,true)
-  if match and p.class==s.class and p.faction==s.faction then return p end
- end
-end
-local function point(m,t,zone)
- if not m or not m.ui_map or not m.x or not m.y then return end
- return{mapID=m.ui_map,x=m.x,y=m.y,name=t and t.name or zone or'Quest area',npcID=t and t.kind=='npc'and t.id or nil,zone=zone}
-end
--- Reference guides supply locations, never the player's quest sequence.
-Q.actionIndex={};Q.profileQuests={};Q.zoneCandidates={}
-for _,p in ipairs(D.profiles)do
- local set={};Q.profileQuests[p]=set
- for _,ref in ipairs(p.refs)do local a=D.actions[ref]
-  if a and a.quest then
-   set[a.quest]=true
-   local bucket=Q.actionIndex[a.quest]or{};Q.actionIndex[a.quest]=bucket
-   if not bucket[ref]then bucket[ref]=a end
-   if a.kind=='accept'and a.map and a.map.ui_map then
-    local zone=Q.zoneCandidates[a.map.ui_map]or{};Q.zoneCandidates[a.map.ui_map]=zone;zone[a.quest]=true
-   end
-  end
+local continentMaps={[1414]=true,[1415]=true,[1945]=true,[947]=true}
+Q.zoneCandidates={}
+for id,q in pairs(locations)do
+ for _,loc in ipairs(q.startPoints or {})do
+  local zone=Q.zoneCandidates[loc.mapID] or {}
+  Q.zoneCandidates[loc.mapID]=zone
+  zone[id]=true
  end
 end
 function Q.Ready(live)
@@ -3032,44 +3674,91 @@ function Q.Ready(live)
  if required>0 then return finished end
  return live.ready==true or live.ready==1 or live.complete==true or live.complete==1
 end
-function Q.NearestSource(sources,s)
+local function locationScore(loc,s)
+ local distance=E.Distance(s.position,loc)
+ return distance or (s.position and s.position.mapID==loc.mapID and math.sqrt((loc.x-s.position.x)^2+(loc.y-s.position.y)^2)*50) or 1e8
+end
+function Q.NearestSource(sources,s,knownPoints)
  local best,score
- for _,src in ipairs(sources or{})do for _,pos in ipairs(D.spawns[src.kind..':'..src.id]or{})do
-  local loc={mapID=pos.mapID,x=pos.x,y=pos.y,name=D.names[src.kind..':'..src.id]or'Quest source',npcID=src.kind=='npc'and src.id or nil}
-  local distance=E.Distance(s.position,loc)
-  local value=distance or(s.position and s.position.mapID==pos.mapID and math.sqrt((pos.x-s.position.x)^2+(pos.y-s.position.y)^2)*50)or 1e8
+ for _,loc in ipairs(knownPoints or {})do
+  local value=locationScore(loc,s)
   if not score or value<score then best,score=loc,value end
+ end
+ if best then return best end
+ for _,src in ipairs(sources or{})do for _,pos in ipairs(D.spawns[src.kind..':'..src.id]or{})do
+  if not continentMaps[pos.mapID]then
+   local loc={mapID=pos.mapID,x=pos.x,y=pos.y,name=D.names[src.kind..':'..src.id]or'Quest source',npcID=src.kind=='npc'and src.id or nil}
+   local value=locationScore(loc,s)
+   if not score or value<score then best,score=loc,value end
+  end
  end end
  return best
 end
-local function actionLocation(id,kind,slot,s)
- local best,value,ref
- for n,a in pairs(Q.actionIndex[id]or{})do
-  if a.kind==kind and(kind~='objective'or a.slot==slot)then
-   local loc=point(a.map,a.target,a.zone)
-   if loc then
-    local d=E.Distance(s.position,loc)or(s.position and loc.mapID==s.position.mapID and 1e5 or 1e8)
-    if not value or d<value or d==value and n<ref then best,value,ref=loc,d,n end
+local function questContact(id,kind,s)
+ local q,evidence=D.quests[id] or {},locations[id] or {}
+ if kind=='accept' then return Q.NearestSource(q.starts,s,evidence.startPoints) end
+ return Q.NearestSource(q.ends,s,evidence.endPoints)
+end
+local liveKinds={monster='kill',kill='kill',item='item',object='object',event='event',explore='event',talk='talk'}
+local function objectiveEvidence(id,slot,live)
+ local evidence=locations[id]
+ if not evidence then return end
+ local objectives=live and live.objectives
+ local goal=objectives and objectives[slot]
+ local liveType=goal and E.Public(goal.type) and goal.type
+ local kind=liveKinds[liveType]
+ local typed=evidence.objectives and evidence.objectives[slot]
+ if typed and (not kind or kind==typed.kind) and (kind~='event' or (typed.points and #typed.points>0)) then return typed end
+ if kind~='event' or not evidence.trigger then return end
+ local events=0
+ for _,objective in ipairs(objectives)do
+  if E.Public(objective.type) and liveKinds[objective.type]=='event' then events=events+1 end
+ end
+ if events==1 then return evidence.trigger end
+end
+local function objectiveLocation(id,slot,s,live)
+ local steps=ns.GroupedQuestSteps
+ local fact, supplement
+ if steps then fact,supplement=steps.Fact(id,slot) end
+ local points,seen={},{}
+ local best,bestDistance
+ local function add(loc)
+  if not loc then return end
+  local key=loc.mapID..':'..loc.x..':'..loc.y
+  if seen[key]then return end
+  seen[key]=true;points[#points+1]=loc
+  local distance=E.Distance(s.position,loc)or(s.position and loc.mapID==s.position.mapID and 1e5 or 1e8)
+  if not bestDistance or distance<bestDistance then best,bestDistance=loc,distance end
+ end
+ local evidence=objectiveEvidence(id,slot,live)
+ for _,loc in ipairs(evidence and evidence.points or {})do add(loc) end
+ local target,action
+ if evidence then target,action=evidence.target,evidence.kind
+ else
+  target=fact and fact.target or supplement and supplement.target
+  action=fact and fact.kind or supplement and supplement.kind
+ end
+ local kind=(action=='kill'or action=='talk')and'npc'or action=='object'and'object'
+ local sources=action=='item'and D.itemSources[target] or kind and target and {{kind=kind,id=target}} or {}
+ for _,source in ipairs(#points==0 and sources or {})do
+  local name=D.names[source.kind..':'..source.id]
+  for _,pos in ipairs(D.spawns[source.kind..':'..source.id]or{})do
+   -- Prefer zone-scale points over copies projected onto a continent map.
+   if not continentMaps[pos.mapID]
+    and (not bestDistance or bestDistance>=1e5 or s.position and pos.mapID==s.position.mapID)then
+    add({mapID=pos.mapID,x=pos.x,y=pos.y,name=name or 'Quest objective',sourceName=action=='item'and name or nil,
+     npcID=source.kind=='npc'and source.id or nil})
    end
   end
  end
- return best,ref
-end
-local function objectiveLocation(id,slot,s)
- local loc,ref=actionLocation(id,'objective',slot,s)
- if loc then return loc,ref end
- local q=D.quests[id]
- for _,o in ipairs(q and q.objectives or{})do if o.n==slot then
-  if o.kind=='item'then return Q.NearestSource(D.itemSources[o.target],s)end
-  local kind=(o.kind=='kill'or o.kind=='talk')and'npc'or o.kind=='object'and'object'
-  if kind and o.target then return Q.NearestSource({{kind=kind,id=o.target}},s)end
- end end
+ if #points==0 and not evidence and supplement and supplement.location then add(supplement.location)end
+ return best,points,evidence
 end
 function Q.Anchor(s)
  local current=s.position and s.position.mapID
  local anchor=E.db and E.db.questAnchor
  local function zone(id)
-  if not id or id==1414 or id==1415 or id==1945 or id==947 then return false end
+  if not id or continentMaps[id] then return false end
   local info=E.Call(C_Map and C_Map.GetMapInfo,id)
   if info and E.Public(info.mapType)and type(info.mapType)=='number'and info.mapType<3 then return false end
   return(next(D.zoneQuests[id]or{})or next(Q.zoneCandidates[id]or{}))~=nil
@@ -3097,11 +3786,10 @@ end
 function Q.Build(s)
  local anchor=Q.Anchor(s)
  local current=s.position and s.position.mapID or anchor
- local preferred=Q.Profile(s);Q.own=preferred and Q.profileQuests[preferred]or{}
  local candidates={}
  local function addZone(mapID)
   for _,id in ipairs(D.zoneQuests[mapID]or{})do candidates[id]=true end
-  -- Some class chains have no zone index. Their reference locations still count.
+  -- Verified starters can establish a zone for quests missing from the bundled index.
   for id in pairs(Q.zoneCandidates[mapID]or{})do candidates[id]=true end
  end
  addZone(current)
@@ -3109,22 +3797,69 @@ function Q.Build(s)
  for id in pairs(s.quests or{})do candidates[id]=true end
  if current==1458 then candidates[97583]=true end
  local out,keys={},{}
- local function add(id,kind,slot,loc,title,ref)
+ local procedures=ns.QuestProcedures
+ if procedures then procedures.Sync(s) end
+ local function add(id,kind,slot,loc,title,points,catalogObjective)
   local key=id..':'..kind..':'..tostring(slot or 0)
   if keys[key]then return end;keys[key]=true
   local q=D.quests[id]or{};local live=qs(id,s)
   local mobs,seen={},{};local function mob(n)if type(n)=='number'and not seen[n]then seen[n]=true;mobs[#mobs+1]=n end end
   if kind=='objective'and slot then
-   local a=ref and D.actions[ref]
-   for _,n in ipairs(a and a.mob_ids or{})do mob(n)end
-   if a and a.target and a.target.kind=='npc'then mob(a.target.id)end
-   for _,o in ipairs(q.objectives or{})do if o.n==slot then
+   for _,p in ipairs(points or {})do mob(p.npcID)end
+   local function addObjectiveMob(o)
     if o.kind=='kill'or o.kind=='talk'then mob(o.target)
     elseif o.kind=='item'then for _,src in ipairs(D.itemSources[o.target]or{})do if src.kind=='npc'then mob(src.id)end end end
-   end end
+   end
+   if catalogObjective then addObjectiveMob(catalogObjective)
+   else for _,o in ipairs(q.objectives or {})do if o.n==slot then addObjectiveMob(o)end end end
   end
   out[#out+1]={id='fq:'..key,quest=id,kind=kind,slot=slot,title=title,body=title,category='Questing',destination=loc,zone=loc and loc.zone,mobIDs=mobs,
-   level=q.level,minLevel=not live.inLog and q.min_level or nil,routeAction=ref or'database',areaTask=kind=='objective',source='Bundled quest facts',xp=q.xp}
+   level=q.level,minLevel=not live.inLog and q.min_level or nil,questStep=true,objectivePoints=points,objectiveEvidence=catalogObjective,
+   areaTask=kind=='objective',source='Bundled quest facts',xp=q.xp}
+ end
+ local function addProcedure(id,slot,phase)
+  local loc=phase.destination
+  add(id,'objective',slot,loc,phase.title,phase.groupable and loc and {loc} or nil)
+  local row=out[#out]
+  row.procedure=phase
+  -- The underlying objective's NPC may not be the target of this action.
+  row.mobIDs=loc and loc.npcID and {loc.npcID} or {}
+ end
+ local function addObjectives(id,q,live)
+  local slots={}
+  for slot in ipairs(live.objectives or {})do slots[slot]=true end
+  if not next(slots) then
+   for _,objective in ipairs(q.objectives or {})do if objective.n then slots[objective.n]=true end end
+   for slot in pairs(locations[id] and locations[id].objectives or {})do slots[slot]=true end
+   local extra=ns.StepObjectiveEvidence and ns.StepObjectiveEvidence[id]
+   for _,objective in ipairs(extra and extra.objectives or {})do if objective.slot then slots[objective.slot]=true end end
+  end
+  if procedures then
+   for _,slot in ipairs(procedures.Slots(id))do if slot>0 then slots[slot]=true end end
+  end
+  local sorted={}
+  for slot in pairs(slots)do sorted[#sorted+1]=slot end
+  table.sort(sorted)
+  local count=0
+  for _,slot in ipairs(sorted)do
+   local goal=live.objectives and live.objectives[slot]
+   local finished=ns.GroupedQuestSteps and ns.GroupedQuestSteps.Progress(goal)
+   local phase,procedureStatus
+   if procedures then phase,procedureStatus=procedures.Current(id,slot,live,s) end
+   if phase then
+    addProcedure(id,slot,phase)
+    count=count+1
+   elseif not finished and procedureStatus~='blocked' then
+    local loc,points,catalogObjective=objectiveLocation(id,slot,s,live)
+    local liveText=goal and E.Public(goal.text) and goal.text
+    add(id,'objective',slot,loc,liveText or catalogObjective and (catalogObjective.text or catalogObjective.name) or q.title,points,catalogObjective)
+    count=count+1
+   end
+  end
+  if count==0 then
+   -- The known contact is still a destination when the game exposes no tracker.
+   add(id,'objective',nil,questContact(id,'turnin',s),'Continue '..q.title)
+  end
  end
  local function wriggle(live)
   local have=E.Call(GetItemCount,278265,false)
@@ -3162,7 +3897,15 @@ function Q.Build(s)
  local function emit(id,remote)
   local q=D.quests[id];local live=qs(id,s)
   if not q then
-   if live.inLog then add(id,Q.Ready(live)and'turnin'or'objective',nil,nil,(Q.Ready(live)and'Turn in 'or'Continue ')..(live.title or('quest '..id)))end
+   if live.inLog then
+    local title=live.title or ('quest '..id)
+    if Q.Ready(live) then
+     add(id,'turnin',nil,questContact(id,'turnin',s),'Turn in '..title)
+    else
+     local whole=procedures and procedures.Current(id,0,live,s)
+     if whole then addProcedure(id,0,whole) else addObjectives(id,{title=title},live) end
+    end
+   end
    return
   end
   if not Q.Eligible(id,s)then return end
@@ -3179,9 +3922,10 @@ function Q.Build(s)
   end
   if live.inLog then
    if Q.Ready(live)then
-    local loc,ref=actionLocation(id,'turnin',nil,s);loc=loc or Q.NearestSource(q.ends,s)
-    add(id,'turnin',nil,loc,'Turn in '..q.title,ref)
+    add(id,'turnin',nil,questContact(id,'turnin',s),'Turn in '..q.title)
    else
+     local whole=procedures and procedures.Current(id,0,live,s)
+     if whole then addProcedure(id,0,whole);return end
     if id==97485 then
      local function hasItem(item)
       local count=E.Call(GetItemCount,item,false)
@@ -3203,56 +3947,41 @@ function Q.Build(s)
       add(id,'objective',105,nil,'Combine the four components to make Prepared Incense')
       return
      end
-     local loc=objectiveLocation(id,1,s)
+     local loc=objectiveLocation(id,1,s,live)
      add(id,'objective',106,loc,"Spread the incense at the south-facing cliff of Hunter's Rise")
      return
     end
-    local slots={};for i in ipairs(live.objectives or{})do slots[i]=true end
-    if not next(slots)then
-     for _,o in ipairs(q.objectives or{})do if o.n then slots[o.n]=true end end
-     for _,a in pairs(Q.actionIndex[id]or{})do if a.kind=='objective'and a.slot then slots[a.slot]=true end end
-    end
-    local count=0;for slot in pairs(slots)do
-     local goal=live.objectives and live.objectives[slot]
-     local finished=goal and(goal.finished==true or type(goal.numRequired)=='number'and goal.numRequired>0 and type(goal.numFulfilled)=='number'and goal.numFulfilled>=goal.numRequired)
-     if not finished then
-      local loc,ref=objectiveLocation(id,slot,s);local a=ref and D.actions[ref]
-      add(id,'objective',slot,loc,goal and goal.text or a and a.title or('Complete '..q.title),ref);count=count+1
-     end
-    end
-    if count==0 then
-     -- A delivery/talk quest may have no leaderboard. Its known contact is a
-     -- destination, not evidence that the quest has already been completed.
-     local loc,ref=actionLocation(id,'turnin',nil,s);loc=loc or Q.NearestSource(q.ends,s)
-     add(id,'objective',nil,loc,'Continue '..q.title,ref)
-    end
+     addObjectives(id,q,live)
    end
   elseif not hasActiveAtGiver(q) and not q.catalogOnly and q.min_level and(q.type or 0)==0 and(q.level or q.min_level)<=s.level+2 then
-   local loc,ref=actionLocation(id,'accept',nil,s);loc=loc or Q.NearestSource(q.starts,s)
-   if loc and(remote or loc.mapID==current or loc.mapID==anchor)then add(id,'accept',nil,loc,'Accept '..q.title,ref)end
+   local loc=questContact(id,'accept',s)
+   if loc and(remote or loc.mapID==current or loc.mapID==anchor)then add(id,'accept',nil,loc,'Accept '..q.title)end
   end
  end
  local ids={};for id in pairs(candidates)do ids[#ids+1]=id end;table.sort(ids)
  for _,id in ipairs(ids)do emit(id,false)end
  local localWork=false;for _,r in ipairs(out)do if r.destination and(r.destination.mapID==current or r.destination.mapID==anchor)then localWork=true;break end end
  if not localWork then
-  -- Exhaust local work before suggesting one reachable next-zone hub. Never
-  -- offer the entire remaining reference guide or a different continent.
+  -- Exhaust local work before suggesting one reachable next-zone hub.
   local nextZone,best
   for id,q in pairs(D.quests)do if not candidates[id]and q.min_level and not q.catalogOnly and(q.type or 0)==0 and q.min_level<=s.level and(q.level or q.min_level)<=s.level+2 and(q.level or q.min_level)>=s.level-3 and Q.Eligible(id,s)then
-   local loc=actionLocation(id,'accept',nil,s);loc=loc or Q.NearestSource(q.starts,s)
+   local loc=questContact(id,'accept',s)
    local d=loc and E.Distance(s.position,loc)
    if d and(not best or d<best)then nextZone,best=loc.mapID,d end
   end end
-  if nextZone then for _,id in ipairs(D.zoneQuests[nextZone]or{})do emit(id,true)end end
+  if nextZone then
+   local visited={}
+   for _,id in ipairs(D.zoneQuests[nextZone] or {})do visited[id]=true;emit(id,true) end
+   for id in pairs(Q.zoneCandidates[nextZone] or {})do if not visited[id] then emit(id,true) end end
+  end
  end
  local grouped,byQuest={},{}
  for _,row in ipairs(out)do
   if row.kind=='objective'then
    local group=byQuest[row.quest]
-   if not group then group={};for k,v in pairs(row)do group[k]=v end;group.id='fq:'..row.quest..':objective:all';group.slot=nil;group.objectives={};group.mobIDs={};group.title=(D.quests[row.quest]or{}).title or row.title;group.body='';byQuest[row.quest]=group;grouped[#grouped+1]=group end
+    if not group then group={};for k,v in pairs(row)do group[k]=v end;group.id='fq:'..row.quest..':objective:all';group.slot=nil;group.objectives={};group.mobIDs={};group.title=(D.quests[row.quest]or{}).title or qs(row.quest,s).title or row.title;group.body='';byQuest[row.quest]=group;grouped[#grouped+1]=group end
    group.objectives[#group.objectives+1]=row
-   group.body=group.body..(group.body~=''and'\n'or'')..(row.quest==97583 and row.body or row.title)
+    group.body=group.body..(group.body~=''and'\n'or'')..(row.quest==97583 and row.body or row.title)
    for _,id in ipairs(row.mobIDs or{})do local found=false;for _,old in ipairs(group.mobIDs)do if old==id then found=true end end;if not found then group.mobIDs[#group.mobIDs+1]=id end end
    local d=row.destination and E.Distance(s.position,row.destination)
    if d and(not group.nearestDistance or d<group.nearestDistance)then group.destination=row.destination;group.nearestDistance=d end
@@ -3262,10 +3991,10 @@ function Q.Build(s)
  out=grouped
  return out
 end
--- The builder already covers both reference coordinates and the standalone DB.
+-- The planner reads the bundled quest catalog directly.
 function Q.AddDatabaseQuests()end
 local eligible=E.Eligible
-E.Eligible=function(row,s)
+E.Eligible=function(row,s,levelsDescribeNPC)
  s=s or E.state or E.Snapshot()
  if row.quest and(row.kind=='accept'or row.kind=='objective'or row.kind=='turnin')then
   if isPvPQuest(D.quests[row.quest]) or not Q.AllowsQuest(row.quest,s.faction) then return false end
@@ -3275,7 +4004,7 @@ E.Eligible=function(row,s)
   if(row.kind=='objective'or row.kind=='turnin')and not(s.quests and s.quests[row.quest]and s.quests[row.quest].inLog==true)then return false end
   if row.kind=='turnin'and not Q.Ready(live)then return false end
  end
- return eligible(row,s)
+ return eligible(row,s,levelsDescribeNPC)
 end
 local priority=E.Priority
 local raceFactions={
@@ -3295,7 +4024,7 @@ E.Priority=function(row,s)
  if row.urgentBags then return 10000 end
  if row.kind=='train'or row.professionChoice then return 1200 end
  row.localQuestPickup=nil
- if not row.routeAction then return priority(row,s)end
+ if not row.questStep then return priority(row,s)end
  if row.questDestination then row.destination=row.questDestination;row.zone=row.destination.zone end
  local loc=row.destination
  local localZone=loc and s.position and loc.mapID==s.position.mapID
@@ -3344,9 +4073,9 @@ local function clusterObjectives(rows,s)
  if not playerWorld then return end
  for _,row in ipairs(rows)do
   local d=row._questDistance
-  if row.routeAction and row.kind=='objective'and d and d<=650 then
+  if row.questStep and row.kind=='objective'and d and d<=650 then
    for _,goal in ipairs(row.objectives or {row})do
-    local p=goal.destination
+     local p=(not goal.procedure or goal.procedure.groupable) and goal.destination
     if p then
      local world,x,y=E.World(p.mapID,p.x,p.y)
      if world==playerWorld then
@@ -3387,7 +4116,7 @@ E.Order=function(rows,s)
  local first=out[1];local service=first and(first.urgentBags or first.kind=='train'or first.professionChoice or first.kind=='farm')
  -- Keep the current objective only when both choices are comparable and
  -- close together. It must yield to a higher tier or a new local hub.
- if heldIndex and heldIndex>1 and first.routeAction and first.kind=='objective'and heldRow.routeAction and heldRow.kind=='objective'
+ if heldIndex and heldIndex>1 and first.questStep and first.kind=='objective'and heldRow.questStep and heldRow.kind=='objective'
     and first._questPriority==heldRow._questPriority and first._questCluster==heldRow._questCluster
     and first._questDistance and heldRow._questDistance and heldRow._questDistance<=first._questDistance+40 then
   local between=E.Distance(first.destination,heldRow.destination)
@@ -3421,7 +4150,7 @@ function Q.Fresh()
 end
 local skip=ns.ProfessionGuide.Skip
 ns.ProfessionGuide.Skip=function(...)Q.held=nil;if E.db then E.db.questHeld=nil end;return skip(...)end
-Q.Source='Polestar forever-db + user Factoruide exports + LibQuestDB harvest'
+Q.Source='Bundled Forever quest catalog, QuestieDB location evidence and live quest log'
 
 end)(ADDON,GF)
 
@@ -3484,17 +4213,20 @@ end
 local function hideTip()if W.tooltip then W.tooltip:Hide()end end
 local function makeScrollPair(parent,up,down)
  local pair={};for i,label in ipairs({'up','down'})do
-  local b=N.MakeButton(parent,'',24,i==1 and up or down);b:SetSize(24,28)
+  local b=CreateFrame('Button',nil,parent);b:SetSize(N.PixelSize(b,24),N.PixelSize(b,24))
+  b:SetScript('OnClick',i==1 and up or down)
   local tri=b:CreateTexture(nil,'OVERLAY');tri:SetTexture('Interface\\AddOns\\GrindingForever\\Media\\ControlTriangleRight');tri:SetSize(11,11);tri:SetPoint('CENTER',b,'CENTER',0,0);tri:SetRotation(i==1 and math.pi/2 or -math.pi/2)
+  tri:SetVertexColor(86/255,50/255,30/255)
+  local hover=b:CreateTexture(nil,'HIGHLIGHT');hover:SetAllPoints();hover:SetColorTexture(.08,.35,.30,.14)
   pair[i]=b
  end;return pair
 end
 W.MakeScrollPair=makeScrollPair
 function W.Ensure()
  local r=N.root;if not r or W.ready then return end
- r.inlineFarm=N.MakeButton(r,'Farm Route',100,function()local ok,why=W.StartStepFarm();if not ok then ns.Print(why)end end);r.inlineFarm:Hide()
- r.inlineSearch=N.MakeButton(r,'Next Spot',100,function()ns.NPCSearch.Next()end);r.inlineSearch:Hide()
- r.workflowGrip=N.MakeButton(r,'',22,function()W.collapsed=not W.collapsed;N.WorkflowRelayout();N.Refresh(true);N.RefreshRecipes()end);r.workflowGrip:SetSize(22,58)
+ r.inlineFarm=N.PlainButton(r,'Farm Route',100,function()local ok,why=W.StartStepFarm();if not ok then ns.Print(why)end end);r.inlineFarm:Hide()
+ r.inlineSearch=N.PlainButton(r,'Next Spot',100,function()ns.NPCSearch.Next()end);r.inlineSearch:Hide()
+ r.workflowGrip=N.PlainButton(r,'',22,function()W.collapsed=not W.collapsed;N.WorkflowRelayout();N.Refresh(true);N.RefreshRecipes()end);r.workflowGrip:SetSize(22,58)
  r.workflowGrip:SetFrameLevel(r:GetFrameLevel()+30)
  r.workflowGrip.label:SetText('');r.workflowGrip.glyph=r.workflowGrip:CreateTexture(nil,'OVERLAY');r.workflowGrip.glyph:SetTexture(r.back.glyph:GetTexture());r.workflowGrip.glyph:SetSize(16,16);r.workflowGrip.glyph:SetPoint('CENTER')
  r.workflowStepIndicators=makeScrollPair(r.panels[1],function()N.rowStart=math.max(1,(N.rowStart or 1)-1);N.LayoutStepRows(N.visible or{},N.rowStart)end,function()local count=#(N.visible or{});N.rowStart=math.min(count,(N.rowStart or 1)+1);N.LayoutStepRows(N.visible or{},N.rowStart)end)
@@ -3522,7 +4254,18 @@ end
 function W.Layout()
  local r=N.root;if not r or not r.panels then return end;W.Ensure()
  local compact=N.mode=='compact';if compact and not N.fieldGuideMinimumHeight and r:GetHeight()<(W.recipeCompact and 820 or 560)then r:SetHeight(W.recipeCompact and 820 or 560)end;local collapsed=W.collapsed and not compact;local p=r.panels
- local width=r:GetWidth();local top=compact and 145 or 170;local height=r:GetHeight()-top-10
+ local steps=compact and not W.recipeCompact and N.sideMaterial=='parchment'
+ if steps and not r.stepsParchment then
+  -- Keep the paper flush with the outer rails while controls keep their inset.
+  local paper=r:CreateTexture(nil,'BACKGROUND',nil,2)
+  paper:SetTexture('Interface\\AddOns\\GrindingForever\\Media\\BaseParchment')
+  paper:SetTexCoord(96/2048,1158/2048,96/2048,1158/2048)
+  paper:SetAllPoints(r.backdrop)
+  r.stepsParchment=paper
+ end
+ if r.stepsParchment then r.stepsParchment:SetShown(steps)end
+ p[1].fill:SetShown(not steps and N.sideMaterial=='parchment')
+ local width=r:GetWidth();local top=N.HeaderSize(r)+N.PixelSize(r,8);local height=r:GetHeight()-top-10
  local stepW=compact and width-16 or collapsed and 4 or (width-16)*(.255/.835)
  local mapW=collapsed and (width-16)/2 or (width-16)*(.34/.835)
  local recipeW=collapsed and mapW or width-16-stepW-mapW
@@ -3536,23 +4279,18 @@ function W.Layout()
  if collapsed then x={9,9,8+mapW,width-9}end
  for _,c in ipairs(r.connectors)do
   local col=c.junctionColumn or 1;local row=c.junctionRow or 1
-  if compact then c:SetShown((col==1 or col==4)and not(row==1 and col==4));point(c,r,col==1 and 2 or width-17,row==1 and top-1 or r:GetHeight()-16)
-  else c:ClearAllPoints();c:SetPoint('CENTER',r,'TOPLEFT',x[col],row==1 and -top-6 or -r:GetHeight()+9);c:SetShown(not collapsed or col~=2)end
+  c:ClearAllPoints()
+  c:SetPoint('CENTER',r,'TOPLEFT',x[col],row==1 and -N.HeaderSize(r) or -r:GetHeight()+9)
+  c:SetShown(compact and (col==1 or col==4) or (not compact and (not collapsed or col~=2)))
  end
  for _,s in ipairs(r.shoulders)do
   if compact then s:Hide()else
-   local col=s.junctionColumn or 1;local row=s.junctionRow or 1;local sx=x[col];local sy=row==1 and -top-6 or -r:GetHeight()+9
+   local col=s.junctionColumn or 1;local row=s.junctionRow or 1;local sx=x[col];local sy=row==1 and -N.HeaderSize(r) or -r:GetHeight()+9
    s:ClearAllPoints();local dir=s.direction
    if dir=='RIGHT'then s:SetPoint('LEFT',r,'TOPLEFT',sx,sy)elseif dir=='LEFT'then s:SetPoint('RIGHT',r,'TOPLEFT',sx,sy)elseif dir=='DOWN'then s:SetPoint('TOP',r,'TOPLEFT',sx,sy)else s:SetPoint('BOTTOM',r,'TOPLEFT',sx,sy)end
    s:SetShown(not collapsed or col~=2)
   end
  end
- local headerW=compact and stepW*.75 or width*.75
- local headerCenter=compact and 8+stepW/2 or width/2
- r.wood:ClearAllPoints();r.wood:SetPoint('BOTTOM',r,'TOPLEFT',headerCenter,-top-3);r.wood:SetSize(headerW,40)
- for i,cap in ipairs(r.endcaps)do local cw=compact and 160 or 194;cap:SetSize(cw,cw*282/482);cap:ClearAllPoints();cap:SetPoint('BOTTOM',r.wood,i==1 and 'BOTTOMLEFT'or'BOTTOMRIGHT',i==1 and -cw*.08 or cw*.08,0)end
- for _,f in ipairs({r.titleLeft,r.titleRight})do f:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',compact and 23 or 26,'');f:SetWidth(headerW*.38)end
- r.headerEmblem:SetSize(32,32)
  r.workflowGrip:ClearAllPoints();r.workflowGrip:SetPoint('CENTER',collapsed and p[2]or p[1],'LEFT',0,0);r.workflowGrip.glyph:SetTexture((collapsed and r.forward.glyph or r.back.glyph):GetTexture());r.workflowGrip:SetShown(not compact)
  r.modeButton:SetParent(p[1]);point(r.modeButton,p[1],stepW-104,20,80,28);r.modeButton:Show()
  if N.settingsFrame then N.settingsFrame:SetParent(p[1])end
@@ -3577,7 +4315,8 @@ function W.Layout()
  r.recipesText:ClearAllPoints();r.recipesText:SetPoint('TOPLEFT',p[3],'TOPLEFT',28,-30);r.recipesText:SetWidth(recipeW-56)
  r.recipeScroll:ClearAllPoints();r.recipeScroll:SetPoint('TOPLEFT',p[3],'TOPLEFT',28,-65);r.recipeScroll:SetPoint('BOTTOMRIGHT',p[3],'BOTTOMRIGHT',-42,82)
  r.recipeSearch:ClearAllPoints();r.recipeSearch:SetPoint('BOTTOMLEFT',p[3],'BOTTOMLEFT',28,30);r.recipeSearch:SetPoint('BOTTOMRIGHT',p[3],'BOTTOMRIGHT',-28,30)
- for i,b in ipairs(r.workflowStepIndicators)do point(b,p[1],stepW-29,i==1 and filterY+50 or height-110,22,26)end
+ local rowStartY=compact and 104 or (E.db and E.db.journey=='Completionist' and 105 or 145)
+ for i,b in ipairs(r.workflowStepIndicators)do point(b,p[1],stepW-29,i==1 and rowStartY or height-114,22,26)end
  for i,b in ipairs(r.workflowRecipeIndicators)do point(b,p[3],recipeW-29,i==1 and 65 or height-110,22,26)end
  if r.updateRouteHere then r.updateRouteHere:SetParent(p[1]);point(r.updateRouteHere,p[1],28,height-112,180,28)end
  N.LayoutStepRows(N.visible or{},N.rowStart or 1);W.ScrollState()
@@ -3620,6 +4359,28 @@ local function addCraftTile(details)
  tile:SetScript('OnHide',hideTooltip)
  return tile
 end
+function N.ConfirmQuestAction(selection)
+ local procedures=ns.QuestProcedures
+ if not procedures or not selection then return false end
+ local live=E.QuestState(selection.quest)
+ if not procedures.Acknowledge(selection.quest,selection.slot,selection.id,live) then return false end
+ local model=N.model
+ local previous=model.index
+ P.Refresh()
+ local rows=model:Visible()
+ local follow
+ for _,row in ipairs(rows)do
+  if row.id==previous then follow=row.id;break end
+  if not follow and row.quest==selection.quest then follow=row.id end
+  for _,group in ipairs(row.groupObjectives or {})do
+   if not follow and group.quest==selection.quest then follow=row.id;break end
+  end
+ end
+ model.index=follow
+ model:Reconcile(rows)
+ N.Refresh(true)
+ return true
+end
 local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  local nextQuest
  if step.quest then
@@ -3639,17 +4400,19 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  body:SetText(description)
  body:SetHeight(0)
  local bodyHeight=description~='' and body:GetStringHeight()+4 or 0
- if not sections and not nextQuest then
+ if step.objectiveDetails then nextQuest=nil end
+ if not sections and not nextQuest and not step.objectiveDetails then
   if stepDetails then stepDetails:Hide()end
   return math.max(1,bodyHeight)
  end
  if not stepDetails then
   stepDetails=CreateFrame('Frame',nil,content)
-  stepDetails.texts,stepDetails.tiles={},{}
+  stepDetails.texts,stepDetails.tiles,stepDetails.counters,stepDetails.confirmations,stepDetails.mapButtons={},{},{},{},{}
  end
  local details=stepDetails
- local textCount,tileCount,y=0,0,0
- local function line(value,size)
+ local textCount,tileCount,counterCount,dividerCount,confirmationCount,y=0,0,0,0,0,0
+ local mapCount=0
+ local function line(value,size,usable,muted)
   textCount=textCount+1
   local label=details.texts[textCount]
   if not label then
@@ -3657,12 +4420,77 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
    details.texts[textCount]=label
   end
   label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',size,'')
+  label:SetTextColor(muted and .34 or .19,muted and .23 or .105,muted and .13 or .045)
   label:SetText(value)
-  point(label,details,0,y,width)
+  point(label,details,0,y,usable or width)
   label:SetHeight(0)
   label:Show()
   y=y+label:GetStringHeight()+4
  end
+ for index,group in ipairs(step.objectiveDetails or{})do
+  if index>1 then
+   details.dividers=details.dividers or {}
+   dividerCount=dividerCount+1
+   local divider=details.dividers[dividerCount]
+   if not divider then
+    divider=details:CreateTexture(nil,'ARTWORK');divider:SetColorTexture(.36,.21,.09,.28)
+    details.dividers[dividerCount]=divider
+   end
+   point(divider,details,0,y+1,width,1);divider:Show();y=y+8
+  end
+  if step.groupObjectives then line(group.questTitle,13,nil,true)end
+  for _,entry in ipairs(group.entries)do
+   if entry.phaseCount and entry.phaseCount>1 then
+    line(('Step %d of %d'):format(entry.phaseNumber,entry.phaseCount),13,nil,true)
+   end
+   local action=(entry.action and entry.action..' 'or'')..entry.label
+   local countWidth
+   if entry.count then
+    counterCount=counterCount+1
+    local count=details.counters[counterCount]
+    if not count then count=text(details,14);count:SetJustifyH('RIGHT');details.counters[counterCount]=count end
+    count:SetTextColor(.19,.105,.045);count:SetText(entry.count)
+    countWidth=math.max(35,count:GetStringWidth()+10)
+    point(count,details,width-countWidth,y,countWidth,19);count:Show()
+   end
+   line(action,16,countWidth and width-countWidth-5)
+   if entry.source then line(entry.source,13,nil,true)end
+   if entry.nextAction then line('Next: '..entry.nextAction,13,nil,true)end
+   if entry.mapPoint then
+    mapCount=mapCount+1
+    local button=details.mapButtons[mapCount]
+    if not button then
+     button=N.MakeButton(details,'Show on Map',115,function()end)
+     button:SetScript('OnClick',function(self)
+      local map=ns.MapControls99
+      if map then map.ShowStepPoint(self.mapPoint) end
+     end)
+     details.mapButtons[mapCount]=button
+    end
+    button.mapPoint=entry.mapPoint
+    point(button,details,0,y+2,math.min(width,115),26)
+    button:Show();y=y+32
+   end
+   if entry.confirm then
+    confirmationCount=confirmationCount+1
+    local button=details.confirmations[confirmationCount]
+    local buttonWidth=math.min(width,185)
+    if not button then
+     button=N.MakeButton(details,'Done with this action',buttonWidth,function()N.ConfirmQuestAction(button.questAction)end)
+     details.confirmations[confirmationCount]=button
+    end
+    button.questAction=entry.confirm
+    point(button,details,0,y+2,buttonWidth,29)
+    button:Show()
+    y=y+36
+   end
+  end
+  if group.directions then
+   line('Quest instructions',13,nil,true)
+   line(group.directions,14)
+  end
+ end
+ for i=mapCount+1,#details.mapButtons do details.mapButtons[i]:Hide() end
  local columns=math.max(1,math.floor((width+6)/88))
  local tileWidth=math.min(96,(width-6*(columns-1))/columns)
  for _,section in ipairs(sections or {})do
@@ -3703,6 +4531,12 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  end
  for i=textCount+1,#details.texts do details.texts[i]:Hide()end
  for i=tileCount+1,#details.tiles do details.tiles[i]:Hide()end
+ for i=counterCount+1,#details.counters do details.counters[i]:Hide()end
+ for i=confirmationCount+1,#details.confirmations do
+  details.confirmations[i].questAction=nil
+  details.confirmations[i]:Hide()
+ end
+ for i=dividerCount+1,#(details.dividers or{}) do details.dividers[i]:Hide()end
  local gap=bodyHeight>0 and 6 or 0
  point(details,content,0,bodyHeight+gap,width,y)
  details:Show()
@@ -3712,14 +4546,100 @@ local function nearbyOpportunity(step,visible)
  local counter=step.resourceCounters and step.resourceCounters[1]
  if counter then return 'Gather nearby',counter.text..'\nGather alongside your current quest.' end
  for _,row in ipairs(visible)do
-  if row.id~=step.id and (row.kind=='recipe' or row.id=='camp:visit') then
-   return row.kind=='recipe' and 'Recipe vendor nearby' or 'Camp nearby',row.title..'\n'..(row.body or ''),row.id
+  if row.id~=step.id and row.kind=='recipe' then
+   return 'Recipe vendor nearby',row.title..'\n'..(row.body or ''),row.id
   end
  end
 end
 local function objectiveHeadline(step)
+ if step.groupObjectives then return step.title,step.context end
  if step.kind~='objective' or not step.quest or step.quest==97583 or not step.actionHeadline then return end
  return step.actionHeadline,step.actionContext,step.actionLine
+end
+local enhancementIcons={
+ {key='food',spell=1249521,title='Well Fed missing',fallback='INV_Misc_Food_01'},
+ {key='camp',spell=1229741,title='Camp Benefits missing',fallback='Spell_Fire_Fire'},
+ {key='sleep',spell=429959,title='Well-Rested · Up to 3 stacks',fallback='INV_Drink_15'},
+}
+local function dismissEnhancementTooltip(self)
+ if self.tooltipOpen then N.HideInfoTooltip();self.tooltipOpen=nil end
+end
+local function createEnhancementIcon(panel,config)
+ local frame=CreateFrame('Frame',nil,panel)
+ frame:EnableMouse(true)
+ local icon=frame:CreateTexture(nil,'ARTWORK')
+ icon:SetAllPoints()
+ local texture=E.Call(C_Spell and C_Spell.GetSpellTexture or GetSpellTexture,config.spell)
+ icon:SetTexture(texture or 'Interface\\Icons\\'..config.fallback)
+ N.BronzeRectangle(frame,1)
+ frame:SetScript('OnEnter',function(self)
+  self.tooltipOpen=true
+  N.ShowInfoTooltip(self,config.title..'\n'..self.message)
+ end)
+ frame:SetScript('OnLeave',dismissEnhancementTooltip)
+ frame:SetScript('OnHide',dismissEnhancementTooltip)
+ return frame
+end
+local function layoutEnhancementIcons(root,panel,firstRow,compact,hidden,visible)
+ local reminders=not hidden and #visible>0 and P.enhancementReminders or nil
+ root.enhancementIcons=root.enhancementIcons or {}
+ local px=N.PixelSize(panel,1)
+ local size=24*px
+ -- The compact navigation buttons end 65 physical pixels below the panel edge.
+ local top=firstRow-size-5*px
+ if compact then top=math.max(top,70*px)end
+ local count=0
+ for _,config in ipairs(enhancementIcons)do
+  local message=reminders and reminders[config.key]
+  local frame=root.enhancementIcons[config.key]
+  if message then
+   if not frame then frame=createEnhancementIcon(panel,config);root.enhancementIcons[config.key]=frame end
+   if frame.tooltipOpen and frame.message~=message then N.ShowInfoTooltip(frame,config.title..'\n'..message)end
+   frame.message=message
+   point(frame,panel,28+count*(size+5*px),top,size,size)
+   frame:Show()
+   count=count+1
+  elseif frame then
+   dismissEnhancementTooltip(frame)
+   frame:Hide()
+  end
+ end
+ return count>0 and math.max(firstRow,top+size+5*px) or firstRow
+end
+local function layoutDungeonOffer(root,panel,y,width,hidden)
+ local prep=ns.DungeonPrep
+ local offer=not hidden and prep and prep.VisibleOffer()
+ local card=root.dungeonOffer
+ if not offer then if card then card:Hide() end;return y end
+ if not card then
+  card=CreateFrame('Frame',nil,panel)
+  local fill=card:CreateTexture(nil,'BACKGROUND');fill:SetAllPoints(card);fill:SetColorTexture(.17,.38,.26,.18)
+  local edge=card:CreateTexture(nil,'BORDER');edge:SetPoint('TOPLEFT');edge:SetPoint('BOTTOMLEFT');edge:SetWidth(3);edge:SetColorTexture(.11,.33,.23,.85)
+  card.title=text(card,19);card.detail=text(card,14)
+  card.choose=N.WoodButton(card,'Get Quests',142,function()prep.Choose(offer.mode)end)
+  card.pickups=N.WoodButton(card,'Get Quests',112,function()prep.Choose('prep')end)
+  card.skip=N.WoodButton(card,'Skip',60,function()prep.DismissOffer();N.Refresh(true)end)
+  root.dungeonOffer=card
+ end
+ card.choose:SetScript('OnClick',function()prep.Choose(offer.mode)end)
+ card.title:SetText(offer.title);card.detail:SetText(offer.body)
+ card.title:SetWordWrap(true);card.detail:SetWordWrap(true)
+ point(card.title,card,10,7,width-20);card.title:SetHeight(0)
+ local detailY=8+card.title:GetStringHeight()+3
+ point(card.detail,card,10,detailY,width-20);card.detail:SetHeight(0)
+ local buttonY=detailY+card.detail:GetStringHeight()+5
+ card.choose.label:SetText(offer.mode=='run' and 'Show Entrance' or 'Get Quests')
+ local extra=offer.mode=='run' and offer.pickups>0
+ local secondary=extra and math.min(112,(width-88)/2) or 0
+ local primary=math.min(142,width-76-secondary-(extra and 6 or 0))
+ point(card.choose,card,10,buttonY,primary,30)
+ if extra then point(card.pickups,card,16+primary,buttonY,secondary,30) end
+ card.pickups:SetShown(extra)
+ point(card.skip,card,width-62,buttonY,54,30)
+ local height=buttonY+34
+ point(card,panel,28,y,width,height)
+ card:Show()
+ return y+height+5
 end
 function N.LayoutStepRows(visible,start)
  local r=N.root;if not r then return 0 end
@@ -3727,8 +4647,11 @@ function N.LayoutStepRows(visible,start)
  local body,bodyScroll,stepLabel,bodyContent,status=N.WorkflowBody()
  bodyScroll:Hide();r.done:Hide();r.skip:Hide();status:Hide();if r.inlineFarm then r.inlineFarm:Hide()end;if r.inlineSearch then r.inlineSearch:Hide()end
  if r.stepContext then r.stepContext:Hide()end
+ if r.groupDistance then r.groupDistance:Hide()end
  if r.opportunityStrip then r.opportunityStrip:Hide();r.opportunityDetail:Hide()end
- local y=compact and 118 or E.db and E.db.journey=='Completionist'and 105 or 145;local shown=0;local selected=N.model.index;local room=panel:GetHeight()-92;local width=panel:GetWidth()-72
+ local y=compact and 104 or E.db and E.db.journey=='Completionist'and 105 or 145;local shown=0;local selected=N.model.index;local room=panel:GetHeight()-92;local width=panel:GetWidth()-72
+ y=layoutEnhancementIcons(r,panel,y,compact,hidden,visible)
+ y=layoutDungeonOffer(r,panel,y,width,hidden)
  for _,b in ipairs(r.workflowBodyIndicators or{})do b:Hide()end
  for i,row in ipairs(N.stepRows)do
   local step=visible[start+i-1];row:Hide();row.stepID=nil
@@ -3747,7 +4670,7 @@ function N.LayoutStepRows(visible,start)
       r.stepContext:SetTextColor(.35,.22,.10)
      end
      r.stepContext:SetParent(row);r.stepContext:SetText(context)
-     point(r.stepContext,row,10,h-2,width-20)
+     point(r.stepContext,row,10,h-2,width-(step.groupObjectives and 85 or 20))
      r.stepContext:SetHeight(0);r.stepContext:Show()
      h=h+math.max(16,r.stepContext:GetStringHeight()+3)
      if actionLine and step.body and step.body:sub(1,#actionLine)==actionLine then
@@ -3761,6 +4684,12 @@ function N.LayoutStepRows(visible,start)
     local bodyY=h+34
     local available=math.max(1,math.min(250,room-y-bodyY-40-(opportunity and 32 or 0)))
     status:SetParent(row);point(status,row,10,h+4,width-20,26);status:Show()
+    if step.groupObjectives then
+     status:Hide();bodyY=h+10
+     if not r.groupDistance then r.groupDistance=text(row,13);r.groupDistance:SetTextColor(.35,.22,.10);r.groupDistance:SetJustifyH('RIGHT')end
+     r.groupDistance:SetParent(row);r.groupDistance:SetText(string.format('%.0f yd',step.areaDistance))
+     point(r.groupDistance,row,width-79,h-math.max(16,r.stepContext:GetStringHeight()+3)-2,69,16);r.groupDistance:Show()
+    end
     bodyScroll:SetParent(row)
     bodyContent:SetWidth(width-20)
     local contentHeight=layoutStepDetails(step,visible,start+i,body,bodyContent,width-38)
@@ -3775,27 +4704,25 @@ function N.LayoutStepRows(visible,start)
     local manual=step.kind~='profession'and step.kind~='farm'and step.kind~='grind'and step.kind~='objective'and step.kind~='accept'and step.kind~='turnin'
     r.done:SetParent(row);r.skip:SetParent(row);local by=bodyY+bh+8;local farm=W.StepFarmable and W.StepFarmable(step);local search=ns.NPCSearch and ns.NPCSearch.Active(step);local total=(farm or search)and 186 or manual and 164 or 78;local bx=math.max(10,(width-total)/2)
     local prep=ns.DungeonPrep
-    local offer=step.kind=='dungeonPrepOffer'
-    local preparing=prep and prep.active~=nil
-    r.done.label:SetText(offer and 'Get Quests for Dungeon' or 'Done')
-    r.skip.label:SetText(preparing and 'Cancel Dungeon Prep' or 'Skip')
-    if offer then
-     bx=math.max(4,(width-310)/2)
-     point(r.done,row,bx,by,220,30);point(r.skip,row,bx+228,by,78,30)
-    elseif preparing then
+    local dungeonRun=step.kind=='dungeonRun'
+    local preparing=prep and prep.active~=nil and not (ns.FarmingPlanner and ns.FarmingPlanner.route)
+    r.done.label:SetText('Done')
+    r.skip.label:SetText(preparing and 'Cancel Dungeon Prep' or dungeonRun and 'Stop Directions' or 'Skip')
+    if preparing or dungeonRun then
      point(r.skip,row,math.max(4,(width-180)/2),by,180,30)
     else
      point(r.done,row,bx,by,78,30);point(r.skip,row,manual and bx+86 or bx,by,78,30)
     end
-    r.done:SetShown(manual and not preparing);r.skip:Show()
+    r.done:SetShown(manual and not preparing and not dungeonRun);r.skip:Show()
     if farm and r.inlineFarm then r.inlineFarm:SetParent(row);point(r.inlineFarm,row,bx+86,by,120,30);r.inlineFarm:Show()end
     if search and r.inlineSearch then r.inlineSearch:SetParent(row);point(r.inlineSearch,row,bx+86,by,100,30);r.inlineSearch:Show()end
     h=by+38
     if opportunity and y+h+28<=room then
      if not r.opportunityStrip then
-      local strip=N.MakeButton(row,'',width-20)
+      local strip=N.PlainButton(row,'',width-20)
       r.opportunityStrip=strip
       r.opportunityArrow=N.ButtonArrow(strip,'right','RIGHT')
+      r.opportunityArrow:SetVertexColor(86/255,50/255,30/255)
       r.opportunityDetail=text(row,13)
       r.opportunityDetail:SetTextColor(.28,.16,.065)
       strip:SetScript('OnClick',function()
@@ -3971,13 +4898,14 @@ function W.ScrollRail(pair,value,maximum,visible,changed)
   rail:SetOrientation('VERTICAL');rail:SetValueStep(1);rail:SetMinMaxValues(0,1)
   rail.track=rail:CreateTexture(nil,'BACKGROUND')
   rail.track:SetPoint('TOP',rail,'TOP',0,0);rail.track:SetPoint('BOTTOM',rail,'BOTTOM',0,0)
-  rail.track:SetWidth(3.5);rail.track:SetColorTexture(.34,.19,.07,1)
-  rail:SetThumbTexture('Interface\\AddOns\\GrindingForever\\Media\\RidgedFacetedHex')
-  rail:GetThumbTexture():SetSize(15,15)
+  rail.track:SetWidth(N.PixelSize(pair[1],3));N.BronzeRail(rail.track,"LEFT");rail.track:SetAlpha(.82)
+  rail:SetThumbTexture('Interface\\AddOns\\GrindingForever\\Media\\BronzeCutDiamond')
+  local thumb=rail:GetThumbTexture()
+  thumb:SetSize(N.PixelSize(pair[1],15),N.PixelSize(pair[1],15));N.BronzeDiamond(thumb)
   rail:EnableMouse(true)
   rail:SetScript('OnValueChanged',function(self,v)if not self.syncing and self.changed then self.changed(v)end end)
  end
- local rail=pair.rail;rail:SetParent(pair[1]:GetParent());rail:ClearAllPoints();rail:SetPoint('TOP',pair[1],'BOTTOM',0,-3);rail:SetPoint('BOTTOM',pair[2],'TOP',0,3);rail:SetWidth(17);rail.changed=changed
+ local rail=pair.rail;rail:SetParent(pair[1]:GetParent());rail:ClearAllPoints();rail:SetPoint('TOP',pair[1],'BOTTOM',0,-3);rail:SetPoint('BOTTOM',pair[2],'TOP',0,3);rail:SetWidth(math.max(17,N.PixelSize(rail,24)));rail.changed=changed
  rail.syncing=true;rail:SetMinMaxValues(0,math.max(1,maximum));rail:SetValue(math.min(maximum,math.max(0,value)));rail.syncing=false
  rail:SetShown(visible and bounds(pair)>16);rail:SetFrameLevel(pair[1]:GetFrameLevel()+1)
 end
@@ -4002,7 +4930,7 @@ function N.PanelScroll(parent, viewport, get, set, maximum, step)
  pair=W.MakeScrollPair(parent,function()scroll(-step)end,function()scroll(step)end)
  for i,button in ipairs(pair)do
   local edge=i==1 and 'TOP' or 'BOTTOM'
-  button:ClearAllPoints();button:SetSize(21,24);button:SetPoint(edge,viewport,edge..'RIGHT',12,i==1 and -3 or 3)
+  button:ClearAllPoints();button:SetSize(N.PixelSize(button,24),N.PixelSize(button,24));button:SetPoint(edge,viewport,edge..'RIGHT',12,i==1 and -3 or 3)
   button:SetFrameLevel(viewport:GetFrameLevel()+5)
  end
  viewport:EnableMouseWheel(true)
@@ -4022,7 +4950,6 @@ end
 function W.FitMap()
  local r=N.root;local map=r.recipeMap;local v=r.mapViewport
  v:ClearAllPoints();v:SetPoint('TOPLEFT',map,'TOPLEFT',8,-8);v:SetPoint('BOTTOMRIGHT',map,'BOTTOMRIGHT',-8,8);v:SetClipsChildren(true)
- ns.VisualPhaseB.Components.LayoutBorder(map,14)
  N.UpdateMapView()
 end
 -- Full-map textures are cropped in UV space as well as clipped. This keeps the
@@ -4489,7 +5416,7 @@ W.Layout=function(...)
  r.workflowGrip.glyph:SetTexture((compact and r.back.glyph or r.forward.glyph):GetTexture())
  r.workflowGrip:SetShown(not recipe);r.workflowGrip:ClearAllPoints();r.workflowGrip:SetPoint('CENTER',r.panels[1],'LEFT',0,0)
  if not r.recipeCompactGrip then
-  local b=N.MakeButton(r,'',22,function()W.SetView(N.mode=='compact'and'normal'or'recipes')end);r.recipeCompactGrip=b;b:SetSize(22,58);b:SetFrameLevel(r:GetFrameLevel()+30)
+  local b=N.PlainButton(r,'',22,function()W.SetView(N.mode=='compact'and'normal'or'recipes')end);r.recipeCompactGrip=b;b:SetSize(22,58);b:SetFrameLevel(r:GetFrameLevel()+30)
   b.glyph=b:CreateTexture(nil,'OVERLAY');b.glyph:SetSize(16,16);b.glyph:SetPoint('CENTER')
  end
  local grip=r.recipeCompactGrip;grip.glyph:SetTexture((recipe and r.forward.glyph or r.back.glyph):GetTexture());grip:ClearAllPoints();grip:SetPoint('CENTER',recipe and r.panels[2]or r.panels[3],'RIGHT',0,0);grip:SetShown(not compact or recipe)
@@ -4543,7 +5470,8 @@ local function material(id,name,kind,skill)
  if R.byID[id]then R.byID[id].skill=math.min(R.byID[id].skill,skill or 1);return end
  local m={id=id,name=name,kind=kind,skill=skill or 1};R.materials[#R.materials+1]=m;R.byID[id]=m
 end
-local materialNames={[11370]='Dark Iron Ore',[248815]='Heavy Thorium Ore',[2770]="Copper Ore",[2771]="Tin Ore",[2772]="Iron Ore",[2775]="Silver Ore",[2776]="Gold Ore",[3858]="Mithril Ore",[7911]="Truesilver Ore",[10620]="Thorium Ore",[2447]="Peacebloom",[765]="Silverleaf",[2449]="Earthroot",[785]="Mageroyal",[2450]="Briarthorn",[3820]="Stranglekelp",[2453]="Bruiseweed",[3355]="Wild Steelbloom",[3356]="Kingsblood",[3357]="Liferoot",[3818]="Fadeleaf",[3821]="Goldthorn",[3358]="Khadgar's Whisker",[8831]="Purple Lotus",[4625]="Firebloom",[8838]="Sungrass",[8845]="Ghost Mushroom",[8846]="Gromsblood",[13464]="Golden Sansam",[13463]="Dreamfoil",[13465]="Mountain Silversage",[13466]="Plaguebloom"}
+local materialNames={[11370]='Dark Iron Ore',[248815]='Heavy Thorium Ore',[2770]="Copper Ore",[2771]="Tin Ore",[2772]="Iron Ore",[2775]="Silver Ore",[2776]="Gold Ore",[3858]="Mithril Ore",[7911]="Truesilver Ore",[10620]="Thorium Ore",[2447]="Peacebloom",[765]="Silverleaf",[2449]="Earthroot",[785]="Mageroyal",[2450]="Briarthorn",[3820]="Stranglekelp",[2453]="Bruiseweed",[3355]="Wild Steelbloom",[3356]="Kingsblood",[3357]="Liferoot",[3818]="Fadeleaf",[3821]="Goldthorn",[3358]="Khadgar's Whisker",[8831]="Purple Lotus",[4625]="Firebloom",[8838]="Sungrass",[8845]="Ghost Mushroom",[8846]="Gromsblood",[13464]="Golden Sansam",[13463]="Dreamfoil",[13465]="Mountain Silversage",[13466]="Plaguebloom",
+ [3819]="Wintersbite",[8839]="Blindweed",[13467]="Icecap",[13468]="Black Lotus"}
 for id,m in pairs(F.meta)do if m.item and(m.kind=='Mining'or m.kind=='Herbalism')then local name=read(GetItemInfo,m.item);material(m.item,materialNames[m.item]or name or F.names[id]or('Item '..m.item),m.kind,m.skill)end end
 material(11370,'Dark Iron Ore','Mining',230)
 material(248815,'Heavy Thorium Ore','Mining',300)
@@ -4650,7 +5578,7 @@ local function orderZoneLoop(choice)
  end
  if #points==0 then ref.points={};choice.start=nil;return end
  -- Keep hand-traced bends. For node-only routes, leave isolated spawns off the circuit.
- if not ref.traced and #points>=7 then
+ if not ref.traced and not ref.preserveStops and #points>=7 then
   local gaps,ordered={},{}
   for i,point in ipairs(points)do
    local gap=math.huge
@@ -4692,7 +5620,7 @@ local function orderZoneLoop(choice)
    if x[1]~=y[1]then return x[1]<y[1]end
    return x[2]<y[2]
   end)
-  if #points>=6 then
+  if #points>=6 and not ref.preserveStops then
    local changed=true
    while changed and #points>4 do
     changed=false
@@ -4955,13 +5883,524 @@ function R.RecommendSelection(materials, ranks, scope)
  if here and (not best or #here.materials>=#best.materials)then return here end
  return best
 end
+local farmCategories={"Mining","Herbalism","Skinning","Tailoring","Fishing","Cooking","Specialty"}
+R.categories=farmCategories
+local sourceKinds={mine="Mining",herb="Herbalism",skin="Skinning",fish="Fishing",drop="Cloth"}
+local validCategories={}
+for _,name in ipairs(farmCategories) do validCategories[name]=true end
+
+-- BEGIN FOREVER CRAFT INPUTS
+-- Positive SpellReagents counts for profession spells in Forever client 1.60.1.70532
+local craftingReagents={}
+for _,id in ipairs({
+ 118, 159, 723, 729, 730, 731, 765, 769, 774, 783, 785, 814,
+ 818, 929, 1015, 1080, 1081, 1179, 1205, 1206, 1210, 1251, 1288, 1468,
+ 1475, 1529, 1645, 1705, 1708, 2251, 2289, 2312, 2313, 2318, 2319, 2320,
+ 2321, 2324, 2325, 2447, 2449, 2450, 2452, 2453, 2454, 2455, 2456, 2457,
+ 2458, 2459, 2570, 2589, 2592, 2594, 2596, 2604, 2605, 2672, 2673, 2674,
+ 2675, 2677, 2678, 2686, 2692, 2723, 2770, 2771, 2772, 2775, 2776, 2835,
+ 2836, 2838, 2840, 2841, 2842, 2863, 2870, 2880, 2886, 2894, 2924, 2928,
+ 2930, 2934, 2996, 2997, 3013, 3030, 3172, 3173, 3174, 3182, 3355, 3356,
+ 3357, 3358, 3369, 3371, 3372, 3383, 3385, 3389, 3390, 3391, 3404, 3466,
+ 3470, 3478, 3486, 3575, 3576, 3577, 3667, 3685, 3712, 3713, 3730, 3731,
+ 3818, 3819, 3820, 3821, 3823, 3824, 3827, 3829, 3857, 3858, 3859, 3860,
+ 3864, 4096, 4231, 4232, 4233, 4234, 4235, 4236, 4243, 4246, 4253, 4255,
+ 4265, 4289, 4291, 4304, 4305, 4306, 4320, 4337, 4338, 4339, 4340, 4341,
+ 4342, 4357, 4359, 4360, 4361, 4363, 4364, 4368, 4371, 4375, 4377, 4380,
+ 4382, 4385, 4387, 4389, 4394, 4397, 4399, 4400, 4402, 4404, 4405, 4407,
+ 4461, 4470, 4536, 4589, 4603, 4605, 4611, 4625, 4655, 5051, 5082, 5116,
+ 5173, 5373, 5465, 5466, 5467, 5468, 5469, 5470, 5471, 5498, 5500, 5503,
+ 5504, 5507, 5633, 5635, 5637, 5784, 5785, 5966, 6037, 6048, 6217, 6260,
+ 6261, 6289, 6291, 6303, 6308, 6317, 6338, 6358, 6359, 6361, 6362, 6370,
+ 6371, 6452, 6453, 6470, 6471, 6522, 6530, 6662, 6889, 7067, 7068, 7069,
+ 7070, 7071, 7072, 7075, 7076, 7077, 7078, 7079, 7080, 7081, 7082, 7191,
+ 7286, 7287, 7387, 7392, 7428, 7909, 7910, 7911, 7912, 7966, 7971, 7972,
+ 7974, 8146, 8150, 8151, 8152, 8153, 8154, 8165, 8167, 8168, 8169, 8170,
+ 8171, 8172, 8173, 8343, 8365, 8368, 8544, 8766, 8831, 8836, 8838, 8839,
+ 8845, 8846, 8923, 8924, 8925, 8949, 8951, 8959, 9060, 9061, 9206, 9210,
+ 9224, 9260, 9262, 10026, 10284, 10285, 10286, 10290, 10308, 10500, 10502, 10505,
+ 10507, 10518, 10543, 10546, 10558, 10559, 10560, 10561, 10576, 10577, 10586, 10588,
+ 10592, 10620, 10647, 10648, 10938, 10939, 10940, 10978, 10998, 11040, 11082, 11083,
+ 11084, 11128, 11134, 11135, 11137, 11138, 11139, 11144, 11174, 11175, 11176, 11177,
+ 11178, 11184, 11185, 11186, 11188, 11291, 11370, 11371, 11382, 11754, 12037, 12184,
+ 12202, 12203, 12204, 12205, 12206, 12207, 12208, 12223, 12359, 12360, 12361, 12363,
+ 12364, 12365, 12607, 12644, 12655, 12662, 12735, 12753, 12784, 12790, 12794, 12796,
+ 12797, 12799, 12800, 12803, 12804, 12808, 12809, 12810, 12811, 12938, 13180, 13422,
+ 13423, 13444, 13458, 13463, 13464, 13465, 13466, 13467, 13468, 13510, 13511, 13512,
+ 13513, 13754, 13755, 13756, 13758, 13759, 13760, 13888, 13889, 13890, 13893, 13926,
+ 14044, 14047, 14048, 14227, 14256, 14341, 14342, 14343, 14344, 14530, 15407, 15408,
+ 15409, 15410, 15412, 15414, 15415, 15416, 15417, 15419, 15420, 15422, 15423, 15564,
+ 15992, 15994, 16000, 16005, 16006, 16202, 16203, 16204, 16206, 16583, 17010, 17011,
+ 17012, 17034, 17035, 17056, 17194, 17196, 17202, 17203, 18168, 18240, 18251, 18255,
+ 18256, 18262, 18512, 18562, 18567, 18631, 18984, 18986, 19441, 19726, 19767, 19768,
+ 19774, 19943, 20381, 20424, 20498, 20500, 20501, 20520, 20725, 20867, 20868, 20870,
+ 20871, 20872, 20873, 20874, 20875, 20876, 20877, 20878, 20879, 20881, 20882, 21024,
+ 21071, 21153, 22202, 22203, 22682, 23567, 211422, 213369, 213370, 213371, 213372, 213373,
+ 213376, 213378, 213379, 213381, 213383, 215430, 220688, 220689, 221021, 221312, 227813, 234003,
+ 234004, 234005, 234006, 234007, 234008, 234009, 234010, 234011, 234012, 236656, 238737, 238786,
+ 238787, 238788, 239016, 239017, 247786, 248815, 248819, 248820, 248821, 248822, 248823, 248824,
+ 248825, 249274, 249391, 249399, 249409, 249410, 249424, 249425, 249426, 249427, 249428, 249429,
+ 249430, 249431, 249432, 249726, 249796, 251290, 251291, 251524, 252948, 255007, 255645, 260784,
+ 260794, 260796, 260799, 260801, 260804, 260808, 260813, 260815, 260823, 272941, 273125, 273127,
+ 273128, 273129, 273130, 273131, 274030,
+}) do craftingReagents[id]=true end
+-- END FOREVER CRAFT INPUTS
+function R.IsCraftingReagent(id)
+ return craftingReagents[id]==true
+end
+
+local specialty={[12938]=true}
+R.materialTier={[2770]=1,[2771]=2,[2775]=3,[2772]=4,[2776]=5,[3858]=6,[7911]=7,[11370]=8,[10620]=9,[248815]=10,
+ [2318]=1,[2319]=2,[4234]=3,[4304]=4,[8170]=5,
+ [2589]=1,[2592]=2,[4306]=3,[4338]=4,[14047]=5,[14256]=6}
+
+-- Yield IDs come from the Forever catalog, observed loot, and named vein loot tables.
+-- A node list limits coordinate inheritance to the vein variants with that yield.
+local veinYields, byproductIDs = {}, {}
+local function vein(ore, nodes, yields)
+ local entries=veinYields[ore] or {}
+ veinYields[ore]=entries
+ for _,item in ipairs(yields) do
+  local id,name=item[1],item[2]
+  if not R.byID[id] then material(id,name,"Mining",R.byID[ore] and R.byID[ore].skill or 1) end
+  byproductIDs[id]=true
+  local entry=entries[id] or {nodes={}}
+  entries[id]=entry
+  for _,node in ipairs(nodes) do entry.nodes[node]=true end
+ end
+end
+vein(2770,{201,1731,3763,562111},{{2835,"Rough Stone"}})
+vein(2770,{201,1731},{{818,"Tigerseye"},{774,"Malachite"},{1210,"Shadowgem"},{249391,"Pyrite"}})
+vein(2771,{202,1732,3764},{{2836,"Coarse Stone"}})
+vein(2771,{202,1732},{{1210,"Shadowgem"},{1206,"Moss Agate"},{1705,"Lesser Moonstone"},{1529,"Jade"},{249391,"Pyrite"}})
+vein(2775,{204,209,1733,73940,105569},{{1210,"Shadowgem"},{1206,"Moss Agate"},{1705,"Lesser Moonstone"},{249391,"Pyrite"}})
+vein(2772,{203,1735},{{2838,"Heavy Stone"},{1705,"Lesser Moonstone"},{1529,"Jade"},{3864,"Citrine"},{7909,"Aquamarine"},{249391,"Pyrite"}})
+vein(2776,{205,210,1734,73941},{{1705,"Lesser Moonstone"},{1529,"Jade"},{3864,"Citrine"},{249425,"Bauxite"}})
+vein(3858,{206,207,2040,123310},{{7912,"Solid Stone"},{3864,"Citrine"},{7909,"Aquamarine"},{7910,"Star Ruby"},{9262,"Black Vitriol"},{249425,"Bauxite"}})
+vein(5833,{220,19903},{{249425,"Bauxite"}})
+vein(7911,{208,211,2047,123309},{{3864,"Citrine"},{7909,"Aquamarine"},{7910,"Star Ruby"}})
+vein(11370,{217,165658},{{9262,"Black Vitriol"},{11754,"Black Diamond"},{11382,"Blood of the Mountain"}})
+vein(10620,{212,213,214,215,324,123848,175404,177388},{{12365,"Dense Stone"},{7910,"Star Ruby"},{12361,"Blue Sapphire"},{12799,"Large Opal"},{12800,"Azerothian Diamond"}})
+vein(10620,{213,214,324,123848},{{9262,"Black Vitriol"}})
+vein(10620,{212,215,175404,177388},{{12363,"Arcane Crystal"},{12364,"Huge Emerald"}})
+vein(248815,{4201,566779},{{12365,"Dense Stone"},{248819,"Fel Crystal"},{248820,"Torbernite"}})
+
+local leatherHides={[2318]={783,"Light Hide"},[2319]={4232,"Medium Hide"},[4234]={4235,"Heavy Hide"},
+ [4304]={8169,"Thick Hide"},[8170]={8171,"Rugged Hide"}}
+for leather,hide in pairs(leatherHides) do
+ if not R.byID[hide[1]] then material(hide[1],hide[2],"Skinning",R.byID[leather].skill) end
+ byproductIDs[hide[1]]=true
+end
+local groupOrder={["Ore Veins"]=1,Herbs=2,Leather=3,Scales=4,["Cloth Drops"]=5,
+ ["Fishing Pools"]=6,Fish=7,["Creature Drops"]=8,["Other Reagents"]=9,Specialty=10}
+local gatheringPools={}
+for _,data in pairs(fish) do gatheringPools[data[1]]=true end
+gatheringPools[21113]=true
+
+function R.MaterialGroup(m)
+ if m.categories.Specialty then return "Specialty" end
+ if veinYields[m.id] or (m.categories.Mining and m.name:find(" Ore$")) then return "Ore Veins" end
+ if m.sourceKinds.herb or m.categories.Herbalism then return "Herbs" end
+ if m.sourceKinds.skin or m.categories.Skinning then
+  local name=m.name:lower()
+  if name:find("scale") then return "Scales" end
+  if name:find("leather") then return "Leather" end
+ end
+ if m.kind=="Cloth" and R.materialTier[m.id] then return "Cloth Drops" end
+ if gatheringPools[m.id] then return "Fishing Pools" end
+ if m.sourceKinds.fish or m.categories.Fishing then return "Fish" end
+ if m.sourceKinds.drop then return "Creature Drops" end
+ return "Other Reagents"
+end
+
+local function materialOrder(a,b)
+ local ra=R.materialTier[a.id] or 100+(a.sortSkill or 1000)
+ local rb=R.materialTier[b.id] or 100+(b.sortSkill or 1000)
+ if ra~=rb then return ra<rb end
+ if a.name~=b.name then return a.name<b.name end
+ return a.id<b.id
+end
+
+function R.CompareMaterials(a,b)
+ local ga,gb=groupOrder[R.MaterialGroup(a)],groupOrder[R.MaterialGroup(b)]
+ if ga~=gb then return ga<gb end
+ return materialOrder(a,b)
+end
+
+function R.IsByproduct(m)
+ return byproductIDs[m.id]
+end
+
+function R.ByproductTitle(m)
+ return leatherHides[m.id] and (m.name.." hides") or ("From "..m.name.." veins")
+end
+
+function R.Byproducts(m,zone,category)
+ local list={}
+ for id in pairs(veinYields[m.id] or {}) do
+  local item=R.byID[id]
+  local available=zone and zone.veinYields and zone.veinYields[m.id]
+  if R.IsCraftingReagent(id) and (not zone or available and available[id])
+    and (not category or m.categories[category] or item.categories[category]) then
+   list[#list+1]=item
+  end
+ end
+ table.sort(list,function(a,b)
+  local stoneA,stoneB=a.name:find(" Stone$")~=nil,b.name:find(" Stone$")~=nil
+  if stoneA~=stoneB then return stoneA end
+  return a.name<b.name
+ end)
+ local hide=leatherHides[m.id]
+ if hide then
+  local item=R.byID[hide[1]]
+  if R.IsCraftingReagent(item.id) and (not zone or zone.items[item.id])
+    and (not category or m.categories[category] or item.categories[category]) then
+   list[#list+1]=item
+  end
+ end
+ return list
+end
+
+local function categoryFor(kind)
+ return kind=="Cloth" and "Tailoring" or kind
+end
+
+function R.LoadCatalog()
+ local catalog=ns.ForeverCatalog and ns.ForeverCatalog.reagents or {}
+ for _,m in ipairs(R.materials) do
+  m.categories=m.categories or {[categoryFor(m.kind)]=true}
+  m.sourceKinds={}
+ end
+ for _,node in pairs(F.meta) do
+  local m=R.byID[node.item]
+  if m and node.skill then m.sortSkill=math.min(m.sortSkill or node.skill,node.skill) end
+ end
+ for id,entry in pairs(catalog) do
+  local m=R.byID[id]
+  local kind=entry.sources and entry.sources[1] and sourceKinds[entry.sources[1].kind]
+  if not m then
+   material(id,entry.name or ("Item "..id),kind or "Cloth",entry.skill or 1)
+   m=R.byID[id]
+  end
+  if entry.name and m.name:match("^Item %d+$") then m.name=entry.name end
+  m.categories=m.categories or {}
+  m.sourceKinds=m.sourceKinds or {}
+  for _,source in ipairs(entry.sources or {}) do
+   m.sourceKinds[source.kind or "unknown"]=true
+   local node=F.meta[source.nodeID]
+   if source.kind=="herb" and node and node.kind=="Herbalism" and node.skill then
+    m.sortSkill=math.min(m.sortSkill or node.skill,node.skill)
+   end
+  end
+  m.sortSkill=m.sortSkill or entry.skill
+  for _,name in ipairs(entry.professions or {}) do
+   if validCategories[name] then m.categories[name]=true end
+  end
+  if not next(m.categories) and kind and kind~="Cloth" then m.categories[kind]=true end
+  if specialty[m.id] or m.name=="Blood of Heroes" or not next(m.categories) then m.categories={Specialty=true} end
+ end
+end
+
+local function coordinate(v)
+ return type(v)=="number" and v>=0 and v<=100
+end
+
+local function addSource(index,mapNames,m,map,name,source)
+ if type(map)~="number" then return end
+ local cached=mapNames[map]
+ if cached==nil then
+  local info=read(C_Map and C_Map.GetMapInfo,map)
+  cached=info and info.name or ""
+  if info and info.mapType and info.mapType~=3 then cached=false end
+  if cached=="" then
+   local catalog=ns.ForeverCatalog and ns.ForeverCatalog.zones
+   local entry=catalog and catalog[map]
+   cached=entry and entry.name or ""
+   if cached=="" then
+    for label,facts in pairs(ns.ForeverData.zones) do
+     if facts.mapID==map then cached=label;break end
+    end
+   end
+  end
+  mapNames[map]=cached
+ end
+ if cached==false then return end
+ if cached~="" then name=cached end
+ if not name or name=="" then return end
+ local zone=index[map]
+ if not zone then
+  zone={mapID=map,name=name,items={}}
+  index[map]=zone
+ end
+ local entries=zone.items[m.id]
+ if not entries then entries={};zone.items[m.id]=entries end
+ entries[#entries+1]=source
+end
+function R.BuildSourceIndex()
+ R.LoadCatalog()
+ F.LoadKnown()
+ local index,mapNames={},{}
+ local catalog=ns.ForeverCatalog and ns.ForeverCatalog.reagents or {}
+ for id,entry in pairs(catalog) do
+  for _,source in ipairs(entry.sources or {}) do
+   addSource(index,mapNames,R.byID[id],source.mapID,source.zone,source)
+  end
+ end
+ local function addVeinYields(m,map,name,node,source)
+  local yields=veinYields[m.id]
+  local zone=index[map]
+  if not yields or not zone or not node then return end
+  for id,yield in pairs(yields) do
+   if yield.nodes[node] then
+    zone.veinYields=zone.veinYields or {}
+    local confirmed=zone.veinYields[m.id] or {}
+    zone.veinYields[m.id]=confirmed
+    confirmed[id]=true
+    local key=source.routeEligible~=false and coordinate(source.x) and coordinate(source.y) and (source.x..":"..source.y)
+    if not key then
+     if not zone.items[id] then
+      addSource(index,mapNames,R.byID[id],map,name,{name=source.name,kind="mine",routeEligible=false,
+       provenance="Vein yield"})
+     end
+    else
+     zone.mappedYields=zone.mappedYields or {}
+     local mapped=zone.mappedYields[id]
+     if not mapped then
+      mapped={}
+      zone.mappedYields[id]=mapped
+      for _,point in ipairs(zone.items[id] or {}) do
+       if point.kind=="mine" and point.routeEligible~=false and coordinate(point.x) and coordinate(point.y) then
+        mapped[point.x..":"..point.y]=true
+       end
+      end
+     end
+     if not mapped[key] then
+      mapped[key]=true
+      addSource(index,mapNames,R.byID[id],map,name,{x=source.x,y=source.y,name=source.name,kind="mine",
+       nodeID=node,byproduct=true,provenance="Vein yield at a mapped node"})
+     end
+    end
+   end
+  end
+ end
+ for ore in pairs(veinYields) do
+  local entry=catalog[ore]
+  for _,source in ipairs(entry and entry.sources or {}) do
+   if source.kind=="mine" then addVeinYields(R.byID[ore],source.mapID,source.zone,source.nodeID,source) end
+  end
+ end
+ for _,ref in ipairs(R.references) do
+  local map=mapFor(ref.zone)
+  if map and ref.mode~="backtrack" then
+   for _,m in ipairs(R.materials) do
+    if R.Eligible(ref,m,math.max(m.skill or 1,ref.minSkill or 1),100,ref.faction) then
+     for _,point in ipairs(ref.points) do
+      addSource(index,mapNames,m,map,ref.zone,{x=point[1],y=point[2],minLevel=ref.minLevel,
+       name=ref.targets,faction=ref.faction,kind="mapped",provenance="Bundled route"})
+     end
+    end
+   end
+  end
+ end
+ for _,maps in pairs(F.known) do
+  for map,points in pairs(maps) do
+   for coord,id in pairs(points) do
+    local meta=F.meta[id]
+    local m=meta and R.byID[meta.item]
+    if m then
+     local x,y=F.Decode(coord)
+     addSource(index,mapNames,m,map,nil,{x=x,y=y,name=meta.name,kind="mapped",provenance="Bundled gathering map"})
+     if meta.kind=="Mining" then addVeinYields(m,map,nil,id,{x=x,y=y,name=meta.name}) end
+    end
+   end
+  end
+ end
+ for id,sites in pairs(ns.Forever.materialSites or {}) do
+  local m=R.byID[id]
+  if m then
+   for _,site in ipairs(sites) do
+    addSource(index,mapNames,m,site.mapID,site.zone,{x=site.x,y=site.y,name=site.name,kind="drop",
+     provenance="Personal loot observation"})
+   end
+  end
+ end
+ local observer=ns.GatheringObserver
+ for _,node in pairs(observer and observer.data and observer.data.nodes or {}) do
+  local meta=F.meta[node.sourceNodeID]
+  local m=meta and R.byID[meta.item]
+  local at=node.position
+  if m and at and not node.instanced then
+   addSource(index,mapNames,m,at.mapID,at.zone,{x=at.x,y=at.y,name=node.name,kind="mapped",
+    provenance="Personal gathering observation"})
+  end
+ end
+ for map,zone in pairs(index) do
+  zone.mappedYields=nil
+  for id in pairs(zone.items) do
+   if not R.IsCraftingReagent(id) then zone.items[id]=nil end
+  end
+  if not next(zone.items) then index[map]=nil end
+ end
+ return index
+end
+
+local function sourceQuality(source,level)
+ local difficulty=1
+ if source.minLevel or source.maxLevel then
+  local enemy=((source.minLevel or source.maxLevel)+(source.maxLevel or source.minLevel))/2
+  difficulty=1+math.max(0,enemy-level+1)^1.4/4
+ end
+ if source.elite or source.rank==1 or source.rank==2 or source.rank==3 then difficulty=difficulty*3 end
+ local measured=type(source.rate)=="number" and source.rate>=0 and source.rate<=1
+ local samples=type(source.sampleSize)=="number" and math.max(0,source.sampleSize) or 0
+ local baseline=(source.kind=="drop" or source.kind=="skin" or source.byproduct) and .09 or .28
+ local estimate=measured and (source.rate*samples+baseline*20)/(samples+20) or baseline
+ if measured and samples==0 then estimate=(source.rate+baseline)/2 end
+ local density=type(source.density)=="number" and math.min(40,math.max(0,source.density)) or 0
+ estimate=estimate*(1+density/80)
+ return estimate/difficulty,measured and samples>0
+end
+
+local function destinationCost(map,point,p)
+ if not p then return nil end
+ local distance=yards(map,point[1],point[2],p)
+ if distance then return distance end
+ if map==p.mapID then
+  return math.sqrt((point[1]-p.x*100)^2+(point[2]-p.y*100)^2)*100
+ end
+end
+
+local function pairDistance(a,b)
+ return math.sqrt((a[1]-b[1])^2+(a[2]-b[2])^2)
+end
+
+local function pickStops(zone,materials,p,level,faction)
+ local sources,seedList={},{}
+ local areas=deadEnds[zone.name] or {}
+ for _,m in ipairs(materials) do
+  local candidates={}
+  local seen={}
+  for _,source in ipairs(zone.items[m.id]) do
+   if (not source.faction or source.faction==faction) and coordinate(source.x) and coordinate(source.y)
+     and source.routeEligible~=false then
+    local key=math.floor(source.x*2)..":"..math.floor(source.y*2)
+    local quality,measured=sourceQuality(source,level)
+    local point={source.x,source.y,quality=quality,measured=measured,source=source}
+    if outsideDeadEnds(point,point,areas) and (not seen[key] or seen[key].quality<quality) then seen[key]=point end
+   end
+  end
+  for _,point in pairs(seen) do candidates[#candidates+1]=point end
+  if #candidates==0 then return end
+  table.sort(candidates,function(a,b)
+   if a.quality~=b.quality then return a.quality>b.quality end
+   if a[1]~=b[1] then return a[1]<b[1] end
+   return a[2]<b[2]
+  end)
+  sources[m.id]=candidates
+  -- Use well-spaced anchors to evaluate several distinct clusters in the same zone.
+  local anchors={}
+  for _,point in ipairs(candidates) do
+   local near=false
+   for _,other in ipairs(anchors) do
+    if pairDistance(point,other)<8 then near=true;break end
+   end
+   if not near then
+    anchors[#anchors+1]=point
+    seedList[#seedList+1]=point
+    if #anchors>=18 then break end
+   end
+  end
+ end
+ local best
+ for _,seed in ipairs(seedList) do
+  local points,totalYield,measured={},0,false
+  for _,m in ipairs(materials) do
+   local candidates=sources[m.id]
+   local ranked,density={},0
+   for _,point in ipairs(candidates) do
+    local gap=pairDistance(seed,point)
+    if gap<=12 then density=density+1 end
+    ranked[#ranked+1]={point=point,utility=point.quality/(1+gap/4)}
+   end
+   table.sort(ranked,function(a,b)
+    if a.utility~=b.utility then return a.utility>b.utility end
+    if a.point[1]~=b.point[1] then return a.point[1]<b.point[1] end
+    return a.point[2]<b.point[2]
+   end)
+   local first=ranked[1].point
+   points[#points+1]=first
+   totalYield=totalYield+first.quality*(1+math.min(density,12)/12)
+   measured=measured or first.measured
+   for _,v in ipairs(ranked) do
+    if v.point~=first and pairDistance(v.point,first)>=2 and pairDistance(v.point,seed)<=9 then
+     points[#points+1]=v.point
+     if #points>=24 then break end
+     local tail=#points
+     if tail>=2 and points[tail-1]~=first then break end
+    end
+   end
+  end
+  local start,cost=1,nil
+  for i,point in ipairs(points) do
+   local distance=destinationCost(zone.mapID,point,p)
+   if distance and (not cost or distance<cost) then start,cost=i,distance end
+  end
+  local choice={mapID=zone.mapID,materials=materials,start=start,cost=cost,measured=measured,
+   reference={zone=zone.name,points=points,preserveStops=true}}
+  orderZoneLoop(choice)
+  if choice.start then
+   local ref=choice.reference
+   local travel=0
+   local count=ref.mode=="loop" and #ref.points or #ref.points-1
+   for i=1,count do travel=travel+pairDistance(ref.points[i],ref.points[i%#ref.points+1]) end
+   choice.score=totalYield/(1+travel/24+(cost or 16000)/18000)
+   if not best or choice.score>best.score then best=choice end
+  end
+ end
+ return best
+end
+
+function R.MatchZones(index,materials,p,level,faction)
+ if #materials==0 then return {},{} end
+ p=p or pos()
+ level=level or read(UnitLevel,"player") or 1
+ faction=faction or read(UnitFactionGroup,"player")
+ local choices,overlap={},{}
+ for _,zone in pairs(index) do
+  local available={}
+  for id,entries in pairs(zone.items) do
+   for _,source in ipairs(entries) do
+    if not source.faction or source.faction==faction then available[id]=true;break end
+   end
+  end
+  local match=true
+  for _,m in ipairs(materials) do if not available[m.id] then match=false;break end end
+  if match then
+   for id in pairs(available) do overlap[id]=true end
+   choices[#choices+1]=pickStops(zone,materials,p,level,faction)
+    or {mapID=zone.mapID,reference={zone=zone.name,points={}},materials=materials}
+  end
+ end
+ table.sort(choices,function(a,b)
+  if (a.cost or math.huge)~=(b.cost or math.huge) then return (a.cost or math.huge)<(b.cost or math.huge) end
+  if a.reference.zone~=b.reference.zone then return a.reference.zone<b.reference.zone end
+  return a.mapID<b.mapID
+ end)
+ local best
+ for _,choice in ipairs(choices) do
+  if choice.start and (not best or choice.score>best.score) then best=choice end
+ end
+ if best then best.recommendation="Recommended" end
+ return choices,overlap
+end
+
 local oldPlan=F.Plan
 function F.Plan(kind,item,limit)
  local choice=R.request;if not choice then return oldPlan(kind,item,limit)end
  local ref=choice.reference;local nodes={};local pts=ref.points;local ordered={}
  if ref.mode=='backtrack'then for i=choice.start,#pts do ordered[#ordered+1]=i end;for i=#pts-1,1,-1 do ordered[#ordered+1]=i end;for i=2,choice.start-1 do ordered[#ordered+1]=i end
  elseif ref.mode=='open'then for i=1,#pts do ordered[#ordered+1]=i end
- else for n=0,#pts do ordered[#ordered+1]=(choice.start+n-1)%#pts+1 end end
+ else for n=0,#pts-1 do ordered[#ordered+1]=(choice.start+n-1)%#pts+1 end end
  for _,i in ipairs(ordered)do local v=pts[i];nodes[#nodes+1]={mapID=choice.mapID,x=v[1],y=v[2],name=ref.zone..' '..kind..' Route',profession=kind,item=item,routeWaypoint=true}end
  return nodes,nil,{mapID=choice.mapID}
 end
@@ -5049,9 +6488,10 @@ end)(...)
 ;(function(...)
 local _,ns=...;local N,P,F,R,W=ns.NormalUI,ns.ProfessionGuide,ns.FarmingPlanner,ns.MaterialRoutes,ns.WindowWorkflow
 if not(N and P and F and R and W)then return end
-local C=ns.Retail.Client
+local C,E=ns.Retail.Client,ns.Forever
 local AS='Interface\\AddOns\\GrindingForever\\Media\\'
 local K={pins={},targets={},markers={},ticks={},world={},worldCount=0,age=1,selected={}}
+K.professionPinTexture=AS..'BronzeProfessionTools'
 ns.NavigationCompass=K
 local function read(fn,...)if type(fn)=='function'then local ok,a,b,c=pcall(fn,...);if ok then return a,b,c end end end
 local function wrap(a)return(a+math.pi)%(math.pi*2)-math.pi end
@@ -5090,7 +6530,7 @@ function K.Flag(record,loc)
  if not world(loc)then return false end;local key=K.FlagKey(record,loc)
  if K.Unpin(key)then return true end
  local n=0;for _ in pairs(K.pins)do n=n+1 end;if n>=6 then ns.Print('Unpin a recipe source before adding another.');return false end
- K.pins[key]={key=key,name=loc.name or record.name,zone=loc.zone,location=loc,icon=AS..'RecipePin',pin=true};K.age=1;return true
+ K.pins[key]={key=key,name=loc.name or record.name,zone=loc.zone,location=loc,icon=K.professionPinTexture,professionPin=true,pin=true};K.age=1;return true
 end
 K.questIcon='Interface\\TargetingFrame\\UI-RaidTargetingIcon_3'
 K.manualPinAtlas='Waypoint-MapPin-Tracked'
@@ -5349,7 +6789,7 @@ function K.Collect()
  local rows={};local d=read(P.Destination);local row=P.selected
  if d and not N.gpsSuppressed and not N.areaNavigation then
   local id=d.materialID or F.route and F.route.item or row and(row.materialID or row.itemID)
-  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\AddOns\\GrindingForever\\Media\\RecipePin',active=true,pin=not id}
+  rows[1]={key='active',name=d.name or row and row.title or'Current Objective',zone=d.zone,location=d,icon=id and icon(id)or'Interface\\AddOns\\GrindingForever\\Media\\RecipePin',active=true,pin=not id,professionPin=row and (row.kind=='recipe' or row.kind=='farmRecipe')}
  end
  local route=F.route;local p=position()
  if route and route.multiMaterials then
@@ -5399,10 +6839,43 @@ function K.ShowRouteMap()
  end
  frame:SetMapID(mapID)
 end
+local directions={"N","NE","E","SE","S","SW","W","NW"}
+local function compassText(frame,pixels,value)
+ local label=text(frame,N.PixelSize(frame,pixels),value)
+ label:SetTextColor(232/255,218/255,176/255)
+ label:SetShadowColor(.07,.043,.027,.95)
+ label:SetShadowOffset(N.PixelSize(frame,1),-N.PixelSize(frame,1))
+ return label
+end
+
 function K.Ensure()
  if K.frame then return end
- local f=CreateFrame('Frame',nil,UIParent);K.frame=f;f:SetSize(744,66);f:SetPoint('TOP',UIParent,'TOP',0,-55);f:SetFrameStrata('HIGH');f:SetClampedToScreen(true);f:EnableMouse(true);f:SetMovable(true);f:RegisterForDrag('LeftButton');f:SetScript('OnDragStart',f.StartMoving);f:SetScript('OnDragStop',f.StopMovingOrSizing)
+ local f=CreateFrame('Frame',nil,UIParent);K.frame=f;f:SetSize(744,66);f:SetPoint('TOP',UIParent,'TOP',0,-55);f:SetFrameStrata('HIGH');f:SetClampedToScreen(true);f:EnableMouse(true);f:SetMovable(true);f:RegisterForDrag('LeftButton');f:SetScript('OnDragStart',f.StartMoving);f:SetScript('OnDragStop',function()f:StopMovingOrSizing();N.SnapPanel(f)end)
  N.PanelChrome(f,nil,320,52)
+ local function saveCompass()
+  if not E.db then return end
+  local point,relative,relativePoint,x,y=f:GetPoint(1)
+  local unit=N.PixelSize(f,1)
+  E.db.compassFrame={width=math.floor(f:GetWidth()/unit+.5),height=math.floor(f:GetHeight()/unit+.5)}
+  if point and (not relative or relative==UIParent) and type(x)=='number' and type(y)=='number' then
+   E.db.compassFrame.point={point,relativePoint or point,x,y}
+  end
+ end
+ local function restoreCompass()
+  local saved=E.db and E.db.compassFrame
+  if type(saved)~='table' then return end
+  local unit,p,minW,minH,maxW,maxH=N.ApplySizeProfile(f,'compass')
+  local w=tonumber(saved.width) or p[3]
+  local h=tonumber(saved.height) or p[4]
+  f:SetSize(math.max(minW,math.min(w,maxW))*unit,math.max(minH,math.min(h,maxH))*unit)
+  local a=saved.point
+  if type(a)=='table' and type(a[1])=='string' and type(a[2])=='string' and type(a[3])=='number' and type(a[4])=='number' then
+   f:ClearAllPoints();f:SetPoint(a[1],UIParent,a[2],a[3],a[4]);N.SnapPanel(f)
+  end
+ end
+ f.gfSaveFrame=saveCompass
+ restoreCompass()
+ f:HookScript('OnDragStop',saveCompass)
  f:HookScript('OnSizeChanged',function()K.lastFacing=nil end)
  local routeButton=CreateFrame('Button',nil,f)
  routeButton:SetSize(32,32);routeButton:SetPoint('CENTER',f,'CENTER');routeButton:Hide()
@@ -5418,11 +6891,25 @@ function K.Ensure()
  K.routeButton=routeButton
  K.routeArrow=routeButton:CreateTexture(nil,'OVERLAY')
  K.routeArrow:SetTexture(N.ProjectedArrowAsset());K.routeArrow:SetAllPoints()
- K.caption=text(f,19);K.caption:SetTextColor(.94,.82,.55);K.caption:SetPoint('TOP',f,'BOTTOM',0,-20);K.caption:SetPoint('LEFT',f,'LEFT',18,0);K.caption:SetPoint('RIGHT',f,'RIGHT',-18,0);K.caption:SetJustifyH('CENTER')
- K.headingStatus=text(f,15,'Compass heading unavailable');K.headingStatus:SetPoint('CENTER');K.headingStatus:SetTextColor(.94,.82,.55);K.headingStatus:Hide()
- for i=0,47 do local line=f:CreateTexture(nil,'ARTWORK');line:SetColorTexture(.9,.68,.36,1);line:SetSize(1.25,i%6==0 and 10 or 5);local t=text(f,15,({[0]='N',[6]='NE',[12]='E',[18]='SE',[24]='S',[30]='SW',[36]='W',[42]='NW'})[i]);t:SetTextColor(.94,.81,.54);K.ticks[i]={line=line,label=t,bearing=-i*math.pi/24}end
- for i=1,15 do local b=CreateFrame('Button',nil,f);b:SetSize(28,28);b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetAllPoints()
-  b.arrow=texture(b,'ControlTriangleRight','OVERLAY');b.arrow:SetSize(7,7);b.arrow:SetRotation(math.pi/2);b.arrow:SetPoint('BOTTOM',b,'CENTER',0,-15);b.arrow:Hide()
+ local captionInset=N.PixelSize(f,18)
+ K.caption=compassText(f,14)
+ K.caption:SetPoint('TOPLEFT',f,'BOTTOMLEFT',captionInset,-N.PixelSize(f,12))
+ K.caption:SetPoint('TOPRIGHT',f,'BOTTOMRIGHT',-captionInset,-N.PixelSize(f,12))
+ K.caption:SetJustifyH('CENTER')
+ K.headingStatus=compassText(f,13,'Compass heading unavailable');K.headingStatus:SetPoint('CENTER');K.headingStatus:Hide()
+ for i=0,47 do
+  local major=i%6==0
+  local line=f:CreateTexture(nil,'ARTWORK')
+  line:SetTexture(AS..'BronzeCompassTick')
+  line:SetSize(N.PixelSize(f,major and 3 or 2),N.PixelSize(f,major and 16 or 10))
+  local label
+  if major then
+   label=compassText(f,14,directions[i/6+1])
+  end
+  K.ticks[i]={line=line,label=label,bearing=-i*math.pi/24}
+ end
+ for i=1,15 do local b=CreateFrame('Button',nil,f);b:SetSize(28,28);b.icon=b:CreateTexture(nil,'ARTWORK')
+  b.arrow=texture(b,'BronzeCompassUp','OVERLAY');b.arrow:SetSize(N.PixelSize(f,9),N.PixelSize(f,9));b.arrow:SetPoint('TOP',b,'BOTTOM',0,-N.PixelSize(f,3));b.arrow:Hide()
   b:RegisterForClicks('RightButtonUp')
   b:SetScript('OnClick',function(self)
    if self.target and K.pins[self.target.key]==self.target and K.Unpin(self.target.key) then
@@ -5445,7 +6932,7 @@ function K.Update(elapsed)
   if not K.headingUnavailable then
    K.headingUnavailable=true;K.lastFacing=nil;K.captionText=nil;K.arrowRevision=nil
    for _,b in ipairs(K.markers)do b:Hide()end
-   for _,tick in pairs(K.ticks)do tick.line:Hide();tick.label:Hide()end
+   for _,tick in pairs(K.ticks)do tick.line:Hide();if tick.label then tick.label:Hide() end end
    K.caption:SetText('');K.headingStatus:Show();K.routeButton:Hide()
   end
   return
@@ -5464,19 +6951,48 @@ function K.Update(elapsed)
  end
  if K.headingUnavailable then K.headingUnavailable=nil;K.headingStatus:Hide()end
  if K.lastFacing==facing and K.lastRevision==K.revision then return end;K.lastFacing=facing;K.lastRevision=K.revision
- local width=math.max(1,K.frame:GetWidth()-36);local span=math.pi
- for _,t in pairs(K.ticks)do local a=wrap(t.bearing-facing);local show=math.abs(a)<=span/2;local x=-a/span*width;t.line:SetShown(show);t.label:SetShown(show);if show then t.line:ClearAllPoints();t.line:SetPoint('BOTTOM',K.frame,'BOTTOM',x,9);t.label:ClearAllPoints();t.label:SetPoint('TOP',K.frame,'TOP',x,-10)end end
+ local width=math.max(1,K.frame:GetWidth()-N.PixelSize(K.frame,44));local span=math.pi
+ for _,t in pairs(K.ticks) do
+  local a=wrap(t.bearing-facing)
+  local show=math.abs(a)<=span/2
+  local x=-a/span*width
+  t.line:SetShown(show)
+  if t.label then t.label:SetShown(show) end
+  if show then
+   t.line:ClearAllPoints();t.line:SetPoint('BOTTOM',K.frame,'BOTTOM',x,N.PixelSize(K.frame,11))
+   if t.label then
+    t.label:ClearAllPoints();t.label:SetPoint('TOP',K.frame,'TOP',x,-N.PixelSize(K.frame,15))
+   end
+  end
+ end
  local focus
  for i,b in ipairs(K.markers)do local r=K.targets[i]
   if r and r.bearing then local a=wrap(r.bearing-facing);local clipped=math.max(-span/2,math.min(span/2,a));local x=-clipped/span*width
    b.target=r
    local manualPin=K.pins[r.key]==r and not r.customIcon
-   local atlas=manualPin and b.icon.SetAtlas and pcall(b.icon.SetAtlas,b.icon,K.manualPinAtlas)
-   local nativePin=atlas and (not b.icon.GetAtlas or b.icon:GetAtlas()==K.manualPinAtlas)
-   if not nativePin then
+   b.icon:ClearAllPoints()
+   local defaultPin=not r.professionPin and (manualPin or (r.pin and not r.customIcon))
+   if r.professionPin then
+    b.icon:SetTexture(K.professionPinTexture)
+    b.icon:SetTexCoord(0,1,0,1)
+    b:SetSize(N.PixelSize(K.frame,27),N.PixelSize(K.frame,27))
+   elseif defaultPin then
+    b.icon:SetTexture(AS..'BronzeCompassCenteredPin')
+    b.icon:SetTexCoord(.5/64,63.5/64,.5/128,127.5/128)
+    b:SetSize(N.PixelSize(K.frame,16),N.PixelSize(K.frame,32))
+   else
     b.icon:SetTexture(r.icon);b.icon:SetTexCoord(0,1,r.professionButton and 23/64 or 0,r.pin and .75 or 1)
+    b:SetSize(r.pin and 24 or r.active and 32 or 28,r.professionButton and 34 or r.pin and 36 or r.active and 32 or 28)
    end
-   b:SetSize(nativePin and 28 or r.pin and 24 or r.active and 32 or 28,nativePin and 28 or r.professionButton and 34 or r.pin and 36 or r.active and 32 or 28);b:ClearAllPoints();b:SetPoint('CENTER',K.frame,'CENTER',x,0);b.arrow:SetShown(r.active==true);b:SetAlpha(r.resource and (.25+.75*math.min(1,r.distance/40)) or 1);b:Show();if r.active then focus=r end
+   b.icon:SetPoint('CENTER',b,'CENTER')
+   b.icon:SetSize(b:GetWidth(),b:GetHeight())
+   -- The rail centers are inset 8 px from the top and 10 px from the bottom.
+   local y=N.PixelSize(K.frame,defaultPin and 1 or (r.active and 4 or 0))
+   b:ClearAllPoints();b:SetPoint('CENTER',K.frame,'CENTER',x,y)
+   b.arrow:ClearAllPoints();b.arrow:SetPoint('TOP',b,'BOTTOM',0,-N.PixelSize(K.frame,3))
+   b.arrow:SetShown(r.active==true and not defaultPin)
+   b:SetAlpha(r.resource and (.25+.75*math.min(1,r.distance/40)) or 1)
+   b:Show();if r.active then focus=r end
   else b:Hide()end
  end
  local caption=focus and(focus.name..'\n'..(focus.zone and focus.zone..' - 'or'')..math.floor(focus.distance+.5)..' yd')or''
@@ -5493,7 +7009,7 @@ function K.Settings()
  if N.arrowToggle then N.arrowToggle:Hide()end
  f:SetWidth(332);f:SetHeight(382);f:EnableMouse(true);f:SetFrameStrata('TOOLTIP');f:SetFrameLevel(N.root:GetFrameLevel()+200)
  for i,b in ipairs({N.autoFlightToggle,N.autoAcceptToggle,N.autoTurninToggle})do b:SetCheckedVisual(ns.Forever.db[({'autoFlights','autoAcceptQuests','autoTurnInQuests'})[i]]==true);b:ClearAllPoints();b:SetPoint('TOPLEFT',f,'TOPLEFT',18,-64-(i-1)*40);b:SetWidth(294)end
- if not K.rule then K.rule=f:CreateTexture(nil,'ARTWORK');K.rule:SetColorTexture(.45,.31,.12,1);K.rule:SetSize(294,1);K.rule:SetPoint('TOPLEFT',f,'TOPLEFT',18,-48)end
+ if not K.rule then K.rule=f:CreateTexture(nil,'ARTWORK');N.BronzeRail(K.rule,"TOP");K.rule:SetAlpha(.65);K.rule:SetSize(294,1);K.rule:SetPoint('TOPLEFT',f,'TOPLEFT',18,-48)end
  K.Sync()
 end
 local function materialName(m)return m.name end
@@ -5524,12 +7040,14 @@ function R.StartSelection()
  if #materials==0 then return false,'Select at least one resource.'end
  if read(IsInInstance)then return false,'Use an outdoor farming route.'end
  local ranks={}
+ if not selectedCard then
  for _,m in ipairs(materials) do
   local rank=m.kind=='Cloth' and 1 or F.Skill(m.kind)
   if not rank or rank<(m.skill or 0) then return false,'Requires '..m.kind..' '..tostring(m.skill or 1)..' for '..m.name..'.' end
   ranks[m.id]=rank
   if m.kind=='Mining' and (read(C_Item and C_Item.GetItemCount or GetItemCount,2901,false) or 0)<1 then return false,'Carry a Mining Pick.' end
   if m.kind=='Skinning' and (read(C_Item and C_Item.GetItemCount or GetItemCount,7005,false) or 0)<1 then return false,'Carry a Skinning Knife.' end
+ end
  end
  local choice,why=K.confirmed
  K.confirmed=nil
@@ -5668,172 +7186,485 @@ local settings=K.Settings
 K.Settings=function(...)local v=settings(...);if N.recordStatus then N.recordStatus:Hide();N.recordStatus:SetText('')end;local d=ns.db;if d and not d.gpsSize99 then d.gpsSize99=true;N.SetArrowSize(55)end;local d=ns.db;if d and not d.gpsSize99 then d.gpsSize99=true;N.SetArrowSize(55)end;return v end
 local sync=K.Sync
 K.Sync=function(...)local v=sync(...);for _,b in ipairs(N.root and N.root.recipeRows or{})do if b.compassFlag then b.compassFlag:SetAlpha(K.PinAvailable()and 1 or .45)end end;return v end
--- Explicit solid paper base prevents transparent source gutters/backdrop layers obscuring labels.
-function R.Fill()
- if not R.body then return end
- local list={};for _,m in ipairs(R.materials)do list[#list+1]=m end;table.sort(list,function(a,b)return a.name<b.name end)
- local rows=math.ceil(#list/5);R.body:SetHeight(math.max(1,rows*100))
- for i,m in ipairs(list)do local b=R.buttons[i]
-  if not b then
-   b=CreateFrame('Button',nil,R.body);R.buttons[i]=b;b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetSize(36,36);b.icon:SetPoint('TOP',b,'TOP',-8,-8)
-   b.label=text(b,16);b.label:SetPoint('TOPLEFT',b,'TOPLEFT',3,-50);b.label:SetWidth(112);b.label:SetHeight(42);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true)
-   b.check=CreateFrame('CheckButton',nil,b,'UICheckButtonTemplate');b.check:SetSize(23,23);b.check:SetPoint('TOPRIGHT',b,'TOPRIGHT',-3,-13);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end)
-   b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.17);b:SetScript('OnClick',function(self)R.ToggleMaterial(self.material)end)
-  end
-  b.material=m;b:SetSize(120,98);b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((i-1)%5)*124,-math.floor((i-1)/5)*100);b.icon:SetTexture(icon(m.id));b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:SetChecked(K.selected[m.id]==true);b.wash:SetShown(K.selected[m.id]==true);b:Show()
- end
- for i=#list+1,#R.buttons do R.buttons[i]:Hide()end
- local n=0;for _ in pairs(K.selected)do n=n+1 end;K.count:SetText(n..' Resources Selected')
- if K.resourceBar then K.resourceBar:SetShown(R.body:GetHeight()>K.gridHeight)end
+local function farmPlace(widget,parent,x,y,w,h)
+ widget:ClearAllPoints()
+ widget:SetPoint("TOPLEFT",parent,"TOPLEFT",x,-y)
+ widget:SetSize(w,h)
 end
+
+local function farmList(parent)
+ local scroll=CreateFrame("ScrollFrame",nil,parent)
+ local contents=CreateFrame("Frame",nil,scroll)
+ contents:SetSize(1,1)
+ scroll:SetScrollChild(contents)
+ scroll:SetClipsChildren(true)
+ scroll:EnableMouseWheel(true)
+ local function limit()
+  return scroll:IsShown() and math.max(0,contents:GetHeight()-scroll:GetHeight()) or 0
+ end
+ local sync=N.PanelScroll(parent,scroll,function()return scroll:GetVerticalScroll()end,
+  function(y)scroll:SetVerticalScroll(y)end,limit,64)
+ return scroll,contents,function(reset)
+  scroll:SetVerticalScroll(reset and 0 or math.min(limit(),scroll:GetVerticalScroll()or 0))
+  sync()
+ end
+end
+
+local function tooltip(widget,title,detail)
+ if not GameTooltip then return end
+ GameTooltip:SetOwner(widget,"ANCHOR_RIGHT")
+ GameTooltip:AddLine(title)
+ if detail and detail~="" then GameTooltip:AddLine(detail,1,.9,.7,true) end
+ GameTooltip:Show()
+end
+
+local function hideTip()
+ if GameTooltip then GameTooltip:Hide() end
+end
+
+local function buildResource(parent)
+ local b=CreateFrame("Button",nil,parent)
+ b.icon=b:CreateTexture(nil,"ARTWORK")
+ b.tick=b:CreateTexture(nil,"OVERLAY");b.tick:SetPoint("BOTTOMRIGHT",b.icon,"BOTTOMRIGHT",4,-2);b.tick:SetSize(17,17)
+ b.tick:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+ b.wash=b:CreateTexture(nil,"BACKGROUND");b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.20)
+ b.label=text(b,14)
+ b.label:SetJustifyH("CENTER");b.label:SetJustifyV("TOP");b.label:SetWordWrap(true)
+ b:SetScript("OnClick",function(self)R.ToggleMaterial(self.material)end)
+ b:SetScript("OnEnter",function(self)
+  if not self.openYields or not self.openYields(self) then tooltip(self,self.material.name,self.note) end
+ end)
+ b:SetScript("OnLeave",hideTip)
+ return b
+end
+
+local function fillResource(tile,m,height,unit,selected,choices,compatible)
+ tile.material=m
+ local checked=K.selected[m.id]==true
+ local faded=#selected>0 and #choices>0 and not checked and not compatible[m.id]
+ tile.note=faded and "No catalogued overlap with this selection." or nil
+ local entry=ns.ForeverCatalog and ns.ForeverCatalog.reagents and ns.ForeverCatalog.reagents[m.id]
+ tile.icon:SetTexture(entry and entry.icon or icon(m.id))
+ tile.icon:SetSize(36*unit,36*unit);tile.icon:ClearAllPoints();tile.icon:SetPoint("TOP",0,-4*unit)
+ tile.labelSize=(tile.isByproduct or #m.name>=18) and 12 or 14
+ local font,_,flags=tile.label:GetFont()
+ tile.label:SetFont(font,tile.labelSize*unit,flags)
+ tile.label:ClearAllPoints()
+ tile.label:SetPoint("TOPLEFT",3*unit,-43*unit);tile.label:SetPoint("TOPRIGHT",-3*unit,-43*unit)
+ tile.label:SetText(m.name);tile.label:SetHeight(height-47*unit)
+ tile.wash:SetShown(checked);tile.tick:SetShown(checked);tile:SetAlpha(faded and .44 or 1)
+end
+
+local function lineBetween(line,plot,a,b,w,h)
+ local x,y=a[1]*w/100,-a[2]*h/100
+ local u,v=b[1]*w/100,-b[2]*h/100
+ if line.SetStartPoint then
+  line:SetStartPoint("TOPLEFT",plot,x,y);line:SetEndPoint("TOPLEFT",plot,u,v)
+ else
+  line:ClearAllPoints()
+  line:SetPoint("CENTER",plot,"TOPLEFT",(x+u)/2,(y+v)/2)
+  line:SetSize(math.max(1,math.sqrt((u-x)^2+(v-y)^2)),2)
+  line:SetRotation(math.atan2(v-y,u-x))
+ end
+ line:Show()
+end
+
+local function buildRouteCard(parent,openRoute)
+ local card=CreateFrame("Button",nil,parent)
+ N.BronzeRectangle(card)
+ local base=card:CreateTexture(nil,"BACKGROUND");base:SetAllPoints();base:SetColorTexture(.19,.108,.052,1)
+ local over=card:CreateTexture(nil,"HIGHLIGHT");over:SetAllPoints();over:SetColorTexture(.99,.85,.53,.12)
+ card.plot=CreateFrame("Frame",nil,card);card.plot:EnableMouse(false)
+ card.map=card.plot:CreateTexture(nil,"BACKGROUND");card.map:SetAllPoints()
+ card.title=text(card,15);card.title:SetTextColor(1,.88,.60);card.title:SetWordWrap(false)
+ card.subtitle=text(card,12);card.subtitle:SetTextColor(.99,.91,.73);card.subtitle:SetWordWrap(false)
+ card.lines={}
+ card.dot=card.plot:CreateTexture(nil,"OVERLAY");card.dot:SetSize(6,6);card.dot:SetColorTexture(.98,.72,.36,1)
+ card:SetScript("OnEnter",function(self)
+  local choice=self.choice
+  local selected={}
+  for _,m in ipairs(choice.materials) do selected[#selected+1]=m.name end
+  tooltip(self,choice.reference.zone,table.concat(selected,", ").."\n"..(self.note or ""))
+ end)
+ card:SetScript("OnLeave",hideTip)
+ card:SetScript("OnClick",function(self)
+  if self.choice.start then hideTip();openRoute(self.choice) end
+ end)
+ return card
+end
+
+local function fillRouteCard(card,choice,width)
+ card.choice=choice
+ local pad=N.PixelSize(card,8)
+ local ref=choice.reference
+ local art=ns.ForeverFacts.maps[ref.zone]
+ local height=0
+ if art then
+  local w=width-2*pad
+  height=w*683/1024
+  farmPlace(card.plot,card,pad,pad,w,height);card.plot:Show()
+  card.map:SetTexture(art.path);card.map:SetTexCoord(0,art.u,0,art.v)
+  for _,line in ipairs(card.lines) do line:Hide() end
+  card.dot:SetShown(#ref.points==1)
+  if #ref.points==1 then
+   card.dot:ClearAllPoints()
+   card.dot:SetPoint("CENTER",card.plot,"TOPLEFT",ref.points[1][1]*w/100,-ref.points[1][2]*height/100)
+  end
+  local count=ref.mode=="loop" and #ref.points or #ref.points-1
+  for i=1,count do
+   if not card.lines[i] then
+    local line=card.plot.CreateLine and card.plot:CreateLine(nil,"ARTWORK") or card.plot:CreateTexture(nil,"ARTWORK")
+    N.BronzeWire(line)
+    if line.SetThickness then line:SetThickness(2) end
+    card.lines[i]=line
+   end
+   lineBetween(card.lines[i],card.plot,ref.points[i],ref.points[i%#ref.points+1],w,height)
+  end
+ else card.plot:Hide() end
+ local caption=choice.recommendation or (choice.cost and string.format("%.1fk yd",choice.cost/1000)) or "Distance unavailable"
+ local classic,measured=false,false
+ for _,point in ipairs(ref.points) do
+  local source=point.source
+  if source then
+   classic=classic or source.classicFallback==true
+   measured=measured or point.measured
+  end
+ end
+ local evidence=classic and "Includes Classic fallback" or measured and "Includes measured loot rates" or "Yield estimated from mapped sources"
+ card.note=choice.start and evidence or "Known in this zone. The catalog has insufficient mapped stops for a route."
+ card.title:ClearAllPoints();card.title:SetPoint("TOPLEFT",card,"TOPLEFT",pad,-height-pad*(art and 2 or 1))
+ card.title:SetWidth(width-2*pad);card.title:SetText(ref.zone)
+ card.subtitle:ClearAllPoints();card.subtitle:SetPoint("TOPLEFT",card.title,"BOTTOMLEFT",0,-2)
+ card.subtitle:SetWidth(width-2*pad)
+ card.subtitle:SetText(choice.start and (caption..(classic and " · Classic" or "")) or "No mapped route")
+ local fullHeight=height+card.title:GetStringHeight()+card.subtitle:GetStringHeight()+pad*(art and 3 or 2)+2
+ card:SetSize(width,fullHeight)
+ return fullHeight
+end
+
+function R.ToggleMaterial(m)
+ if not m or not R.IsCraftingReagent(m.id) then return end
+ if K.selected[m.id] then
+  K.selected[m.id]=nil
+ else
+  local count=0
+  for _ in pairs(K.selected) do count=count+1 end
+  if count>=8 then ns.Print("Select up to eight resources.");return end
+  K.selected[m.id]=true
+ end
+ K.confirmed=nil
+ R.selectionChanged=true
+ R.Fill()
+end
+
 function R.Open()
  if not N.root then return end
  if not K.gridMenu then
-  if K.resourceMenu then K.resourceMenu:Hide()end
-  local f=CreateFrame('Frame',nil,UIParent);K.gridMenu=f;K.resourceMenu=f;R.menu=f;f:SetSize(680,640);f:SetPoint('CENTER',UIParent,'CENTER');N.ApplyWindowLayer(f,'farming');f:EnableMouse(true);f:SetClampedToScreen(true)
-  local cards=CreateFrame('Frame',nil,f)
-  cards:SetPoint('TOPLEFT',f,'TOPLEFT',23,-55);cards:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-23,106)
-  cards:SetFrameLevel(f:GetFrameLevel()+12);cards:EnableMouse(true);cards:Hide()
-  cards:SetScript('OnShow',function()K.resourceScroll:Hide();R.syncScroll()end)
-  cards:SetScript('OnHide',function()if K.resourceScroll then K.resourceScroll:Show();R.syncScroll()end end)
-  local options={}
+  if K.resourceMenu then K.resourceMenu:Hide() end
+  local f=CreateFrame("Frame",nil,UIParent)
+  f:Hide()
+  K.gridMenu=f;K.resourceMenu=f;R.menu=f
+  f:SetSize(480,720);f:SetPoint("CENTER",UIParent,"CENTER");f:EnableMouse(true)
+  N.ApplyWindowLayer(f,"farming")
+  local mode,category,zoneID,resultsOnly="reagent",nil,nil,false
+  local index,choices,compatible,selected
+  local resources,reagents,syncResources=farmList(f)
+  local matches,results,syncMatches=farmList(f)
+  local menuHost=CreateFrame("Frame",nil,f);menuHost:SetFrameStrata("TOOLTIP");menuHost:Hide()
+  local menu,options,syncMenu=farmList(menuHost);menu:SetAllPoints(menuHost)
+  local yieldPanel=CreateFrame("Frame",nil,f)
+  yieldPanel:SetFrameStrata("TOOLTIP");yieldPanel:EnableMouse(true);yieldPanel:SetClampedToScreen(true);yieldPanel:Hide()
+  local yieldBase=yieldPanel:CreateTexture(nil,"BACKGROUND");yieldBase:SetAllPoints();yieldBase:SetColorTexture(.20,.11,.051,1)
+  N.BronzeRectangle(yieldPanel)
+  local yieldTitle=text(yieldPanel,14);yieldTitle:SetTextColor(.98,.85,.62);yieldTitle:SetJustifyH("LEFT")
+  local yieldTiles={}
+  local function closeYields()
+   yieldPanel.anchor=nil
+   yieldPanel:Hide()
+  end
+  local function drawYields(anchor)
+   local list=anchor.byproducts
+   if not list or #list==0 then closeYields();return false end
+   menuHost:Hide()
+   hideTip()
+   local unit=N.PixelSize(f,1)
+   local cols=math.min(3,#list)
+   local tileWidth,tileHeight=90*unit,74*unit
+   local width=math.max(172*unit,tileWidth*cols+12*unit)
+   local gutter=(width-cols*tileWidth)/2
+   local rootScale=f:GetEffectiveScale()/UIParent:GetEffectiveScale()
+   local right=(anchor:GetRight() or 0)*rootScale
+   yieldPanel.anchor=anchor
+   yieldPanel.scroll=resources:GetVerticalScroll()
+   yieldPanel.grace=.14
+   yieldPanel:ClearAllPoints()
+   if right+width*rootScale>UIParent:GetWidth() then
+    yieldPanel:SetPoint("TOPRIGHT",anchor,"TOPLEFT",0,0)
+   else
+    yieldPanel:SetPoint("TOPLEFT",anchor,"TOPRIGHT",0,0)
+   end
+   yieldPanel:SetSize(width,(32+math.ceil(#list/cols)*74)*unit)
+   farmPlace(yieldTitle,yieldPanel,10*unit,8*unit,width-20*unit,20*unit)
+   yieldTitle:SetText(R.ByproductTitle(anchor.material))
+   for i,m in ipairs(list) do
+    local tile=yieldTiles[i]
+    if not tile then
+     tile=buildResource(yieldPanel)
+     tile.isByproduct=true
+     tile.label:SetTextColor(.98,.90,.73)
+     yieldTiles[i]=tile
+    end
+    fillResource(tile,m,tileHeight,unit,selected,choices,compatible)
+    farmPlace(tile,yieldPanel,gutter+((i-1)%cols)*tileWidth,28*unit+math.floor((i-1)/cols)*tileHeight,tileWidth,tileHeight)
+    tile:Show()
+   end
+   for i=#list+1,#yieldTiles do yieldTiles[i]:Hide() end
+   yieldPanel:Show()
+   return true
+  end
+  yieldPanel:SetScript("OnUpdate",function(self,elapsed)
+   local anchor=self.anchor
+   if not anchor or not anchor:IsVisible() or self.scroll~=resources:GetVerticalScroll() then closeYields();return end
+   if anchor:IsMouseOver() or self:IsMouseOver() then
+    self.grace=.14
+   else
+    self.grace=self.grace-elapsed
+    if self.grace<=0 then closeYields() end
+   end
+  end)
+
+  menu:EnableMouse(true)
+  local menuBase=menu:CreateTexture(nil,"BACKGROUND");menuBase:SetAllPoints();menuBase:SetColorTexture(.20,.11,.051,1)
+  N.BronzeRectangle(menu)
+  local modeButton,zoneButton,filterButton,action,stop
+  local tiles,zoneCards,menuButtons,tray,groupLabels={},{},{},{},{}
+  local heading=text(f,16)
+  local message=text(f,14);message:SetJustifyH("LEFT");message:SetWordWrap(true)
+  local resultsHeading=text(f,15)
+  local status
+  local function selectFrom(anchor,entries,current,selectValue)
+   closeYields()
+   if menuHost:IsShown() and menu.anchor==anchor then menuHost:Hide();return end
+   menu.anchor=anchor
+   menuHost:ClearAllPoints();menuHost:SetPoint("TOPLEFT",anchor,"BOTTOMLEFT",0,-4)
+   local width=math.max(N.PixelSize(f,234),anchor:GetWidth())
+   menuHost:SetSize(width,math.min(#entries,8)*32+8)
+   options:SetSize(width,math.max(1,#entries*32+8))
+   for i,entry in ipairs(entries) do
+    local b=menuButtons[i]
+    if not b then
+     b=N.PlainButton(options,"",width,nil,true)
+     b.label:SetTextColor(.98,.85,.62)
+     b:SetScript("OnEnter",function(self)tooltip(self,self.label:GetText())end)
+     b:SetScript("OnLeave",hideTip)
+     menuButtons[i]=b
+    end
+    b.label:SetText((entry.value==current and "✓ " or "")..entry.label)
+    local font,_,flags=b.label:GetFont()
+    b.label:SetFont(font,N.PixelSize(b,14),flags)
+    b.label:SetJustifyH("LEFT");b.label:SetWordWrap(false)
+    b.label:ClearAllPoints();b.label:SetPoint("LEFT",b,"LEFT",8,0);b.label:SetPoint("RIGHT",b,"RIGHT",-8,0)
+    b:SetScript("OnClick",function()hideTip();menuHost:Hide();selectValue(entry.value);R.Fill(true)end)
+    farmPlace(b,options,4,4+(i-1)*32,width-24,30);b:Show()
+   end
+   for i=#entries+1,#menuButtons do menuButtons[i]:Hide() end
+   menuHost:Show();syncMenu(true)
+  end
+  modeButton=N.WoodButton(f,"Farm by Reagent",120,function()
+   mode="reagent";resultsOnly=false;menuHost:Hide();R.Fill(true)
+  end)
+  zoneButton=N.WoodButton(f,"Farm by Zone",125,function()
+   mode="zone";resultsOnly=false;menuHost:Hide()
+   if not zoneID then
+    local p=ns.Retail.Client.PlayerPosition()
+    if p and p.status=="available" and index[p.mapID]then zoneID=p.mapID end
+   end
+   R.Fill(true)
+  end)
+  filterButton=N.WoodButton(f,"All Reagents",140,function()
+   local list={}
+   if mode=="zone" then
+    for map,zone in pairs(index) do list[#list+1]={label=zone.name,value=map} end
+    table.sort(list,function(a,b)return a.label<b.label end)
+    selectFrom(filterButton,list,zoneID,function(id)zoneID=id end)
+   else
+    list[1]={label="All Reagents",value=false}
+    for _,name in ipairs(R.categories) do list[#list+1]={label=name,value=name} end
+    selectFrom(filterButton,list,category,function(name)category=name or nil end)
+   end
+  end)
+  N.UnderlineControl(modeButton,true);N.UnderlineControl(zoneButton,true)
+  filterButton.label:SetJustifyH("LEFT")
+  N.ButtonArrow(filterButton,"down")
+  action=N.WoodButton(f,"Show Matching Zones",180,function()
+   if #selected==0 then return end
+   resultsOnly=not resultsOnly;menuHost:Hide();R.Fill(true)
+  end)
+  stop=N.WoodButton(f,"Stop Route",112,function()
+   if F.route then F.Stop("Farming route stopped.") end
+   K.SyncFooter();R.Fill()
+  end)
   local function openRoute(choice)
-   choice.selectedCard=true
    K.confirmed=choice
    local ok,why=R.StartSelection()
    K.confirmed=nil
-   if not ok then K.count:SetText(why or 'Route unavailable.');return end
-   cards:Hide()
+   if not ok then status=why or "Route unavailable.";R.Fill();return end
    K.ShowRouteMap()
   end
-  for i=1,3 do
-   local card=CreateFrame('Button',nil,cards)
-   N.BronzeRectangle(card)
-   local highlight=card:CreateTexture(nil,'HIGHLIGHT');highlight:SetAllPoints();highlight:SetColorTexture(.93,.73,.37,.15)
-
-   card.plot=CreateFrame('Frame',nil,card)
-   card.plot:SetPoint('TOP',card,'TOP',0,-2)
-   card.map=card.plot:CreateTexture(nil,'BACKGROUND');card.map:SetAllPoints()
-   local plotFill=card.plot:CreateTexture(nil,'BACKGROUND',nil,-1);plotFill:SetAllPoints();plotFill:SetColorTexture(.29,.20,.12,1)
-   card.band=card.plot:CreateTexture(nil,'OVERLAY',nil,-1)
-   card.band:SetPoint('BOTTOMLEFT');card.band:SetPoint('BOTTOMRIGHT');card.band:SetColorTexture(0,0,0,.5)
-   card.title=text(card.plot,12);card.title:SetPoint('TOP',card.band,'TOP',0,-2)
-   card.detail=text(card.plot,9);card.detail:SetPoint('BOTTOM',card.band,'BOTTOM',0,2);card.detail:SetTextColor(.95,.72,.43);card.detail:SetWordWrap(false)
-   card.title:SetJustifyH('CENTER');card.title:SetTextColor(.98,.77,.48);card.title:SetWordWrap(false)
-   card.lines={}
-   card:SetScript('OnClick',function()if card.choice and card.choice.start then openRoute(card.choice)end end)
-   options[i]=card
-  end
-  local function showCards(choices,total)
-   cards.choices,cards.total=choices,total
-   local width=(f:GetWidth()-66)/3
-   for i,card in ipairs(options)do
-    local choice=choices[i]
-    card.choice=choice
-    card:ClearAllPoints();card:SetPoint('TOPLEFT',cards,'TOPLEFT',(i-1)*(width+10),-4)
-    local mapWidth=width-4
-    local mapHeight=mapWidth*683/1024
-    card:SetSize(width,mapHeight+4);card.plot:SetSize(mapWidth,mapHeight)
-    card.title:SetWidth(width-12);card.detail:SetWidth(width-12)
-    local art=choice and ns.ForeverFacts.maps[choice.reference.zone]
-    card.map:SetShown(art~=nil)
-    if art then card.map:SetTexture(art.path);card.map:SetTexCoord(0,art.u,0,art.v)end
-    local badge=choice and (choice.current and 'Current Zone' or choice.recommendation)
-    card.title:SetText(choice and choice.reference.zone or 'No mapped alternative')
-    local detail='No mapped route'
-    if choice and choice.start then
-     local path=choice.reference.mode=='loop' and 'Loop' or #choice.reference.points==1 and 'Camp pin' or 'Open route'
-     detail=path..' · '..(choice.reference.targets or (#choice.materials..' / '..total..' resources'))
-     if #choice.materials<total then
-      local names={}
-      for _,m in ipairs(choice.materials)do names[#names+1]=m.name end
-      detail=detail..' · '..table.concat(names,', ')
-     end
-    end
-    card.detail:SetText((badge and badge.." · " or "")..detail)
-    for _,label in ipairs({card.title,card.detail}) do
-     local font,size,flags=label:GetFont()
-     local maximum=label==card.title and 12 or 9
-     label:SetWidth(0)
-     for candidate=maximum,8,-1 do
-      label:SetFont(font,candidate,flags)
-      if label:GetStringWidth()<=width-12 then break end
-     end
-     label:SetWidth(width-12)
-    end
-    card.band:SetHeight((mapHeight+4)*.175)
-    card.map:SetAlpha(choice and choice.start and 1 or .65)
-    card:EnableMouse(choice and choice.start~=nil or false)
-    for _,line in ipairs(card.lines)do line:Hide()end
-    local points=choice and choice.reference.points or {}
-    local count=choice and choice.reference.mode~='loop' and math.max(0,#points-1) or #points
-    if #points==1 then
-     if not card.campDot then
-      card.campDot=card.plot:CreateTexture(nil,'OVERLAY')
-      card.campDot:SetColorTexture(.18,.06,.03,1)
-      card.campDot:SetSize(6,6)
-     end
-     card.campDot:ClearAllPoints()
-     card.campDot:SetPoint('CENTER',card.plot,'TOPLEFT',points[1][1]*mapWidth/100,-points[1][2]*mapHeight/100)
-     card.campDot:Show()
-    elseif card.campDot then card.campDot:Hide() end
-    for j=1,count do
-     local line=card.lines[j]
-     if not line then
-      line=card.plot.CreateLine and card.plot:CreateLine(nil,'ARTWORK') or card.plot:CreateTexture(nil,'ARTWORK')
-      line:SetColorTexture(.035,.025,.018,.86)
-      if line.SetThickness then line:SetThickness(2)end
-      card.lines[j]=line
-     end
-     local a,b=points[j],points[j%#points+1]
-     local x,y,u,v=a[1]*mapWidth/100,-a[2]*mapHeight/100,b[1]*mapWidth/100,-b[2]*mapHeight/100
-     if line.SetStartPoint then
-      line:SetStartPoint('TOPLEFT',card.plot,x,y);line:SetEndPoint('TOPLEFT',card.plot,u,v);line:Show()
-     elseif line.SetRotation then
-      line:ClearAllPoints();line:SetPoint('CENTER',card.plot,'TOPLEFT',(x+u)/2,(y+v)/2)
-      line:SetSize(math.max(1,math.sqrt((u-x)^2+(v-y)^2)),2);line:SetRotation(math.atan2(v-y,u-x));line:Show()
-     end
-    end
+  local function refreshSelection()
+   selected={}
+   for id in pairs(K.selected) do
+    local m=R.byID[id]
+    if m and R.IsCraftingReagent(id) then selected[#selected+1]=m else K.selected[id]=nil end
    end
-   cards:Show()
+   table.sort(selected,function(a,b)return a.name<b.name end)
+   choices,compatible=R.MatchZones(index,selected)
+   status=nil
   end
-  local scope=N.MakeButton(f,'Recommend a Zone',157,function()
-   if cards:IsShown()then cards:Hide();return end
-   local materials,ranks={},{}
-   for _,m in ipairs(R.materials)do
-    if K.selected[m.id]then
-     materials[#materials+1]=m;ranks[m.id]=m.kind=='Cloth' and 1 or F.Skill(m.kind)
+  function R.Fill(reset)
+   if not index then return end
+   if reset then closeYields() end
+   local changed=R.selectionChanged
+   if changed then R.selectionChanged=false;refreshSelection() end
+   local unit=N.PixelSize(f,1)
+   local inset,gap=14*unit,8*unit
+   local width=f:GetWidth()-2*inset
+   local header=(N.HeaderSize and N.HeaderSize(f) or 40*unit)+10*unit
+   local usable=width-24*unit
+   local buttonHeight=29*unit
+   local half=(width-gap)/2
+   farmPlace(modeButton,f,inset,header,half,buttonHeight)
+   farmPlace(zoneButton,f,inset+half+gap,header,half,buttonHeight)
+   modeButton:SetSelected(mode=="reagent")
+   zoneButton:SetSelected(mode=="zone")
+   local control=header+buttonHeight+gap
+   farmPlace(filterButton,f,inset,control,half,buttonHeight)
+   local activeZone=zoneID and index[zoneID]
+   local activeCategory=mode=="reagent" and category or nil
+   filterButton.label:SetText(mode=="zone" and (activeZone and activeZone.name or "Select a Zone") or (category or "All Reagents"))
+   filterButton:SetShown(not resultsOnly)
+   local contentTop=control+buttonHeight+gap*2
+   local footer=96*unit
+   local height=math.max(1,f:GetHeight()-contentTop-footer)
+   local resourceWidth=math.floor((usable-gap)*.54/unit)*unit
+   local matchX=inset+resourceWidth+gap+12*unit
+   local matchWidth=width-resourceWidth-gap-24*unit
+   if resultsOnly then matchX=inset;matchWidth=width-14*unit end
+   farmPlace(heading,f,inset,contentTop,resourceWidth,20*unit)
+   heading:SetText(mode=="zone" and "Zone Reagents" or "Resources")
+   heading:SetShown(not resultsOnly)
+   farmPlace(resultsHeading,f,matchX,contentTop,matchWidth,20*unit)
+   resultsHeading:SetText("Matching Zones"..(#selected>0 and " ("..#choices..")" or ""))
+   farmPlace(resources,f,inset,contentTop+23*unit,resourceWidth,height-23*unit)
+   farmPlace(matches,f,matchX,contentTop+23*unit,matchWidth,height-23*unit)
+   resources:SetShown(not resultsOnly)
+   reagents:SetWidth(resourceWidth);results:SetWidth(matchWidth)
+   local names={}
+   local tileYields={}
+   if not resultsOnly then
+    for _,m in ipairs(R.materials) do
+     if R.IsCraftingReagent(m.id) and not R.IsByproduct(m) then
+      local yields=R.Byproducts(m,mode=="zone" and activeZone or nil,activeCategory)
+      if (mode=="zone" and activeZone and activeZone.items[m.id])
+        or (mode=="reagent" and (activeCategory and (m.categories[activeCategory] or #yields>0)
+          or not activeCategory and R.MaterialGroup(m)~="Specialty")) then
+       names[#names+1]=m
+       tileYields[m.id]=yields
+      end
+     end
     end
+    table.sort(names,R.CompareMaterials)
    end
-   if #materials==0 then K.count:SetText('Select at least one resource.');return end
-   local choices,why=R.RecommendSelection(materials,ranks,'cards')
-   if not choices then K.count:SetText(why or 'No mapped zone for this selection.');return end
-   showCards(choices,#materials)
-   K.count:SetText('Choose a zone card to start its route.')
-  end)
-  f:HookScript('OnHide',function()cards:Hide();K.confirmed=nil;K.recommended=nil end)
-  N.LiveLayout(f,function()
-   if cards:IsShown() and cards.choices then showCards(cards.choices,cards.total) end
-   R.Fill()
-  end)
-  K.recommendButton=scope
-  scope:SetPoint('BOTTOMLEFT',f,'BOTTOMLEFT',26,26)
-  local sf=CreateFrame('ScrollFrame',nil,f);K.resourceScroll=sf;K.gridHeight=450;sf:SetPoint('TOPLEFT',26,-50);sf:SetPoint('BOTTOMRIGHT',-33,105);sf:EnableMouseWheel(true)
-  R.body=CreateFrame('Frame',nil,sf);R.body:SetSize(620,1);sf:SetScrollChild(R.body);R.buttons={};R.search=nil
-  R.syncScroll=N.PanelScroll(f,sf,function()return sf:GetVerticalScroll()end,function(v)sf:SetVerticalScroll(v)end,
-   function()return cards:IsShown() and 0 or math.max(0,R.body:GetHeight()-K.gridHeight)end,85)
-  K.count=text(f,16);K.count:SetPoint('TOPLEFT',f,'BOTTOMLEFT',26,94);K.count:SetPoint('TOPRIGHT',f,'BOTTOMRIGHT',-26,94)
-
-  local stop=N.MakeButton(f,'Stop Route',116,function()
-   K.confirmed=nil;K.recommended=nil;R.request=nil
-   cards:Hide()
-   if F.route then F.Stop('Farming route stopped.')end
-   K.SyncFooter();R.Fill()
-  end);stop:SetPoint('BOTTOMRIGHT',f,'BOTTOMRIGHT',-26,26)
-  N.PanelChrome(f,{'Farming','Routes'},490,460,function()R.Fill()end)
+   local columns=math.max(2,math.floor(resourceWidth/(72*unit)))
+   local tileWidth=(resourceWidth-(columns-1)*5*unit)/columns
+   local tileHeight=80*unit
+   local group,y,column,groupCount=nil,0,0,0
+   for i,m in ipairs(names) do
+    local nextGroup=R.MaterialGroup(m)
+    if group~=nextGroup then
+     if column>0 then y=y+tileHeight end
+     if group then y=y+6*unit end
+     column=0;group=nextGroup;groupCount=groupCount+1
+     local label=groupLabels[groupCount]
+     if not label then label=text(reagents,14);label:SetJustifyH("LEFT");groupLabels[groupCount]=label end
+     label:SetText(group);farmPlace(label,reagents,0,y,resourceWidth,22*unit);label:Show()
+     y=y+24*unit
+    end
+    local tile=tiles[i]
+    if not tile then
+     tile=buildResource(reagents)
+     tile.openYields=drawYields
+     tile.yieldArrow=text(tile,16,"›");tile.yieldArrow:SetPoint("TOPRIGHT",tile,"TOPRIGHT",-3,-8)
+     tiles[i]=tile
+    end
+    fillResource(tile,m,tileHeight,unit,selected,choices,compatible)
+    tile.byproducts=tileYields[m.id]
+    tile.yieldArrow:SetShown(#tile.byproducts>0)
+    farmPlace(tile,reagents,column*(tileWidth+5*unit),y,tileWidth,tileHeight)
+    column=column+1
+    if column==columns then column=0;y=y+tileHeight end
+    tile:Show()
+   end
+   for i=#names+1,#tiles do tiles[i]:Hide() end
+   for i=groupCount+1,#groupLabels do groupLabels[i]:Hide() end
+   reagents:SetHeight(math.max(1,y+(column>0 and tileHeight or 0)))
+   local y=0
+   for i,choice in ipairs(choices) do
+    local card=zoneCards[i]
+    if not card then card=buildRouteCard(results,openRoute);zoneCards[i]=card end
+    card:ClearAllPoints();card:SetPoint("TOPLEFT",results,"TOPLEFT",0,-y)
+    y=y+fillRouteCard(card,choice,matchWidth)+gap
+    card:Show()
+   end
+   for i=#choices+1,#zoneCards do zoneCards[i]:Hide() end
+   results:SetHeight(math.max(1,y))
+   syncResources(reset);syncMatches(reset or changed)
+   if yieldPanel:IsShown() and yieldPanel.anchor then
+    local anchor=yieldPanel.anchor
+    if anchor:IsShown() and yieldPanel.scroll==resources:GetVerticalScroll() then drawYields(anchor) else closeYields() end
+   end
+   local trayTop=f:GetHeight()-footer+2*unit
+   for i,m in ipairs(selected) do
+    local b=tray[i]
+    if not b then
+     b=CreateFrame("Button",nil,f)
+     b.icon=b:CreateTexture(nil,"ARTWORK");b.icon:SetAllPoints()
+     N.BronzeRectangle(b)
+     b:SetScript("OnClick",function(self)hideTip();R.ToggleMaterial(self.material)end)
+     b:SetScript("OnEnter",function(self)tooltip(self,self.material.name,"Click to remove")end)
+     b:SetScript("OnLeave",hideTip)
+     tray[i]=b
+    end
+    b.material=m;b.icon:SetTexture(icon(m.id))
+    farmPlace(b,f,inset+(i-1)*29*unit,trayTop,25*unit,25*unit);b:Show()
+   end
+   for i=#selected+1,#tray do tray[i]:Hide() end
+   farmPlace(message,f,inset,trayTop+30*unit,width,25*unit)
+   message:SetText(status or (#selected==0 and "Choose reagents to see matching zones.")
+    or (#choices==0 and "No catalogued zone covers the whole selection.")
+    or (mode=="zone" and #names==0 and not resultsOnly and "Choose a zone to browse its reagents.")
+    or "Choose a zone card to start its route.")
+   farmPlace(action,f,inset,trayTop+56*unit,half+15*unit,buttonHeight)
+   action.label:SetText(resultsOnly and "Back to Reagents" or "Show Matching Zones")
+   action:SetShown(#selected>0)
+   farmPlace(stop,f,inset+half+gap+15*unit,trayTop+56*unit,half-15*unit,buttonHeight)
+   stop:SetShown(F.route~=nil)
+  end
+  R.body=reagents;K.resourceScroll=resources;K.recommendButton=action;K.count=message
+  f:HookScript("OnHide",function()closeYields();menuHost:Hide();syncMenu();hideTip();K.confirmed=nil end)
+  N.PanelChrome(f,{"Farming","Routes"},490,460,R.Fill)
+  N.LiveLayout(f,R.Fill)
+  R.RefreshCatalog=function()
+   index=R.BuildSourceIndex()
+   refreshSelection()
+  end
  end
- R.menu=K.gridMenu;local h=UIParent:GetHeight();if type(h)=='number'and h>0 then R.menu:SetScale(math.min(1,math.max(.5,(h-32)/640)))end;R.menu:Show();R.Fill()
+ R.menu=K.gridMenu
+ R.RefreshCatalog()
+ R.menu:Show()
+ R.Fill()
 end
+
 local function clickThrough()
  local r=N.root;if not r then return end
  if N.frame then N.frame:EnableMouse(false)end;r:EnableMouse(false)
@@ -5900,8 +7731,7 @@ function V.DrawRoute(canvas,map)
      return
     end
     segment.line=segment:CreateLine(nil,'OVERLAY')
-    segment.line:SetTexture('Interface\\Buttons\\WHITE8X8')
-    segment.line:SetVertexColor(.12,.055,.018,.85)
+    N.BronzeWire(segment.line)
     segment.line:SetThickness(4)
     pool[count]=segment
    end
@@ -5924,17 +7754,82 @@ function V.DrawRoute(canvas,map)
  V.routeLayout={route=route,canvas=canvas,width=width,height=height,strata=strata}
  V.routeReport=string.format('Map %d: %d native segments',map,count)
 end
+local function activeQuestPoints()
+ local row=ns.ProfessionGuide.selected
+ local locations,seen={},{}
+ local function addPoint(loc)
+  if not loc then return end
+  local key=loc.mapID..':'..loc.x..':'..loc.y
+  if seen[key] then return end
+  seen[key]=true
+  locations[#locations+1]=loc
+ end
+ local function add(phase)
+  if not phase then return end
+  addPoint(phase.destination)
+  for _,loc in ipairs(phase.alternateDestinations or {})do addPoint(loc)end
+ end
+ if row and row.kind=='objective' then
+  add(row.procedure)
+  for _,objective in ipairs(row.objectives or {})do add(objective.procedure)end
+  for _,group in ipairs(row.groupObjectives or {})do
+   for _,objective in ipairs(group.children or {})do add(objective.procedure)end
+  end
+ end
+ return locations
+end
+function V.DrawQuestPoints(canvas,map,locations)
+ local pins=V.questPoints or {}
+ V.questPoints=pins
+ local count=0
+ if canvas and map then
+  local width,height=canvas:GetWidth(),canvas:GetHeight()
+  if width>0 and height>0 then
+   for _,loc in ipairs(locations)do
+    if loc.mapID==map then
+     count=count+1
+     local pin=pins[count]
+     if not pin then
+      pin=CreateFrame('Frame',nil,canvas)
+      pin:SetSize(22,26)
+      local icon=pin:CreateTexture(nil,'ARTWORK')
+      icon:SetAllPoints();icon:SetTexture(AS..'RecipePin')
+      pins[count]=pin
+     end
+     pin:SetParent(canvas);pin:SetFrameLevel(canvas:GetFrameLevel()+12)
+     pin:ClearAllPoints()
+     pin:SetPoint('BOTTOM',canvas,'TOPLEFT',loc.x*width/100,-loc.y*height/100)
+     pin.location=loc
+     pin:Show()
+    end
+   end
+  end
+ end
+ for i=count+1,#pins do pins[i]:Hide()end
+end
+function V.ShowStepPoint(loc)
+ local frame=WorldMapFrame
+ if not (loc and frame and frame.SetMapID) or read(InCombatLockdown) then return false end
+ if not frame:IsShown() then
+  if ShowUIPanel then read(ShowUIPanel,frame) else frame:Show()end
+ end
+ read(frame.SetMapID,frame,loc.mapID)
+ V.UpdateWorld(.5)
+ return frame:IsShown() and read(frame.GetMapID,frame)==loc.mapID
+end
 function V.UpdateWorld(elapsed)
  V.elapsed=(V.elapsed or 0)+(elapsed or 0);if V.elapsed<.5 then return end;V.elapsed=0
  local frame=WorldMapFrame;local mode=V.Mode()
  local nodesEnabled=mode=='World Map'or mode=='Both'
  local routeEnabled=F.route and F.route.steps and #F.route.steps>1
  local canvas,map
- if frame and frame:IsShown()and(nodesEnabled or routeEnabled)then
+ local questPoints=frame and frame:IsShown() and activeQuestPoints() or {}
+ if frame and frame:IsShown()and(nodesEnabled or routeEnabled or #questPoints>0)then
   canvas=read(frame.GetCanvas,frame)or(frame.ScrollContainer and(read(frame.ScrollContainer.GetScrollChild,frame.ScrollContainer)or frame.ScrollContainer.Child))or WorldMapDetailFrame
   map=read(frame.GetMapID,frame)
  end
  V.DrawRoute(canvas,map)
+ V.DrawQuestPoints(canvas,map,questPoints)
  if not nodesEnabled or not canvas or not map then V.pending=nil;for _,p in ipairs(V.pins)do p:Hide()end;return end
  local skills='';for _,kind in ipairs({'Mining','Herbalism','Fishing'})do local rank=F.Skill(kind);skills=skills..kind..':'..tostring(rank or 0)..';'end
  V.age=(V.age or 5)+.5;if V.map==map and V.skills==skills and V.age<5 then return end;V.map,V.skills,V.age=map,skills,0
@@ -5994,7 +7889,7 @@ end
 local originalSources=N.root and N.root.sourceButton:GetScript('OnClick');local originalProfessions=N.root and N.root.professionButton:GetScript('OnClick')
 local function dropdown(anchor,values,callback)
  if V.menu then V.menu:Hide()end
- if not V.menu then V.menu=CreateFrame('Frame',nil,UIParent,'BackdropTemplate');V.menu.buttons={};V.menu:SetBackdrop({bgFile='Interface\\Tooltips\\UI-Tooltip-Background',edgeFile='Interface\\Tooltips\\UI-Tooltip-Border',edgeSize=12});V.menu:SetBackdropColor(.04,.035,.02,1);V.menu:SetClampedToScreen(true);V.menu:SetFrameStrata('TOOLTIP')end
+ if not V.menu then V.menu=CreateFrame('Frame',nil,UIParent,'BackdropTemplate');V.menu.buttons={};V.menu:SetBackdrop({bgFile='Interface/Buttons/WHITE8X8'});V.menu:SetBackdropColor(.04,.035,.02,1);N.BronzeRectangle(V.menu,2);V.menu:SetClampedToScreen(true);V.menu:SetFrameStrata('TOOLTIP')end
  local f=V.menu;f:SetFrameLevel(N.root:GetFrameLevel()+280);f:ClearAllPoints();f:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT',0,-3);f:SetSize(330,#values*30+12)
  for i,v in ipairs(values)do local b=f.buttons[i];if not b then b=N.MakeButton(f,'',314,function()end);f.buttons[i]=b end;b:SetSize(314,28);b:ClearAllPoints();b:SetPoint('TOPLEFT',f,'TOPLEFT',8,-6-(i-1)*30);b.label:SetText(v.name);b:SetScript('OnClick',function()callback(v);f:Hide()end);b:Show()end
  for i=#values+1,#f.buttons do f.buttons[i]:Hide()end;f:Show()
@@ -6087,40 +7982,6 @@ local function position()local c=ns.Retail and ns.Retail.Client;local p=c and c.
 local function dist(d,p)if not d or not p or d.mapID~=p.mapID then return end;local c=ns.Retail.Client;local a,x,y=c.WorldPosition(d.mapID,d.x,d.y);local b,xx,yy=c.WorldPosition(p.mapID,p.x*100,p.y*100);if a and a==b and x and y and xx and yy then return math.sqrt((x-xx)^2+(y-yy)^2),math.atan2(y-yy,x-xx)end end
 -- Reuse historical pin rendering, fading only GF icons near the player.
 if M then local update=M.Update;M.Update=function(...)local v=update(...);local now=clock();if M.fade100 and now-M.fade100<.25 then return v end;M.fade100=now;local p=position();if p then for _,pin in ipairs(M.pins)do if pin:IsShown()and pin.node then local d=dist({mapID=p.mapID,x=pin.node.x,y=pin.node.y},p);if d then pin:SetAlpha(.12+.60*math.max(0,math.min(1,(d-12)/65)))end end end end;return v end end
--- Compact grouped grids with GF's own checkbox art and labels directly below icons.
-R.collapsed100=R.collapsed100 or{};local category={{'Mining','Mining'},{'Herbalism','Herbalism'},{'Skinning','Skinning'},{'Fishing','Fishing'},{'Cloth','Cloth'}}
-local clothMobFloor={[2589]=5,[2592]=15,[4306]=25,[4338]=37,[14047]=48,[14256]=50}
-local function canGather(m)
- if m.kind=='Cloth' then return (read(UnitLevel,'player') or 1)+5 >= (clothMobFloor[m.id] or 1) end
- local rank=F.Skill(m.kind)
- return rank~=nil and rank >= (m.skill or 1)
-end
-local toggleMaterial=R.ToggleMaterial
-function R.ToggleMaterial(m)
- if not m or (not K.selected[m.id] and not canGather(m))then return end
- K.confirmed=nil;K.recommended=nil
- if K.recommendButton then K.recommendButton.label:SetText('Recommend a Zone')end
- toggleMaterial(m)
-end
-function R.Fill()
- if not R.body then return end;if not R.grid100 then for _,b in ipairs(R.buttons or{})do b:Hide()end;R.buttons={};R.grid100=true end;R.headers100=R.headers100 or{};local y,index=0,0
- K.gridHeight=math.max(1,R.menu:GetHeight()-155)
- R.body:SetWidth(math.max(1,R.menu:GetWidth()-59))
- local columns=math.max(1,math.floor(R.body:GetWidth()/66))
- local clothOrder={[2589]=1,[2592]=2,[4306]=3,[4338]=4,[14047]=5,[14256]=6}
- for _,cat in ipairs(category)do local title,kind=cat[1],cat[2];local list={};for _,m in ipairs(R.materials)do if m.kind==kind then list[#list+1]=m end end;table.sort(list,function(a,b)local ar,br=clothOrder[a.id] or a.skill or 0,clothOrder[b.id] or b.skill or 0;if ar~=br then return ar<br end;return a.name<b.name end)
-  local h=R.headers100[title];if not h then h=CreateFrame('Button',nil,R.body);h.label=h:CreateFontString(nil,'OVERLAY');h.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',18);h.label:SetTextColor(.16,.09,.03);h.label:SetPoint('LEFT',24,0);h.arrow=h:CreateTexture(nil,'ARTWORK');h.arrow:SetTexture(AS..'ControlTriangleRight');h.arrow:SetSize(12,12);h.arrow:SetPoint('LEFT',4,0);h:SetScript('OnClick',function()R.collapsed100[title]=not R.collapsed100[title];R.Fill()end);R.headers100[title]=h end
-  h:ClearAllPoints();h:SetPoint('TOPLEFT',R.body,'TOPLEFT',0,-y);h:SetSize(R.body:GetWidth(),30);h.label:SetText(title);h.arrow:SetRotation(R.collapsed100[title]and 0 or-math.pi/2);h:Show();y=y+34
-  if not R.collapsed100[title]then for j,m in ipairs(list)do index=index+1;local b=R.buttons[index]
-   if not b then b=CreateFrame('Button',nil,R.body);b.icon=b:CreateTexture(nil,'ARTWORK');b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',12);b.label:SetTextColor(.16,.09,.03);b.check=CreateFrame('Button',nil,b);b.box=b.check:CreateTexture(nil,'ARTWORK');b.box:SetAllPoints();b.box:SetTexture(AS..'ControlButtonNormal');b.tick=b.check:CreateTexture(nil,'OVERLAY');b.tick:SetAllPoints();b.tick:SetTexture('Interface\\Buttons\\UI-CheckBox-Check');b.wash=b:CreateTexture(nil,'BACKGROUND');b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.15);R.buttons[index]=b end
-   b.material=m;b:ClearAllPoints();b:SetPoint('TOPLEFT',R.body,'TOPLEFT',((j-1)%columns)*66,-y-math.floor((j-1)/columns)*61);b:SetSize(64,61);b.icon:ClearAllPoints();b.icon:SetSize(32,32);b.icon:SetPoint('TOP',b,'TOP',0,-3);b.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,m.id));b.label:ClearAllPoints();b.label:SetPoint('TOPLEFT',b,'TOPLEFT',1,-37);b.label:SetWidth(62);b.label:SetHeight(24);b.label:SetJustifyH('CENTER');b.label:SetWordWrap(true);b.label:SetText(m.id==21071 and'Sagefish Pool'or m.name);b.check:ClearAllPoints();b.check:SetSize(13,13);b.check:SetPoint('BOTTOMRIGHT',b.icon,'BOTTOMRIGHT',1,-1);b.check:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);b:SetScript('OnClick',function()R.ToggleMaterial(b.material)end);if b.check.SetChecked then b.check:SetChecked(K.selected[m.id]==true)end;if b.tick then b.tick:SetShown(K.selected[m.id]==true)end;b.wash:SetShown(K.selected[m.id]==true);b:SetAlpha(canGather(m) and 1 or .35);b:Show()
-  end;y=y+math.ceil(#list/columns)*61 end
- end
- for i=index+1,#R.buttons do R.buttons[i]:Hide()end;R.body:SetHeight(math.max(1,y));local n=0;for _ in pairs(K.selected)do n=n+1 end;K.count:SetText(n..' Resources Selected');if K.resourceBar then K.resourceBar:SetShown(y>K.gridHeight)end
- local scroll=K.resourceScroll
- if scroll then scroll:SetVerticalScroll(math.min(scroll:GetVerticalScroll()or 0,math.max(0,y-K.gridHeight)))end
- if R.syncScroll then R.syncScroll()end
-end
 -- Automatically track the single selected recipe source; clicking again clears it.
 local refresh=N.RefreshRecipes
 N.RefreshRecipes=function(...)
@@ -6130,7 +7991,7 @@ N.RefreshRecipes=function(...)
    b:SetScript('OnClick',function(self,...)
     if W.recipeSelection100==key and K.recipePin then W.recipeSelection100=nil;W.activeSource=nil;W.expandedRecipe=nil;W.selection=nil;W.mapLocation=nil;N.selectedRecipe=nil;K.Unpin(K.recipePin);N.RefreshRecipes();N.UpdateMapView();return end
     W.recipeSelection100=key;K.Unpin(K.recipePin);W.sourceSelection100=true;if old then old(self,...)end;W.sourceSelection100=nil
-    local loc=record.location or record.locations and record.locations[1];if loc and loc.mapID and loc.x and loc.y then local id=K.FlagKey(record,loc);K.recipePin=id;K.pins[id]={key=id,name=loc.name or record.name,zone=loc.zone,location=loc,icon=AS..'RecipePin',pin=true};K.age=1 end
+    local loc=record.location or record.locations and record.locations[1];if loc and loc.mapID and loc.x and loc.y then local id=K.FlagKey(record,loc);K.recipePin=id;K.pins[id]={key=id,name=loc.name or record.name,zone=loc.zone,location=loc,icon=K.professionPinTexture,professionPin=true,pin=true};K.age=1 end
    end)
   end
  end end;return v
@@ -6199,7 +8060,7 @@ end
 local D={};ns.Review100=D
 function D.Menu(anchor,values,callback)
  if V.menu then V.menu:Hide()end
- if not D.menu then local f=CreateFrame('Frame',nil,UIParent,'BackdropTemplate');D.menu=f;f:SetBackdrop({bgFile='Interface\\Tooltips\\UI-Tooltip-Background',edgeFile='Interface\\Tooltips\\UI-Tooltip-Border',edgeSize=10});f:SetBackdropColor(.025,.02,.01,1);f:SetFrameStrata('TOOLTIP');f:SetClampedToScreen(true);f.buttons={};local scroll=CreateFrame('ScrollFrame',nil,f);f.scroll=scroll;scroll:SetPoint('TOPLEFT',6,-6);scroll:SetPoint('BOTTOMRIGHT',-6,6);scroll:SetClipsChildren(true);scroll:EnableMouseWheel(true);f.body=CreateFrame('Frame',nil,scroll);scroll:SetScrollChild(f.body);scroll:SetScript('OnMouseWheel',function(_,d)scroll:SetVerticalScroll(math.max(0,math.min(math.max(0,f.body:GetHeight()-scroll:GetHeight()),(scroll:GetVerticalScroll()or 0)-d*27)))end)end
+ if not D.menu then local f=CreateFrame('Frame',nil,UIParent,'BackdropTemplate');D.menu=f;f:SetBackdrop({bgFile='Interface/Buttons/WHITE8X8'});f:SetBackdropColor(.025,.02,.01,1);N.BronzeRectangle(f,2);f:SetFrameStrata('TOOLTIP');f:SetClampedToScreen(true);f.buttons={};local scroll=CreateFrame('ScrollFrame',nil,f);f.scroll=scroll;scroll:SetPoint('TOPLEFT',6,-6);scroll:SetPoint('BOTTOMRIGHT',-6,6);scroll:SetClipsChildren(true);scroll:EnableMouseWheel(true);f.body=CreateFrame('Frame',nil,scroll);scroll:SetScrollChild(f.body);scroll:SetScript('OnMouseWheel',function(_,d)scroll:SetVerticalScroll(math.max(0,math.min(math.max(0,f.body:GetHeight()-scroll:GetHeight()),(scroll:GetVerticalScroll()or 0)-d*27)))end)end
  local f=D.menu;local scale=read(N.root.GetEffectiveScale,N.root)or read(N.root.GetScale,N.root)or 1;local parent=read(UIParent.GetEffectiveScale,UIParent)or 1;f:SetScale(scale/parent);f:SetFrameLevel(N.root:GetFrameLevel()+350);f:ClearAllPoints();f:SetPoint('TOPLEFT',anchor,'BOTTOMLEFT',0,-2);local width=math.max(180,anchor:GetWidth());f:SetSize(width,math.min(290,#values*27+12));f.body:SetSize(width-12,math.max(1,#values*27));f.scroll:SetVerticalScroll(0)
  for i,row in ipairs(values)do local b=f.buttons[i];if not b then b=CreateFrame('Button',nil,f.body);b.label=b:CreateFontString(nil,'OVERLAY');b.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',17);b.label:SetTextColor(.94,.78,.42);b.label:SetPoint('LEFT',8,0);b.label:SetPoint('RIGHT',-8,0);b.label:SetJustifyH('LEFT');b.highlight=b:CreateTexture(nil,'BACKGROUND');b.highlight:SetAllPoints();b.highlight:SetColorTexture(.45,.36,.16,.4);b:SetScript('OnEnter',function(self)self.highlight:Show()end);b:SetScript('OnLeave',function(self)self.highlight:SetShown(self.selected)end);f.buttons[i]=b end;b:ClearAllPoints();b:SetPoint('TOPLEFT',f.body,'TOPLEFT',0,-(i-1)*27);b:SetSize(width-12,27);b.label:SetText(row.name);b.selected=row.selected;b.highlight:SetShown(row.selected==true);b:SetScript('OnClick',function()f:Hide();callback(row)end);b:Show()end
  for i=#values+1,#f.buttons do f.buttons[i]:Hide()end;f:Show();V.menu=f
@@ -7026,7 +8887,7 @@ function R.Apply(rows)
  if mode()=='Farming'and #additions==0 then local farm=R.FarmRow(plan,sources);if farm then additions[1]=farm end end
  -- Preserve urgent services, training and immediately available hub turn-ins.
  local at=1
- while out[at]and(out[at].urgentBags or out[at].localQuestPickup or out[at].adaptiveVendor or out[at].kind=='sell'or out[at].kind=='train'or out[at].trainingRequired or out[at].professionChoice or out[at].kind=='turnin'and(distance(position(),out[at].destination)or math.huge)<=150)do at=at+1 end
+ while out[at]and(out[at].urgentBags or out[at].localQuestPickup or out[at].nearbyRecipeVendor or out[at].adaptiveVendor or out[at].kind=='sell'or out[at].kind=='train'or out[at].trainingRequired or out[at].professionChoice or out[at].kind=='turnin'and(distance(position(),out[at].destination)or math.huge)<=150)do at=at+1 end
  for i=#additions,1,-1 do table.insert(out,at,additions[i])end
  return out
 end
@@ -7165,7 +9026,10 @@ end)(ADDON,GF)
     slots[i]=done and '1' or '0'
    end
    if not(E.Public(live.ready)and E.Public(live.complete))then return end
-   parts[#parts+1]=id..':'..(Q.Ready(live)and 'ready' or table.concat(slots))
+    local shape=id..':'..(Q.Ready(live)and 'ready' or table.concat(slots))
+    local procedures=ns.QuestProcedures
+    if procedures and procedures.Has(id)then shape=shape..':'..procedures.Signature(id,live,s) end
+    parts[#parts+1]=shape
   end
   return table.concat(parts,';')
  end
@@ -7372,7 +9236,7 @@ end)(ADDON,GF)
  W.Layout=function(...)
   local value=layout(...);local r=N.root;if not r then return value end
   if not r.compactSwap31 then
-   local b=N.MakeButton(r,'',22,function()W.SetView(W.recipeCompact and 'steps' or 'recipes')end)
+   local b=N.PlainButton(r,'',22,function()W.SetView(W.recipeCompact and 'steps' or 'recipes')end)
    r.compactSwap31=b;b:SetSize(22,58);b:SetFrameLevel(r:GetFrameLevel()+30)
    b.glyph=b:CreateTexture(nil,'OVERLAY');b.glyph:SetSize(16,16);b.glyph:SetPoint('CENTER')
   end
@@ -7387,7 +9251,7 @@ end)(ADDON,GF)
 ;(function(_,ns)
 local E,P,N=ns.Forever,ns.ProfessionGuide,ns.NormalUI
 if not E or not P or not N then return end
-local prep={dismissed={}}
+local prep={dismissed={prep={},run={}}}
 ns.DungeonPrep=prep
 local raid={["onyxias lair"]=true,["barrow deeps"]=true,["hyjal summit"]=true,
  ["molten core"]=true,["blackwing lair"]=true,["zulgurub"]=true,["ahnqiraj"]=true,
@@ -7402,8 +9266,8 @@ local function allowed(quest,level)
   and ((side~='Alliance' and side~='Horde') or side==faction)
   and (not ns.ForeverQuestPlanner or ns.ForeverQuestPlanner.AllowsQuest(quest.id,faction,record))
 end
-local function pending(instance,level)
- local rows,seen={},{}
+local function dungeonQuests(instance,level)
+ local rows,seen,references={},{},{}
  local data=ns.ForeverQuestData.quests
  local function add(row)
   if row.id and not seen[row.id] and allowed(row,level) then
@@ -7414,19 +9278,44 @@ local function pending(instance,level)
  for _,row in ipairs(ns.DungeonQuestRows(instance,instance.name))do add(row)end
  for _,ref in ipairs(ns.DungeonReferencesFor(instance.name))do
   for _,fact in ipairs(ref.quests or {})do
+   references[fact.id]=fact
    local row=seen[fact.id]
    if row then row.reference=fact
    else add({id=fact.id,name=fact.name,reference=fact,record=data[fact.id] or {}})end
   end
  end
- local out={}
- for _,row in ipairs(rows)do
-  local state=E.QuestState(row.id)
-  if allowed(row,level) and not state.inLog and not state.rewarded and state.status~='unavailable' then
-   out[#out+1]=row
-  end
+ return rows,references
+end
+local function startsInside(quest)
+ local reference=quest.reference or {}
+ if not reference.startsInDungeon then return false end
+ -- Some chain records flag an earlier instance pickup, while this quest has an exterior giver.
+ local record=ns.ForeverQuestData.quests[quest.id] or quest.record or {}
+ local point=reference.startPoint
+ local map=point and E.Call(C_Map and C_Map.GetMapInfo,point[1])
+ if E.Public(map) and map and E.Public(map.mapType) and map.mapType==3 then
+  for _,source in ipairs(record.starts or {})do if source.kind=='npc' then return false end end
  end
- return out
+ return true
+end
+local function questState(id)
+ local state=E.QuestState(id)
+ if state.inLog or state.rewarded then return state end
+ if state.status~='available' then return end
+ local rewarded=E.Call(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted or IsQuestFlaggedCompleted,id)
+ if E.Public(rewarded) and (rewarded==false or rewarded==0) then return state end
+ if E.Public(rewarded) and (rewarded==true or rewarded==1) then return {rewarded=true} end
+end
+local function playerState(level)
+ local _,race,raceId=E.Call(UnitRace,'player')
+ local _,class=E.Call(UnitClass,'player')
+ return {level=level,faction=E.Call(UnitFactionGroup,'player'),race=race,raceId=raceId,class=class,
+  quests={},completed={},skills=E.state and E.state.skills or {}}
+end
+local function mayAccept(quest,state)
+ local planner=ns.ForeverQuestPlanner
+ if planner and ns.ForeverQuestData.quests[quest.id] then return planner.Eligible(quest.id,state) end
+ return true
 end
 local function makeStep(quest,kind,loc,hint)
  local verb=kind=='accept' and 'Accept ' or kind=='turnin' and 'Turn In ' or ''
@@ -7436,107 +9325,222 @@ local function makeStep(quest,kind,loc,hint)
  return {id='gf-dungeon-prep:'..kind..':'..quest.id,quest=quest.id,kind=kind,
   category='Dungeons',title=verb..quest.name,body=body,destination=loc}
 end
-local function stepsFor(instance,level)
+local function stepsFor(quests,references,level,normal,state)
  local steps,seen={},{}
  local data=ns.ForeverQuestData.quests
- local function step(quest,prerequisite)
-  if seen[quest.id] or not allowed(quest,level) then return end
-  seen[quest.id]=true
-  local state=E.QuestState(quest.id)
-  if state.rewarded then return end
-  local start=not state.inLog
-  if not start and not prerequisite then return end
-  if not start and not state.ready then
-   steps[#steps+1]=makeStep(quest,'objective')
+ local activeObjectives={}
+ for _,row in ipairs(normal or {})do
+  if row.quest and row.kind=='objective' then activeObjectives[row.quest]=row end
+ end
+ local function step(quest,progress)
+  if seen[quest.id] or not allowed(quest,level) or startsInside(quest) then return end
+  local start=not progress.inLog
+  if start and not mayAccept(quest,state) then return end
+  local planner=ns.ForeverQuestPlanner
+  if not start and not (planner and planner.Ready(progress) or progress.ready) then
+   local row=makeStep(quest,'objective')
+   local objective=activeObjectives[quest.id]
+   if objective then
+    for key,value in pairs(objective)do
+     if key~='id' and key~='category' then row[key]=value end
+    end
+   end
+   steps[#steps+1]=row;seen[quest.id]=true
    return
   end
   local hint,points=ns.DungeonQuestLocations(quest,start)
   local loc=E.Nearest(points,E.state) or points[1]
-  steps[#steps+1]=makeStep(quest,start and 'accept' or 'turnin',loc,hint)
- end
- for _,quest in ipairs(pending(instance,level))do
-  local chain=quest.reference and quest.reference.chain
-  for _,link in ipairs(chain or {})do
-   if link[1]~=quest.id then
-    step({id=link[1],name=link[2] or ('Quest '..link[1]),record=data[link[1]] or {},
-     reference=link[3] and {startPoint=link[3]} or nil},true)
+  if start and not loc then
+   for _,source in ipairs(quest.record and quest.record.starts or {})do
+    -- An item name without a verified exterior location is not a pickup direction.
+    if source.kind=='item' then return end
    end
   end
-  step(quest,false)
+  if not loc and not hint then return end
+  steps[#steps+1]=makeStep(quest,start and 'accept' or 'turnin',loc,hint);seen[quest.id]=true
+ end
+ for _,quest in ipairs(quests)do
+  local progress=questState(quest.id)
+  if progress and not progress.inLog and not progress.rewarded and allowed(quest,level) and not startsInside(quest) then
+   local blocked=false
+   for _,link in ipairs(quest.reference and quest.reference.chain or {})do
+    local id=link[1]
+    if id==quest.id then break end
+    if data[id] then
+     local prior=questState(id)
+     if not prior or not prior.rewarded then
+      if prior then step({id=id,name=data[id].title or link[2],record=data[id],
+        reference=references[id] or (link[3] and {startPoint=link[3]})},prior) end
+      blocked=true;break
+     end
+    end
+   end
+   if not blocked then step(quest,progress) end
+  end
  end
  return steps
+end
+local function hasRunObjective(quest,progress)
+ local record=ns.ForeverQuestData.quests[quest.id] or quest.record or {}
+ local hasTypedObjective=false
+ for _,objective in ipairs(progress.objectives or {})do
+  local kind=objective.type
+  if kind=='monster' or kind=='item' or kind=='object' then
+   hasTypedObjective=true
+   if objective.finished~=true then return true end
+  end
+ end
+ if hasTypedObjective then return false end
+ -- Live event and log types also cover outdoor introductions. Use recorded objectives for those.
+ for _,objective in ipairs(record.objectives or {})do
+  if objective.kind~='talk' then return true end
+ end
+ return false
+end
+local function runObjectives(quests,level,state)
+ local accepted,inside=0,0
+ for _,quest in ipairs(quests)do
+  local progress=questState(quest.id)
+  if progress and not progress.rewarded and allowed(quest,level) then
+   if progress.inLog then
+    local planner=ns.ForeverQuestPlanner
+    if not (planner and planner.Ready(progress) or progress.ready) and hasRunObjective(quest,progress) then accepted=accepted+1 end
+   elseif startsInside(quest) and mayAccept(quest,state) then inside=inside+1 end
+  end
+ end
+ return accepted,inside
+end
+local function canOffer()
+ local model=N.model
+ return model and model.goals.Dungeons and (model.view=='All' or model.view=='Questing' or model.view=='Dungeons')
+  and ns.DungeonQuestRows and ns.DungeonQuestLocations and not (ns.FarmingPlanner and ns.FarmingPlanner.route)
+  and not E.Call(IsInInstance)
 end
 local function offer(level)
  local here=E.CurrentPosition()
  if not here then return end
- local best,bestDistance
+ local best
+ local state=playerState(level)
  for name,instance in pairs(E.dungeons)do
   local key=ns.DungeonNameKey(name)
-  if not prep.dismissed[key] and not raid[key] and instance.minimum and instance.maximum
-   and level>=math.ceil((instance.minimum+instance.maximum)/2) and level<=instance.maximum then
+  if not raid[key] and instance.minimum and instance.maximum and level>=instance.minimum and level<=instance.maximum then
    local entrance=ns.DungeonEntrance(instance)
    local distance=entrance and E.Distance(entrance,here)
-   if distance and distance<3000 and (not bestDistance or distance<bestDistance)
-    and #pending(instance,level)>0 then best,bestDistance=instance,distance end
+   if distance and distance<3000 then
+    local quests,references=dungeonQuests(instance,level)
+    local midpoint=math.ceil((instance.minimum+instance.maximum)/2)
+    local accepted,inside=0,0
+    if level>=midpoint and not prep.dismissed.run[key] then accepted,inside=runObjectives(quests,level,state) end
+    local run=accepted+inside>0
+    local pickups=(run or not prep.dismissed.prep[key]) and #stepsFor(quests,references,level,nil,state) or 0
+    if run or pickups>0 then
+     local rank=run and 2 or 1
+     if not best or rank>best.rank or (rank==best.rank and (distance<best.distance or (distance==best.distance and key<best.key))) then
+      local title,body
+      if run then
+       title='Run '..name
+       local detail={}
+       if accepted>0 then detail[#detail+1]=accepted==1 and '1 dungeon quest to finish.' or accepted..' dungeon quests to finish.' end
+       if inside>0 then detail[#detail+1]=inside==1 and '1 quest starts inside.' or inside..' quests start inside.' end
+       body=table.concat(detail,' ')
+      else
+       title='Get Quests for '..name
+       body='Gather the quests before your run.'
+      end
+      best={instance=instance,entrance=entrance,key=key,mode=run and 'run' or 'prep',rank=rank,distance=distance,
+       title=title,body=body,pickups=pickups}
+     end
+    end
+   end
   end
  end
  return best
 end
 local function finish()
- if prep.active then prep.dismissed[ns.DungeonNameKey(prep.active.name)]=true end
- prep.active=nil
+ prep.active,prep.navigation=nil,nil
  prep.resume=prep.saved
  prep.saved=nil
  prep.offer=nil
+ prep.checked=nil
+end
+local function offerSignature(candidate)
+ return candidate and (candidate.mode..':'..candidate.key..':'..candidate.body..':'..candidate.pickups)
+end
+function prep.VisibleOffer()
+ if canOffer() and not prep.active and not prep.navigation then return prep.offer end
+end
+function prep.UpdateOffer(force,level)
+ local previous=offerSignature(prep.offer)
+ if not canOffer() or prep.active or prep.navigation then
+  prep.offer=nil;prep.checked=nil
+  return previous~=nil
+ end
+ level=level or E.Call(UnitLevel,'player') or 1
+ local clock=E.Call(GetTime) or 0
+ if not force and prep.checked and clock-prep.checked<5 and prep.level==level then return false end
+ prep.checked,prep.level=clock,level
+ prep.offer=offer(level)
+ return previous~=offerSignature(prep.offer)
+end
+function prep.Choose(mode)
+ local candidate=prep.VisibleOffer()
+ if not candidate or (mode=='prep' and candidate.pickups<1) or (mode=='run' and candidate.mode~='run') then return false end
+ prep.saved=N.model.index;prep.offer=nil
+ if mode=='prep' then prep.active=candidate.instance else prep.navigation=candidate end
+ N.Resync()
+ return true
+end
+function prep.DismissOffer()
+ local candidate=prep.VisibleOffer()
+ if candidate then prep.dismissed[candidate.mode][candidate.key]=true;prep.UpdateOffer(true) end
 end
 local refresh=P.Refresh
 function P.Refresh(...)
  local normal=refresh(...)
- if not ns.DungeonQuestRows or not ns.DungeonQuestLocations or (ns.FarmingPlanner and ns.FarmingPlanner.route) then return normal end
+ if not canOffer() then
+  if (prep.active or prep.navigation) and E.Call(IsInInstance) then finish() end
+  prep.UpdateOffer(true)
+  return normal
+ end
  local level=E.Call(UnitLevel,'player') or 1
  if prep.active then
-  local steps=stepsFor(prep.active,level)
+  local quests,references=dungeonQuests(prep.active,level)
+  local steps=stepsFor(quests,references,level,normal,playerState(level))
   if #steps>0 then P.steps=steps;P.firstPending=steps[1].id;return steps end
   finish()
  end
- local clock=E.Call(GetTime) or 0
- if not prep.checked or clock-prep.checked>=5 or prep.level~=level then
-  prep.checked,prep.level=clock,level
-  local candidate=offer(level)
-  if candidate~=prep.offer and candidate then
-   prep.previous=N.model and N.model.index
+ if prep.navigation then
+  local run=prep.navigation
+  local accepted,inside=runObjectives(dungeonQuests(run.instance,level),level,playerState(level))
+  if accepted+inside>0 and level<=run.instance.maximum then
+   local rows={{id='gf-dungeon-run:'..run.key,kind='dungeonRun',category='Dungeons',
+    title=run.title,body=run.body,destination=run.entrance}}
+   for _,row in ipairs(normal or {})do rows[#rows+1]=row end
+   P.steps=rows;P.firstPending=rows[1].id;return rows
   end
-  prep.offer=candidate
+  finish()
  end
- if prep.offer then
-  local instance=prep.offer
-  local rows={{id='gf-dungeon-offer:'..instance.name,kind='dungeonPrepOffer',category='Dungeons',
-   title='Get Quests for '..instance.name,body='Temporarily switch to gathering the available dungeon quests.'}}
-  for _,row in ipairs(normal or {})do rows[#rows+1]=row end
-  P.steps=rows;P.firstPending=rows[1].id;return rows
- end
+ prep.UpdateOffer(true,level)
  return normal
 end
-local done,skip=P.Done,P.Skip
-function P.Done(...)
- if P.selected and P.selected.kind=='dungeonPrepOffer' and prep.offer then
-  prep.saved=prep.previous
-  if not prep.saved then
-   for _,row in ipairs(P.steps or {})do
-    if row.kind~='dungeonPrepOffer' then prep.saved=row.id;break end
-   end
-  end
-  prep.active,prep.offer=prep.offer,nil
-  return true
- end
- return done(...)
-end
+local skip=P.Skip
 function P.Skip(...)
- if prep.active then finish();return true end
- if P.selected and P.selected.kind=='dungeonPrepOffer' and prep.offer then
-  prep.dismissed[ns.DungeonNameKey(prep.offer.name)]=true;prep.offer=nil;return true
+ if canOffer() then
+  if prep.active then
+   prep.dismissed.prep[ns.DungeonNameKey(prep.active.name)]=true;finish();return true
+  end
+  if prep.navigation and P.selected and P.selected.kind=='dungeonRun' then
+   prep.dismissed.run[prep.navigation.key]=true;finish();return true
+  end
  end
  return skip(...)
+end
+local tick=N.Tick
+function N.Tick(...)
+ if (prep.active or prep.navigation) and E.Call(IsInInstance) then N.Resync();return end
+ local result=tick(...)
+ if prep.UpdateOffer(false) then N.Refresh(true) end
+ return result
 end
 local resync=N.Resync
 function N.Resync(...)

@@ -74,7 +74,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-User-supplied Factoruide v2 exports retain their provenance. Inputs remain at their original Downloads paths, hashes in Forever-Quest-Coverage.json. Fixed sell actions removed; maps and quest actions deduplicated. Do not imply these guide outputs are independently verified game facts.
+Quest-specific data from QuestieDB Forever v1.1.0 (Questie team), producer commit 90ab55bdddd6ef6507fe51610b9c26948bbeb637; objective data and verified location records were normalized and matched by game IDs. See the source release and its upstream contributor licensing.
+Source: https://github.com/Questie/QuestieDB/releases/tag/v1.1.0
+Licensing: https://github.com/Questie/QuestieDB/blob/90ab55bdddd6ef6507fe51610b9c26948bbeb637/LICENSE.md
 Questie-Forever inspected commit46c8dc78e0342e8727f82226d67446c2e7c7726c: Classic table4244 IDs, no IDs>=90000. Not embedded. ForeverChanges5210 is a comparison count, not a release validation gate.
 
 Forever5 historical gathering facts: 12200 Classic-only reference positions for named legacy zones. Normalized from pinned pfQuest/CMaNGOS factual tables, not a live-node scan. Route traces are approximate user-supplied references and require launch validation on changed Forever terrain.
