@@ -130,6 +130,13 @@ local bossDisplay = {
     [14354] = 7552, [14516] = 14591, [16118] = 16020, [253201] = 142989, [253218] = 143040, [255391] = 7914,
     [260468] = 142457, [261809] = 143832, [261812] = 144514, [261813] = 144511, [262081] = 143063,
     [262127] = 144515, [262716] = 17273, [264172] = 144022, [269111] = 145808, [272561] = 147098,
+    -- WoWBocho's Forever NPC display table, checked against local CreatureDisplayInfo.
+    [255699] = 139050, [261316] = 1070,
+    -- Classic display IDs for the archived Molten Core and Blackwing Lair reference maps.
+    [11502] = 11121, [11982] = 10193, [11988] = 11986, [12018] = 12029, [12056] = 12129,
+    [12057] = 12110, [12098] = 13030, [12118] = 13031, [12259] = 13030, [12264] = 13032,
+    [11583] = 11380, [11981] = 6377, [11983] = 6377, [12017] = 14308,
+    [12435] = 10115, [13020] = 13992, [14020] = 14367, [14601] = 6377,
 }
 
 local function localEndpoint(point)
@@ -168,6 +175,7 @@ local bundledBossIcons = {
 -- These documented boss rows can also originate solely from a named floor pin.
 local pinnedBossNPCs = {
     ["overseer wrex"] = 255391,
+    ["lordaeron captain"] = 255699, ["magmatus"] = 261316,
     ["titanosaur"] = 253201, ["venomridge"] = 261813, ["thunderhoof"] = 261812,
     ["direhorn matriarch"] = 262127, ["cinder"] = 261974, ["bolt"] = 262081,
     ["snowtalon"] = 262297, ["vitrix"] = 272561, ["izharel and torrel"] = 253218,
@@ -218,12 +226,7 @@ local function paintBossToken(frame, boss, anchor, offset, size, mapPin)
             token.portrait:AddMaskTexture(innerMask)
         end
     end
-    local marked = boss.marker ~= nil
-    local markerOnly = marked and mapPin
-    token.edge:SetShown(not markerOnly)
-    token.interior:SetShown(not markerOnly)
-    token.portrait:SetShown(not markerOnly)
-    if marked then
+    if boss.marker ~= nil and not mapPin then
         if not token.badge then
             token.badge = token:CreateTexture(nil, "ARTWORK")
             token.badge:SetTexture("Interface\\AddOns\\GrindingForever\\Media\\DungeonRouteBadges")
@@ -234,11 +237,7 @@ local function paintBossToken(frame, boss, anchor, offset, size, mapPin)
         end
         local diameter = N.PixelSize(token, 21)
         token.badge:ClearAllPoints()
-        if mapPin then
-            token.badge:SetPoint("CENTER")
-        else
-            token.badge:SetPoint("LEFT", token, "RIGHT", N.PixelSize(token, 4), 0)
-        end
+        token.badge:SetPoint("LEFT", token, "RIGHT", N.PixelSize(token, 4), 0)
         token.badge:SetSize(diameter, diameter)
         local diamond = not tonumber(boss.marker)
         token.badge:SetTexCoord(diamond and .5 or 0, diamond and 1 or .5, 0, 1)
@@ -251,12 +250,6 @@ local function paintBossToken(frame, boss, anchor, offset, size, mapPin)
         token.badge:Hide()
         token.glyph:Hide()
     end
-    if markerOnly then
-        token.fallback:Hide()
-        token:Show()
-        return
-    end
-
     local journal = E.journal
     local static = journal and journal.STATIC_DISPLAY_IDS
     local key = ns.DungeonNameKey(boss.name)
@@ -271,20 +264,19 @@ local function paintBossToken(frame, boss, anchor, offset, size, mapPin)
     portrait:SetTexture(nil)
     portrait:SetTexCoord(0, 1, 0, 1)
     local requested
-    if icon then
-        portrait:SetTexture(icon)
-    elseif display and type(SetPortraitTextureFromCreatureDisplayID) == "function" then
+    if display and (mapPin or not icon) and type(SetPortraitTextureFromCreatureDisplayID) == "function" then
         local ok, result = pcall(SetPortraitTextureFromCreatureDisplayID, portrait, display)
         requested = ok and result ~= false
         if not requested then portrait:SetTexture(nil) end
     end
-    if not requested and not portrait:GetTexture() and bundledBossIcons[key] then
-        portrait:SetTexture(bundledBossIcons[key])
+    if not requested and not portrait:GetTexture() then
+        portrait:SetTexture(icon or bundledBossIcons[key])
     end
     -- A successful portrait request can return nil while the client loads it.
     token.fallback:SetShown(not portrait:GetTexture())
     token:Show()
 end
+ns.PaintDungeonBossToken = paintBossToken
 
 local function setWaypoint(loc)
     if not loc then return "No coordinates recorded" end
@@ -828,8 +820,29 @@ function ns.ToggleDungeonBrowser()
         pin.landmark = position
         local focused = selectedBoss and position.kind == "boss" and
             ns.DungeonNameKey(position.name) == ns.DungeonNameKey(position.focusAlias or selectedBoss)
-        pin:SetScale(focused and (position.boss and position.boss.marker and 1.12 or 1.22) or 1)
-        pin.icon:SetShown(not position.boss)
+        pin:SetScale(focused and 1.22 or 1)
+        local isStair = position.stairLabel ~= nil
+        if isStair and not pin.stairBadge then
+            local badge = CreateFrame("Frame", nil, pin)
+            badge:SetAllPoints()
+            local border = badge:CreateTexture(nil, "BACKGROUND")
+            border:SetAllPoints()
+            border:SetColorTexture(.87, .67, .37)
+            local plate = badge:CreateTexture(nil, "BACKGROUND", nil, 1)
+            local pixel = N.PixelSize(badge, 1)
+            plate:SetPoint("TOPLEFT", pixel, -pixel)
+            plate:SetPoint("BOTTOMRIGHT", -pixel, pixel)
+            plate:SetColorTexture(.15, .08, .04)
+            badge.label = N.MakeText(badge, 13, "", true)
+            badge.label:SetPoint("CENTER")
+            badge.label:SetTextColor(1, .89, .64)
+            pin.stairBadge = badge
+        end
+        if pin.stairBadge then
+            pin.stairBadge:SetShown(isStair)
+            if isStair then pin.stairBadge.label:SetText(position.stairLabel) end
+        end
+        pin.icon:SetShown(not position.boss and not isStair)
         if not position.boss then
             pin.icon:SetTexture(position.kind == "quest" and "Interface\\GossipFrame\\AvailableQuestIcon"
                 or "Interface\\MINIMAP\\TRACKING\\Dungeon")
@@ -903,6 +916,7 @@ function ns.ToggleDungeonBrowser()
             addPin({name = name, x = x, y = y, kind = kind, detail = detail, boss = boss,
                 markerX = options and options.markerX, markerY = options and options.markerY,
                 targetFloor = options and options.targetFloor,
+                stairLabel = options and kind == "floor" and (options.stairLabel or options.marker),
                 focusAlias = selectedBoss and positionAlias[selectedBoss]}, count)
         end
         for _, point in ipairs(referencePins) do
@@ -939,6 +953,8 @@ function ns.ToggleDungeonBrowser()
                 addRow(label, nil, nil, description, nil, nil, heading, nil, nil, nil, true)
             end
             local bossID = boss.npcID or pinnedBossNPCs[ns.DungeonNameKey(boss.name)]
+            local verified = ns.GetDungeonEncounterVerifiedFacts(selected.name, boss.name, bossID)
+            bossID = bossID or (verified and verified.npcID)
             local facts = bossID and ns.DungeonEncounterFacts and ns.DungeonEncounterFacts[bossID]
             local creatureID = E.NPCID(E.Call(UnitGUID, "target"))
             local hp, levelText
@@ -950,23 +966,31 @@ function ns.ToggleDungeonBrowser()
                 local maxHealth = E.Call(UnitHealthMax, "target")
                 if E.Public(maxHealth) and type(maxHealth) == "number" and maxHealth > 100 then hp = maxHealth end
             end
-            if not levelText and facts and facts.minLevel then
-                local minimum, maximum = facts.minLevel, facts.maxLevel
+            local level = verified and verified.minLevel and verified or facts
+            if not levelText and level and level.minLevel then
+                local minimum, maximum = level.minLevel, level.maxLevel
                 levelText = minimum == maximum and tostring(minimum) or (minimum .. "–" .. maximum)
-                if facts.alternateLevel then levelText = levelText .. " / " .. facts.alternateLevel end
-                levelText = levelText .. " (reference)"
+                if level == facts then
+                    if facts.alternateLevel then levelText = levelText .. " / " .. facts.alternateLevel end
+                    levelText = levelText .. " (reference)"
+                end
             end
-            local healthSource = not hp and facts and facts.referenceHealth
-            hp = hp or healthSource
+            local healthLabel
+            if not hp and verified and verified.observedHealth then
+                hp, healthLabel = verified.observedHealth, " (recorded)"
+            elseif not hp and facts and facts.referenceHealth then
+                hp, healthLabel = facts.referenceHealth, " (reference)"
+            end
             local healthText
             if hp then
                 healthText = tostring(hp):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "") .. " HP"
-                if healthSource then healthText = healthText .. " (reference)" end
+                if healthLabel then healthText = healthText .. healthLabel end
             end
             mechanicRow("Level " .. (levelText or "unverified") .. "  ·  " .. (healthText or "HP unverified"))
             mechanicRow("Mechanics", nil, true)
-            if facts and type(facts.mechanics) == "table" and #facts.mechanics > 0 then
-                for _, mechanic in ipairs(facts.mechanics) do
+            local mechanics = verified and verified.mechanics or facts and facts.mechanics
+            if mechanics and #mechanics > 0 then
+                for _, mechanic in ipairs(mechanics) do
                     mechanicRow(mechanic.name, mechanic.description)
                 end
             else
@@ -1564,7 +1588,8 @@ function ns.ToggleDungeonBrowser()
         card.name:SetText(entry.name)
         card.band:SetHeight(math.max(24 * pixel, math.min(44 * pixel, card.name:GetStringHeight() + 8 * pixel)))
         card:SetScript("OnClick",function()
-            selected, floor, tab = entry.instance, 1, "bosses"
+            local maps = entry.instance.gfMaps
+            selected, floor, tab = entry.instance, maps and maps.startFloor or 1, "bosses"
             selectedBoss, selectedQuest, questLandmark = nil, nil, nil
             draw()
         end)

@@ -11,15 +11,11 @@ Other numbered reference maps depict Blizzard World of Warcraft dungeon artwork.
 Wailing Caverns uses the original pre-4.1 Blizzard artwork with the eastern maze intact, sourced from ForeverDungeonJournal's WailingCavernsFull map. Its documented eastern boss positions are used for Lord Pythas and Skum.
 https://warcraft.wiki.gg/wiki/The_Wailing_Caverns
 
-Grinding Forever renders Ragefire Chasm on parchment using the calibrated client geometry from HiddenMaps v1.2.2. All four marker coordinates match the Classic-DB map 389 spawn records.
-https://www.curseforge.com/wow/addons/hiddenmaps/files/9496110
+The active Ragefire Chasm illustration is original Grinding Forever artwork registered to the Forever client WMO geometry.
 
-Grinding Forever renders the Sunken Temple floors on parchment using Forever-client minimap geometry from ForeverDB. The previous artwork coordinates do not apply to these images.
-https://foreverdb.net/dungeon/109-sunken-temple
+Sunken Temple uses Santiago Reyes’s Pit of Refuse, Hall of Serpents, Entrance Hall, and Hall of the Cursed. Prismatic Talus also uses Santiago Reyes’s artwork.
 
 Reviewed floor additions: Blackmaw Hold's six floors, Atal'Byzal in The Drowned City, and Alcaz Prison's Maximum Security Unit use the credited atlas art with its original texture and embedded credits.
-Ragefire Chasm's relief redraw is registered to the ForeverDB minimap mosaic.
-https://foreverdb.net/dungeon/389-ragefire-chasm
 New dungeon floor assignments and approximate landmark positions use Forever Dungeon Routes' video-based route evidence, with the existing ForeverDungeonJournal credits retained.
 https://github.com/Checkov23/ForeverDungeonRoutes/blob/main/CHANGELOG.md
 
