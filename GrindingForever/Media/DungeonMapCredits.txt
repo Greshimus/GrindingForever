@@ -13,7 +13,12 @@ https://warcraft.wiki.gg/wiki/The_Wailing_Caverns
 
 The active Ragefire Chasm illustration is original Grinding Forever artwork registered to the Forever client WMO geometry.
 
-Sunken Temple uses Santiago Reyes’s Pit of Refuse, Hall of Serpents, Entrance Hall, and Hall of the Cursed. Prismatic Talus also uses Santiago Reyes’s artwork.
+Sunken Temple uses Santiago Reyes’s Pit of Refuse, Hall of Serpents, Entrance Hall, and Hall of the Cursed. The original artwork and embedded credits are retained.
+https://www.sreyesmaps.com/mapas/templo-de-atal-hakkar
+
+Pit of Sacrifice is original Grinding Forever artwork. Visible chamber outlines reference the shadow layer on Santiago Reyes’s Hall of the Cursed. The concealed areas and main stair use the WoW Forever client layout.
+
+Prismatic Talus uses Santiago Reyes’s artwork.
 
 Reviewed floor additions: Blackmaw Hold's six floors, Atal'Byzal in The Drowned City, and Alcaz Prison's Maximum Security Unit use the credited atlas art with its original texture and embedded credits.
 New dungeon floor assignments and approximate landmark positions use Forever Dungeon Routes' video-based route evidence, with the existing ForeverDungeonJournal credits retained.
