@@ -311,64 +311,152 @@ function Catalog.PurchaseRecipes()
     return rows
 end
 
-local function tooltipName(fact)
-    return fact[3] or E.SpellName(fact[2])
+local recipeItemPrefixes = {
+    Recipe = true, Pattern = true, Plans = true, Formula = true,
+    Schematic = true, Manual = true, Design = true, Technique = true,
+}
+
+local function vendorRecipeName(name)
+    local prefix, title = name:match("^(%a+):%s*(.+)$")
+    return recipeItemPrefixes[prefix] and title or name
 end
 
-function E.RecipeTooltipLines(id, isUnit)
-    ensureObserved()
-    local indexes = isUnit and facts.byVendor[id] or not isUnit and facts.byItem[id]
-    local observed = isUnit and observedByVendor[id] or not isUnit and observedByItem[id]
-    if not indexes and not observed then return nil end
-    local state = E.state
-    local out, seen = {}, {}
-    local function add(key, label)
-        if not seen[key] then
-            out[#out + 1] = label
-            seen[key] = true
+local function vendorTooltipLines(id)
+    local rows, byItem, bySpell = {}, {}, {}
+    local function add(itemID, spellID, name, profession, skill)
+        if not hasText(name) then return end
+        local label = vendorRecipeName(name)
+        local hasSkill = hasText(profession) and type(skill) == "number" and skill > 0
+        if hasSkill then label = label .. (" (%s %d)"):format(profession, skill) end
+        local row = byItem[itemID] or bySpell[spellID]
+        if not row then
+            row = { label = label, hasSkill = hasSkill }
+            rows[#rows + 1] = row
+        elseif hasSkill and not row.hasSkill then
+            row.label, row.hasSkill = label, true
+        end
+        if itemID then byItem[itemID] = row end
+        if spellID then bySpell[spellID] = row end
+    end
+    local function addFact(fact, fallback)
+        if not E.SeasonalAvailable({spellID = fact[2], learnableItemID = fact[5]}) then return end
+        local name = fact[3] or E.SpellName(fact[2])
+        local skill = fact[4] and fact[4] > 0 and fact[4] or fallback
+        add(fact[5], fact[2], name, facts.professions[fact[1]], skill)
+    end
+
+    for _, index in ipairs(facts.byVendor[id] or {}) do
+        addFact(facts.recipes[index])
+    end
+    for _, recipe in pairs(observedByVendor[id] or {}) do
+        if E.SeasonalAvailable(recipe) then
+            local itemID = recipe.learnableItemID
+            local fact
+            for _, index in ipairs(facts.byItem[itemID] or {}) do
+                local candidate = facts.recipes[index]
+                -- This index also contains finished products, including items that teach another recipe.
+                if candidate[5] == itemID then
+                    fact = candidate
+                    break
+                end
+            end
+            if fact then
+                addFact(fact, recipe.requiredSkill or recipe.skill)
+            else
+                add(itemID, recipe.spellID, recipe.name, recipe.profession, recipe.requiredSkill or recipe.skill)
+            end
         end
     end
-    local function addSource(kind, sourceID, name, zone)
-        local verb = kind == "Vendor" and "Sold by " or kind == "Drop" and "Drops from "
-            or kind == "Trainer" and "Taught by " or "Reward from "
-        add(kind .. ":" .. sourceID, verb .. name .. (zone and (" (" .. zone .. ")") or ""))
+
+    local lines = {}
+    for _, row in ipairs(rows) do lines[#lines + 1] = row.label end
+    return lines
+end
+
+local function recipeItemSourceLines(id)
+    local indexes, observed = facts.byItem[id], observedByItem[id]
+    if not indexes and not observed then return {} end
+    local faction = E.state and E.state.faction or E.Call(UnitFactionGroup, "player")
+    local player = E.CurrentPosition()
+    local merchant = E.activeRecipeMerchant
+    local trading = merchant and MerchantFrame and E.Call(MerchantFrame.IsShown, MerchantFrame) == true
+    local function factionAllows(side)
+        return not side or side == "Neutral" or side == "Both"
+            or E.Public(faction) and faction == side
+    end
+    local function nearby(vendor, npcID)
+        if not vendor or not factionAllows(vendor.faction) then return false end
+        if trading and merchant.npcID == npcID then return true end
+        local yards = player and exact(vendor) and E.Distance(player, vendor)
+        return yards and yards <= E.RecipeVendorRadius
+    end
+    local sources, seen = {}, {}
+    local function addSource(key, description, zone)
+        local source = seen[key]
+        if source then
+            source.zone = source.zone or zone
+        else
+            source = {description = description, zone = zone}
+            seen[key] = source
+            sources[#sources + 1] = source
+        end
     end
     for _, index in ipairs(indexes or {}) do
         local fact = facts.recipes[index]
-        local allowed = E.SeasonalAvailable({spellID = fact[2], learnableItemID = fact[5]})
-        if allowed and isUnit then
-            local skill = fact[4] and fact[4] > 0 and (" (" .. facts.professions[fact[1]] .. " " .. fact[4] .. ")") or ""
-            add(fact[2], tooltipName(fact) .. skill)
-        elseif allowed then
+        if E.SeasonalAvailable({spellID = fact[2], learnableItemID = fact[5]}) then
             for _, source in ipairs(fact[7]) do
                 local kind, sourceID = source[1], source[2]
                 local entity = facts.entities[kind] and facts.entities[kind][sourceID]
-                if entity and (not state or not entity[6] or entity[6] == "Neutral" or entity[6] == "Both" or entity[6] == state.faction) then
+                if kind == "Vendor" then
+                    local vendor = E.vendors[sourceID]
+                    if not nearby(vendor, sourceID) then vendor = entity and locate(kind, sourceID) end
+                    if nearby(vendor, sourceID) then
+                        local crafted = fact[6] == id and fact[5] ~= id
+                        local verb = crafted and "Recipe sold by " or "Sold by "
+                        local key = "Vendor:" .. sourceID .. (crafted and ":recipe" or "")
+                        addSource(key, verb .. (vendor.name or "Vendor #" .. sourceID), vendor.zone)
+                    end
+                elseif entity and factionAllows(entity[6]) then
+                    local verb = kind == "Drop" and "Drops from " or kind == "Trainer" and "Taught by " or "Reward from "
                     local name = entity[1] or (kind .. " #" .. sourceID)
-                    addSource(kind, sourceID, name, entity[2])
+                    addSource(kind .. ":" .. sourceID, verb .. name, entity[2])
                 elseif kind == "World Drop" then
-                    add(kind .. ":" .. (sourceID or ""), "World drop" .. (sourceID and (" (" .. sourceID .. ")") or ""))
+                    addSource(kind .. ":" .. (sourceID or ""), "World drop", sourceID)
                 end
             end
         end
     end
-    if observed and isUnit then
-        for key, recipe in pairs(observed) do
-            if E.SeasonalAvailable(recipe) then add(key, recipe.name) end
-        end
-    elseif observed and E.SeasonalAvailable(observed) then
+    if observed and E.SeasonalAvailable(observed) then
         for _, loc in ipairs(observed.locations) do
-            if loc.source == "Vendor" and loc.npcID and loc.name then
-                addSource(loc.source, loc.npcID, loc.name, loc.zone)
+            if loc.source == "Vendor" and loc.npcID and loc.name and nearby(loc, loc.npcID) then
+                addSource("Vendor:" .. loc.npcID, "Sold by " .. loc.name, loc.zone)
             end
         end
     end
-    if #out == 0 then return nil end
+    local lines = {}
+    for _, source in ipairs(sources) do
+        local label = source.description .. (source.zone and (" (" .. source.zone .. ")") or "")
+        lines[#lines + 1] = label
+    end
+    return lines
+end
+
+function E.RecipeTooltipLines(id, isUnit)
+    ensureObserved()
+    local lines = isUnit and vendorTooltipLines(id) or recipeItemSourceLines(id)
+    if #lines == 0 then return nil end
+    local out, seen = {}, {}
+    for _, label in ipairs(lines) do
+        if not seen[label] then
+            seen[label] = true
+            out[#out + 1] = label
+        end
+    end
     table.sort(out)
     if #out > 10 then
         local count = #out
         for i = count, 11, -1 do out[i] = nil end
-        out[11] = "+" .. (count - 10) .. " more in Recipes & Vendors"
+        out[11] = "+" .. (count - 10) .. " more in Recipe Sources"
     end
     if isUnit then table.insert(out, 1, "Recipes for sale") end
     return out

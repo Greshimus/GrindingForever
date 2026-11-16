@@ -57,6 +57,7 @@ end
 local function showRecipes()
     if panel then panel:SetShown(not panel:IsShown()); return end
     local assets = "Interface\\AddOns\\GrindingForever\\Media\\"
+    local face = assets.."Naowh.ttf"
     local catalog = ns.RecipeCatalog
     panel = CreateFrame("Frame", nil, UIParent)
     panel:SetSize(510, 528)
@@ -70,7 +71,7 @@ local function showRecipes()
     local searchFill=search:CreateTexture(nil,"BACKGROUND")
     searchFill:SetAllPoints();searchFill:SetColorTexture(.45,.27,.12,.24)
     N.BronzeRectangle(search,1)
-    search:SetFont(assets.."Naowh.ttf",N.PixelSize(search,14),"")
+    search:SetFont(face,N.PixelSize(search,14),"")
     search:SetTextColor(.18,.105,.045)
     search:SetTextInsets(6,6,0,0)
     search:SetAutoFocus(false)
@@ -219,6 +220,13 @@ local function showRecipes()
         end
     end
 
+    local function captionSize(fullSize)
+        local unit=N.PixelSize(panel, 1)
+        -- Match the other compact selectors at 400 px, growing to the normal size by 480 px.
+        local roomy=math.max(0, math.min(1, (panel:GetWidth()/unit-400)/80))
+        return math.floor(13+(fullSize-13)*roomy+.5)*unit
+    end
+
     local function makeMenu()
         local frame = CreateFrame("Frame", nil, panel, "BackdropTemplate")
         frame:SetWidth(N.PixelSize(panel, 178))
@@ -244,7 +252,7 @@ local function showRecipes()
                     button:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -4-(i-1)*height)
                     button:SetWidth(frame:GetWidth()-8)
                     button:SetHeight(height)
-                    fitLabel(button, entry.label, N.PixelSize(frame, 14), 15)
+                    fitLabel(button, entry.label, captionSize(14), 15)
                 end
             end
         end
@@ -376,13 +384,23 @@ local function showRecipes()
     end
 
     local function priceText(loc)
-        if loc.source ~= "Vendor" then return "" end
+        if loc.source ~= "Vendor" then return end
         if merchantFavor(loc) then
-            if type(loc.currencyAmount)=="number" then return " · "..loc.currencyAmount.." Merchant's Favor" end
-            return " · Merchant's Favor"
+            if type(loc.currencyAmount)=="number" then return loc.currencyAmount.." Merchant's Favor" end
+            return "Merchant's Favor"
         end
-        if type(loc.price) ~= "number" then return " · Price unrecorded" end
-        return " · "..(GetCoinTextureString and GetCoinTextureString(loc.price) or (loc.price .. "c"))
+        if type(loc.price) ~= "number" then return "Price unrecorded" end
+        return GetCoinTextureString and GetCoinTextureString(loc.price) or loc.price.."c"
+    end
+
+    local function skillText(recipe)
+        local skill=(recipe.skill or 0)>0 and " "..recipe.skill or ""
+        return (recipe.profession or "Recipe")..skill
+    end
+
+    local function sourceCountText(row)
+        local count=#row.sources
+        return count..(count==1 and " source" or " sources")..(row.known and " · Known" or "")
     end
 
     local function describeWorldDrop(recipe)
@@ -446,16 +464,14 @@ local function showRecipes()
                     button.label:SetText(row.summary.label)
                     button.detail:SetText(row.summary.detail)
                 elseif loc then
+                    local price=priceText(loc)
                     button.label:SetText(loc.name or "Unknown source")
-                    button.detail:SetText((loc.zone or loc.dungeon or loc.source or "Unknown zone") .. priceText(loc)
+                    button.detail:SetText((loc.zone or loc.dungeon or loc.source or "Unknown zone") .. (price and " · "..price or "")
                         .. (catalog.HasWaypoint(loc) and " · Pin" or ""))
                 else
                     button.disclosure:SetRotation(expanded==recipe.key and -math.pi/2 or 0)
                     button.label:SetText(recipe.name)
-                    local skill=(recipe.skill or 0)>0 and (" "..recipe.skill) or ""
-                    local count=#row.sources
-                    button.detail:SetText((recipe.profession or "Recipe")..skill.." · "..count..(count==1 and " source" or " sources")
-                        .. (row.known and " · Known" or ""))
+                    button.detail:SetText(skillText(recipe).." · "..sourceCountText(row))
                 end
             end
         end
@@ -465,8 +481,8 @@ local function showRecipes()
     end
 
     local function fitFilters()
-        fitLabel(zoneButton, chosenZone=="All Zones" and (chosenContinent or chosenZone) or chosenZone or "Current Zone", N.PixelSize(panel, 15), N.PixelSize(panel, 32))
-        fitLabel(professionButton, profession or "All Professions", N.PixelSize(panel, 15), N.PixelSize(panel, 32))
+        fitLabel(zoneButton, chosenZone=="All Zones" and (chosenContinent or chosenZone) or chosenZone or "Current Zone", captionSize(15), N.PixelSize(panel, 32))
+        fitLabel(professionButton, profession or "All Professions", captionSize(15), N.PixelSize(panel, 32))
     end
 
     refresh = function(keepPage)
@@ -539,6 +555,7 @@ local function showRecipes()
 
     for i=1,26 do
         local button = CreateFrame("Button",nil,viewport)
+        button.gfRecipeSourceRow = true
         button.fill=button:CreateTexture(nil,"BACKGROUND")
         button.fill:SetAllPoints()
         button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
@@ -555,26 +572,52 @@ local function showRecipes()
         buttons[i]=button
         button:SetScript("OnEnter",function(self)
             local row=self.record
-            if not row then return end
+            if not row or not GameTooltip then return end
             local recipe,loc=row.recipe,row.location
-            GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
-            local itemID=recipe.learnableItemID or recipe.productID
-            if itemID and not row.summary then E.Call(GameTooltip.SetHyperlink,GameTooltip,"item:"..itemID) end
-            GameTooltip:AddLine(self.label:GetText(),.98,.84,.58,true)
-            GameTooltip:AddLine(self.detail:GetText(),.98,.84,.58,true)
-            if loc then
-                if loc.requirement then GameTooltip:AddLine(loc.requirement,.98,.84,.58,true) end
-                if type(loc.rate)=="number" and type(loc.sampleSize)=="number" then
-                    GameTooltip:AddLine(("Recorded rate: %.3g%% (%d attempts)"):format(loc.rate*100,loc.sampleSize),.98,.84,.58,true)
-                elseif type(loc.classicRate)=="number" then
-                    GameTooltip:AddLine(("Classic fallback: %.3g%%"):format(loc.classicRate*100),.98,.84,.58,true)
-                end
-                if catalog.HasWaypoint(loc) then
-                    GameTooltip:AddLine(("%s %.1f, %.1f"):format(loc.zone or "Map",loc.x,loc.y),.98,.84,.58,true)
-                end
+            local tip=GameTooltip
+            tip:SetOwner(self,"ANCHOR_RIGHT")
+            E.Call(tip.ClearLines,tip)
+            local function line(value)
+                if value and value~="" then tip:AddLine(value,.98,.84,.58,true) end
             end
-            if row.summary then for _,line in ipairs(row.summary.lines) do GameTooltip:AddLine(line,.98,.84,.58,true) end end
-            GameTooltip:Show()
+            if row.summary then
+                line(row.summary.label)
+                line(row.summary.detail)
+                for _,value in ipairs(row.summary.lines) do line(value) end
+                tip:Show()
+                return
+            end
+            local itemID=recipe.learnableItemID or recipe.productID
+            local nativeTitle=false
+            if itemID then
+                E.Call(tip.SetHyperlink,tip,"item:"..itemID)
+                local count=E.Call(tip.NumLines,tip)
+                local name=E.Call(tip.GetItem,tip)
+                nativeTitle=E.Public(count) and type(count)=="number" and count>0
+                    or E.Public(name) and type(name)=="string" and name~=""
+            end
+            if not nativeTitle then line(recipe.name) end
+            if not nativeTitle or not recipe.learnableItemID then line(skillText(recipe)) end
+            if loc then
+                local name=loc.name or "Unknown source"
+                line(loc.source and loc.source~=name and loc.source.." · "..name or name)
+                local place=loc.zone or loc.dungeon
+                if catalog.HasWaypoint(loc) then
+                    place=("%s %.1f, %.1f"):format(place or "Map",loc.x,loc.y)
+                end
+                if place~=name then line(place) end
+                local price=priceText(loc)
+                line(price)
+                if loc.requirement~=price then line(loc.requirement) end
+                if type(loc.rate)=="number" and type(loc.sampleSize)=="number" then
+                    line(("Recorded rate: %.3g%% (%d attempts)"):format(loc.rate*100,loc.sampleSize))
+                elseif type(loc.classicRate)=="number" then
+                    line(("Classic fallback: %.3g%%"):format(loc.classicRate*100))
+                end
+            else
+                line(sourceCountText(row))
+            end
+            tip:Show()
         end)
         button:SetScript("OnLeave",function() GameTooltip:Hide() end)
         button:SetScript("OnClick",function(self)
@@ -619,7 +662,7 @@ local function showRecipes()
         local x=0
         for i,button in ipairs(scopeButtons) do
             position(button,x,0,scopeWidth[i],px(29))
-            fitLabel(button,scopes[i],px(14),px(15))
+            fitLabel(button,scopes[i],captionSize(14),px(15))
             x=x+scopeWidth[i]+gap
         end
         local zoneWidth = px(math.floor(width/px(1)*.51+.5))
@@ -627,6 +670,11 @@ local function showRecipes()
         position(professionButton,zoneWidth+gap,px(35),width-zoneWidth-gap,px(29))
         position(search,0,px(71),width,px(26))
         position(location,0,px(102),width,px(19))
+        search:SetFont(face,px(14),"")
+        placeholder:SetFont(face,px(14),"")
+        location:SetFont(face,px(15),"")
+        status:SetFont(face,px(12),"")
+        feedback:SetFont(face,px(12),"")
         location:SetJustifyH("LEFT")
         for i,button in ipairs(sourceButtons) do
             local w=(width-3*gap)/4
@@ -713,13 +761,28 @@ function W.Layout(...)
     local unit = N.PixelSize(steps,1)
     local inset = 20*unit
     local gap = 3*unit
-    local width = (steps:GetWidth()-2*inset-2*gap)/3
+    local buttons = {recipeButton,farmButton,dungeonButton}
+    local available = steps:GetWidth()-2*inset-2*gap
+    local equal = available/#buttons
+    local minimums, required, widest = {}, 0, 0
+    for i,button in ipairs(buttons) do
+        local caption = button.label
+        local width = caption.GetUnboundedStringWidth and caption:GetUnboundedStringWidth() or caption:GetStringWidth()
+        minimums[i] = (math.ceil(width/unit) + 12)*unit
+        required = required + minimums[i]
+        widest = math.max(widest, minimums[i])
+    end
+    local extra = math.max(0, available-required)/#buttons
+    local compress = math.min(1, available/required)
     local height = 32*unit
     local top = 33*unit
-    for i,button in ipairs({recipeButton,farmButton,dungeonButton}) do
+    local x = inset
+    for i,button in ipairs(buttons) do
+        local width = widest <= equal and equal or minimums[i]*compress+extra
         button:ClearAllPoints()
-        button:SetPoint("TOPLEFT",steps,"TOPLEFT",inset+(i-1)*(width+gap),-top)
+        button:SetPoint("TOPLEFT",steps,"TOPLEFT",x,-top)
         button:SetSize(width,height)
+        x = x + width + gap
     end
     farmButton:SetSelected(ns.FarmingPlanner.route ~= nil)
     return result

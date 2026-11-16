@@ -16,3 +16,21 @@ https://www.curseforge.com/wow/addons/hiddenmaps/files/9496110
 
 Grinding Forever renders the Sunken Temple floors on parchment using Forever-client minimap geometry from ForeverDB. The previous artwork coordinates do not apply to these images.
 https://foreverdb.net/dungeon/109-sunken-temple
+
+Reviewed floor additions: Blackmaw Hold's six floors, Atal'Byzal in The Drowned City, and Alcaz Prison's Maximum Security Unit use the credited atlas art with its original texture and embedded credits.
+Ragefire Chasm's relief redraw is registered to the ForeverDB minimap mosaic.
+https://foreverdb.net/dungeon/389-ragefire-chasm
+New dungeon floor assignments and approximate landmark positions use Forever Dungeon Routes' video-based route evidence, with the existing ForeverDungeonJournal credits retained.
+https://github.com/Checkov23/ForeverDungeonRoutes/blob/main/CHANGELOG.md
+
+Shadowfang Keep: Blizzard's client map artwork, reused from the installed Grinding Forever bundle.
+
+Upper Blackrock Spire: Native Blizzard Blackrock Spire map art
+
+City of Dalaran: Santiago Reyes’s Atlas de Azeroth: Forever artwork, already bundled in Grinding Forever. https://sreyesmaps.com/post/proyecto-atlas-de-azeroth-forever
+
+Hall of Thanes: Santiago Reyes’s Atlas de Azeroth: Forever artwork, already bundled in Grinding Forever. https://sreyesmaps.com/post/proyecto-atlas-de-azeroth-forever
+
+Molten Core: Blizzard client map artwork, reused from the installed Grinding Forever bundle.
+
+Blackwing Lair: Blizzard client map artwork, reused from the installed Grinding Forever bundle.

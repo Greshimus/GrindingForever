@@ -102,6 +102,20 @@ local function inventoryCount(context, item)
     return context.inventory[item] or nil
 end
 
+local function itemProgress(context, item, required, slot, quest)
+    local inBags = inventoryCount(context, item)
+    local live = quest and questState(quest, context.state) or context.live
+    local credited, tracked
+    if positiveInteger(slot) then
+        credited, tracked = objectiveEvidence(live, slot, required)
+        if credited == nil then credited, tracked = objectiveEvidence(live, slot) end
+    end
+    if credited or (inBags and inBags >= required) then return true, required end
+    if credited == false or inBags ~= nil then
+        return false, math.min(required, math.max(inBags or 0, tracked or 0))
+    end
+end
+
 local phaseStatus
 local function evaluate(condition, context, slot, phase, confirm, depth)
     if type(condition) ~= 'table' or depth > 32 then return end
@@ -119,6 +133,9 @@ local function evaluate(condition, context, slot, phase, confirm, depth)
         if not unknown then return kind == 'all' end
     elseif kind == 'item' then
         local need = condition.count or 1
+        if positiveInteger(need) and condition.objectiveSlot then
+            return itemProgress(context, condition.item, need, condition.objectiveSlot, condition.objectiveQuest)
+        end
         local have = inventoryCount(context, condition.item)
         if positiveInteger(need) and have then return have >= need end
     elseif kind == 'objective' then
@@ -132,6 +149,7 @@ local function evaluate(condition, context, slot, phase, confirm, depth)
         if field == 'rewarded' and context.state and context.state.completed and context.state.completed[quest] then
             return true
         end
+        if field == 'rewarded' and live and trueValue(live.rewarded) then return true end
         if live and live.status ~= 'unavailable' then
             if field == 'inLog' or field == 'rewarded' then return observedBool(live[field]) end
             if field == 'ready' then return observedBool(live.ready) end
@@ -250,14 +268,22 @@ local function current(context, slot)
         local status, canAcknowledge = phaseStatus(context, slot, sequence, index)
         if status == 'current' then
             local upcoming = {}
-            for nextIndex = index + 1, math.min(index + 2, #sequence.phases) do
+            for nextIndex = index + 1, #sequence.phases do
                 local nextPhase = sequence.phases[nextIndex]
                 if nextPhase.requires then break end
-                upcoming[#upcoming + 1] = nextPhase.title
+                if evaluate(nextPhase.complete, context, slot, nextPhase, false, 1) ~= true then
+                    upcoming[#upcoming + 1] = nextPhase.title
+                    if #upcoming == 2 then break end
+                end
             end
-            local destination = destinationFor(phase.destination)
+            local display = phase
+            local alternate = phase.alternate
+            if alternate and evaluate(alternate.when, context, slot, phase, false, 1) == true then
+                display = alternate
+            end
+            local destination = destinationFor(display.destination)
             local alternates
-            for _, candidate in ipairs(phase.alternateDestinations or {}) do
+            for _, candidate in ipairs(display.alternateDestinations or {}) do
                 local location = destinationFor(candidate)
                 if location then
                     alternates = alternates or {}
@@ -265,9 +291,10 @@ local function current(context, slot)
                 end
             end
             return {
-                id = phase.id, quest = context.quest, slot = slot,
-                title = phase.title, body = phase.body, action = phase.action,
-                label = phase.label or phase.title, source = phase.source,
+                id = display.id, quest = context.quest, slot = slot,
+                title = display.title, body = display.body, action = display.action or phase.action,
+                summary = display.summary,
+                label = display.label or display.title, source = phase.source, relatedQuest = phase.relatedQuest,
                 count = displayCount(context, slot, phase), destination = destination,
                 alternateDestinations = alternates,
                 groupable = phase.groupable == true and destination ~= nil,
@@ -288,9 +315,52 @@ local function contextFor(quest, live, state)
         inventory = {}, sequences = {}}
 end
 
+local function materialBoard(context)
+    local definition = context.record.materialBoard
+    local live = context.live
+    if not definition or not live or live.status == 'unavailable' or not trueValue(live.inLog)
+        or trueValue(live.ready) or trueValue(live.complete) or trueValue(live.rewarded) then return end
+
+    local note = definition.notes
+    local notesComplete = itemProgress(context, note.itemID, 1, note.objectiveSlot)
+    local board = {
+        notes = current(context, note.slot),
+        notesComplete = notesComplete,
+        materials = {},
+        relatedQuests = {},
+    }
+    for _, material in ipairs(definition.materials) do
+        local required = material.count or 1
+        local complete, count = itemProgress(context, material.itemID, required, material.slot)
+        local phase = not complete and current(context, material.slot) or nil
+        board.materials[#board.materials + 1] = {
+            slot = material.slot, itemID = material.itemID, title = material.title,
+            source = material.source, instruction = material.instruction,
+            unknownInstruction = material.unknownInstruction,
+            status = complete and 'complete' or (phase and 'current' or 'unknown'),
+            complete = complete == true, phase = phase,
+            progress = count and string.format('%d/%d', count, required) or nil,
+        }
+        if phase and phase.relatedQuest then
+            board.relatedQuests[phase.relatedQuest] = true
+        end
+    end
+    return board
+end
+
+function Procedures.MaterialBoard(quest, live, state)
+    local context = contextFor(quest, live, state)
+    if context then return materialBoard(context) end
+end
+
 function Procedures.Has(quest, slot)
     local record = recordFor(quest)
     return record ~= nil and (slot == nil or record.slots[slot] ~= nil)
+end
+
+function Procedures.SuggestPickup(quest)
+    local record = recordFor(quest)
+    return record ~= nil and record.suggestPickup == true
 end
 
 function Procedures.Slots(quest)
@@ -325,6 +395,16 @@ function Procedures.Signature(quest, live, state)
     local context = contextFor(quest, live, state)
     if not context then return '' end
     local parts = {}
+    local board = materialBoard(context)
+    if board then
+        parts[1] = tostring(board.notesComplete) .. ':' .. (board.notes and board.notes.id or '')
+        for _, material in ipairs(board.materials) do
+            local phase = material.phase
+            parts[#parts + 1] = table.concat({material.status, material.progress or '',
+                phase and phase.id or '', phase and phase.count or ''}, ':')
+        end
+        return table.concat(parts, '|')
+    end
     for _, slot in ipairs(Procedures.Slots(quest)) do
         local phase, status = current(context, slot)
         parts[#parts + 1] = phase and (phase.id .. ':' .. (phase.count or '') .. ':' .. tostring(phase.canAcknowledge)) or status

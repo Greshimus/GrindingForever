@@ -105993,3 +105993,20 @@ ns.QuestLocationEvidence = {
  [99435]=defer({},{["startPoints"]=4767}),
  [99670]=defer({},{["startPoints"]=3830,["endPoints"]=4460}),
 }
+
+-- Confirmed contacts for A Moon-Kissed Blade and its side quest.
+do
+ ns.QuestLocationEvidence[95034]=ns.QuestLocationEvidence[95034] or {}
+ ns.QuestLocationEvidence[95034].zoneMapID=1421
+ ns.QuestLocationEvidence[95034].startPoints={{["mapID"]=1421,["x"]=43.4,["y"]=40.99,["name"]="Lumina Windsinger",["zone"]="Silverpine Forest",["npcID"]=259620}}
+ ns.QuestLocationEvidence[95034].endPoints={{["mapID"]=1421,["x"]=43.4,["y"]=40.99,["name"]="Lumina Windsinger",["zone"]="Silverpine Forest",["npcID"]=259620}}
+ ns.QuestLocationEvidence[95036]=ns.QuestLocationEvidence[95036] or {}
+ ns.QuestLocationEvidence[95036].zoneMapID=1421
+ ns.QuestLocationEvidence[95036].startPoints={{["mapID"]=1421,["x"]=43.4,["y"]=40.99,["name"]="Lumina Windsinger",["zone"]="Silverpine Forest",["npcID"]=259620}}
+ ns.QuestLocationEvidence[95036].endPoints={{["mapID"]=1421,["x"]=43.4,["y"]=41.1,["name"]="Trevan Rol",["zone"]="Silverpine Forest",["npcID"]=248840}}
+ ns.QuestLocationEvidence[95036].requiredQuests={95034}
+ ns.QuestLocationEvidence[95042]=ns.QuestLocationEvidence[95042] or {}
+ ns.QuestLocationEvidence[95042].zoneMapID=1440
+ ns.QuestLocationEvidence[95042].startPoints={{["mapID"]=1440,["x"]=11.84,["y"]=34.47,["name"]="Ulric Frostveil",["zone"]="Ashenvale",["npcID"]=259649}}
+ ns.QuestLocationEvidence[95042].endPoints={{["mapID"]=1440,["x"]=11.84,["y"]=34.47,["name"]="Ulric Frostveil",["zone"]="Ashenvale",["npcID"]=259649}}
+end

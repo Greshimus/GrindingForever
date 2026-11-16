@@ -148,7 +148,7 @@ local function candidates(rows, state)
  end
  for index, row in ipairs(rows) do
   local live = row.quest and state.quests[row.quest]
-  if row.kind == 'objective' and live and live.inLog == true then
+  if row.kind == 'objective' and not row.materialBoard and live and live.inLog == true then
    for _, child in ipairs(row.objectives or {row}) do
     local supported=(row.quest~=97583 and row.quest~=97485) or child.procedure
     if supported and child.slot and not Steps.Progress(live.objectives and live.objectives[child.slot]) then
@@ -292,6 +292,17 @@ end
 
 local display = N.WorkflowLive
 function N.WorkflowLive(step)
+ if step.materialBoard then
+  local row=copy(step)
+  local completed=0
+  for _,material in ipairs(row.materialBoard.materials)do
+   if material.complete then completed=completed+1 end
+  end
+  row.actionHeadline=row.title
+  row.actionContext=('Materials %d/%d'):format(completed,#row.materialBoard.materials)
+  row.body,row.craftingBody='',''
+  return row
+ end
  if step.kind ~= 'objective' or not step.procedure and (step.quest == 97583 or step.quest == 97485) or not step.groupObjectives and not step.objectives then
   return display(step)
  end
