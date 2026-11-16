@@ -953,8 +953,6 @@ function ns.ToggleDungeonBrowser()
                 addRow(label, nil, nil, description, nil, nil, heading, nil, nil, nil, true)
             end
             local bossID = boss.npcID or pinnedBossNPCs[ns.DungeonNameKey(boss.name)]
-            local verified = ns.GetDungeonEncounterVerifiedFacts(selected.name, boss.name, bossID)
-            bossID = bossID or (verified and verified.npcID)
             local facts = bossID and ns.DungeonEncounterFacts and ns.DungeonEncounterFacts[bossID]
             local creatureID = E.NPCID(E.Call(UnitGUID, "target"))
             local hp, levelText
@@ -966,31 +964,23 @@ function ns.ToggleDungeonBrowser()
                 local maxHealth = E.Call(UnitHealthMax, "target")
                 if E.Public(maxHealth) and type(maxHealth) == "number" and maxHealth > 100 then hp = maxHealth end
             end
-            local level = verified and verified.minLevel and verified or facts
-            if not levelText and level and level.minLevel then
-                local minimum, maximum = level.minLevel, level.maxLevel
+            if not levelText and facts and facts.minLevel then
+                local minimum, maximum = facts.minLevel, facts.maxLevel
                 levelText = minimum == maximum and tostring(minimum) or (minimum .. "–" .. maximum)
-                if level == facts then
-                    if facts.alternateLevel then levelText = levelText .. " / " .. facts.alternateLevel end
-                    levelText = levelText .. " (reference)"
-                end
+                if facts.alternateLevel then levelText = levelText .. " / " .. facts.alternateLevel end
+                levelText = levelText .. " (reference)"
             end
-            local healthLabel
-            if not hp and verified and verified.observedHealth then
-                hp, healthLabel = verified.observedHealth, " (recorded)"
-            elseif not hp and facts and facts.referenceHealth then
-                hp, healthLabel = facts.referenceHealth, " (reference)"
-            end
+            local healthSource = not hp and facts and facts.referenceHealth
+            hp = hp or healthSource
             local healthText
             if hp then
                 healthText = tostring(hp):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "") .. " HP"
-                if healthLabel then healthText = healthText .. healthLabel end
+                if healthSource then healthText = healthText .. " (reference)" end
             end
             mechanicRow("Level " .. (levelText or "unverified") .. "  ·  " .. (healthText or "HP unverified"))
             mechanicRow("Mechanics", nil, true)
-            local mechanics = verified and verified.mechanics or facts and facts.mechanics
-            if mechanics and #mechanics > 0 then
-                for _, mechanic in ipairs(mechanics) do
+            if facts and type(facts.mechanics) == "table" and #facts.mechanics > 0 then
+                for _, mechanic in ipairs(facts.mechanics) do
                     mechanicRow(mechanic.name, mechanic.description)
                 end
             else
@@ -1811,7 +1801,11 @@ function ns.ToggleDungeonBrowser()
         drawing = true
         repeat
             redrawPending = false
-            drawContents(keepScroll)
+            local ok, detail = pcall(drawContents, keepScroll)
+            if not ok then
+                drawing, redrawPending = false, false
+                error(detail, 0)
+            end
             keepScroll = true
         until not redrawPending
         drawing = false
