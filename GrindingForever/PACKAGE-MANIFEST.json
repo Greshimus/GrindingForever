@@ -3,8 +3,8 @@
   "ExternalCompanionRequired": false,
   "Files": {
     "DungeonBrowser.lua": {
-      "Bytes": 94765,
-      "SHA256": "B05144A57064EE3166B25E6D9B7F8B28F7D200A39B162A8E504DCBB170FF58D3"
+      "Bytes": 94797,
+      "SHA256": "5C9E34BC54563F4C55CFD2ACF03A55479BF4C80ED7A08E9E49A2F501A8F48F87"
     },
     "DungeonData.lua": {
       "Bytes": 6576,

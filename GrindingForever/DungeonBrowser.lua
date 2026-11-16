@@ -435,7 +435,7 @@ function ns.ToggleDungeonBrowser()
     floorButton:HookScript("OnLeave", function() GameTooltip:Hide() end)
 
     local entrance = button(window, "Pin Entrance", 142, function()
-        status:SetText(setWaypoint(ns.DungeonEntrance(selected)))
+        if selected then status:SetText(setWaypoint(ns.DungeonEntrance(selected))) end
     end)
     entrance:SetPoint("LEFT", back, "RIGHT", 8, 0)
     local clearQuest = button(window, "Clear Quest Pin", 134, function()
@@ -821,7 +821,7 @@ function ns.ToggleDungeonBrowser()
         local focused = selectedBoss and position.kind == "boss" and
             ns.DungeonNameKey(position.name) == ns.DungeonNameKey(position.focusAlias or selectedBoss)
         pin:SetScale(focused and 1.22 or 1)
-        local isStair = position.stairLabel ~= nil
+        local isStair = type(position.stairLabel) == "string"
         if isStair and not pin.stairBadge then
             local badge = CreateFrame("Frame", nil, pin)
             badge:SetAllPoints()
