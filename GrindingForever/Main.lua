@@ -1753,7 +1753,9 @@ function GuideView.New()
   local first=visible[1]
   if not self.browsing and first then
    local saferQuest=(first.questStep or first.groupObjectives) and not first._questRisk and current and current._questRisk
-   if first.overworldTravel or first.nearbyRecipeVendor or first.starterTurnIn or saferQuest then self.index=first.id;return end
+   if first.overworldTravel or first.nearbyRecipeVendor or first.starterTurnIn or first.localQuestTurnIn or first.kind=='train' or saferQuest then
+    self.index=first.id;return
+   end
   end
   if not current or current.complete and not self.browsing then
    self.index=nil
@@ -2114,7 +2116,7 @@ function N.SetArrow(value)
  showArrow()
 end
 function N.Tick()
- target=nil;N.target=nil;N.yards=nil;N.angle=nil;N.bearing=nil;N.areaNavigation=nil;N.navigation="No guide destination"
+ target=nil;N.target=nil;N.yards=nil;N.angle=nil;N.bearing=nil;N.areaNavigation=nil;N.routeTravel=nil;N.navigation="No guide destination"
  local destination=(P.active or ns.FarmingPlanner and ns.FarmingPlanner.route)and P.Destination()
  if destination then
   local client=ns.Retail.Client;local pos=client.PlayerPosition()
@@ -2127,6 +2129,11 @@ function N.Tick()
     local dx,dy=tx-x,ty-y;N.yards=math.sqrt(dx*dx+dy*dy)
     N.bearing=N.Bearing(dx,dy);N.angle=N.bearing-facing;N.navigation="Destination: "..destination.name
     N.RenderArrow()
+   elseif P.selected and P.selected.routeGroup and destination.mapID~=pos.mapID and (destination.zone or destination.name) then
+    local place=destination.zone or destination.name
+    N.routeTravel="Travel to "..place
+    N.navigation=N.routeTravel
+    if destination.name and destination.name~=place then N.navigation=N.navigation.." - "..destination.name end
    else N.navigation="Route position unavailable"end
   else N.navigation="Position unavailable - waiting for outdoor position"end
  end
@@ -4503,6 +4510,7 @@ local function travelDestination(row)
  end
 end
 function Q.SelectTravelStep(row)
+ if row and row.routeGroup then row=row.routeGroup.activeRow end
  if not travelEnabled() or not row or not (row.questStep or row.groupObjectives) then return end
  local mapID=travelDestination(row)
  local current=E.CurrentPosition()
@@ -4850,7 +4858,7 @@ end
 E.Priority=function(row,s)
  if row.urgentBags then return 10000 end
  if row.kind=='train'or row.professionChoice then return 1200 end
- row.localQuestPickup,row.starterTurnIn=nil,nil
+ row.localQuestPickup,row.starterTurnIn,row.localQuestTurnIn=nil,nil,nil
  if row.questStarterItem then return 1080 end
  if not row.questStep then return priority(row,s)end
  if row.questDestination then row.destination=row.questDestination;row.zone=row.destination.zone end
@@ -4863,16 +4871,23 @@ E.Priority=function(row,s)
  row._questPriority=loc and (row.kind~='accept' or nearbyPickup) and priorityQuest(q,s) or false
  row._questCluster=nil
  row.recommendationReason=nil
- if row.kind=='turnin' and s.level<=5 and localZone and d and d<=450 then
-  row.starterTurnIn=true
-  row.recommendationReason='Hand this in before taking on more quests.'
-  return 1195-d/100
+ if row.kind=='turnin' and localZone and d then
+  -- Bring starter XP back before the next outing. Later, finish hand-ins
+  -- within the same short walk as nearby pickups.
+  if s.level<=5 and d<=650 then
+   row.starterTurnIn=true
+   row.recommendationReason='Hand this in before taking on more quests.'
+   return 1198-d/100
+  end
+  if d<=120 then
+   row.localQuestTurnIn=true
+   return 1190-d/20
+  end
  end
  -- Pick up quests within a short walk before leaving for a class objective.
  -- A distant restricted quest pickup belongs in the normal travel ranking.
  if row.kind=='accept' and localZone and d and d<=120 then
   row.localQuestPickup=true
-  row.recommendationReason='Pick this up while you are nearby.'
   return 1180-d/10
  end
  if row._questPriority then return d and 1150-75*d/(d+250) or 1075 end
@@ -5086,6 +5101,8 @@ ns.ProfessionGuide.Refresh=function(...) return E.WithSnapshot(function(...)
 end,...)end
 function Q.Fresh()
  if travelEnabled() then Q.ClearTravelLeg() end
+ local steps=ns.GroupedQuestSteps
+ if steps and steps.ResetRoute then steps.ResetRoute() end
  local p=E.CurrentPosition();if E.db then if p then E.db.questAnchor=p.mapID end;E.db.questHeld=nil end;Q.held=nil
  if ns.NormalUI then ns.NormalUI.Resync()else ns.ProfessionGuide.Refresh()end
 end
@@ -5340,39 +5357,95 @@ function N.ConfirmQuestAction(selection)
  N.Refresh(true)
  return true
 end
-local function layoutStepDetails(step,visible,nextIndex,body,content,width)
- local nextQuest
- if step.quest then
-  local quests=ns.ForeverQuestData and ns.ForeverQuestData.quests
-  for i=nextIndex,#visible do
-   local candidate=visible[i]
-   if candidate.quest and candidate.quest~=step.quest then
-    local quest=quests and quests[candidate.quest]
-    nextQuest=quest and quest.title or candidate.title
-    break
+local function routeSectionHeader(parent)
+ local header=CreateFrame('Frame',nil,parent)
+ header.fill=header:CreateTexture(nil,'BACKGROUND')
+ header.fill:SetAllPoints()
+ header.fill:SetColorTexture(.53,.32,.12,.14)
+ header.label=text(header,13)
+ header.label:SetTextColor(.30,.17,.07)
+ header.label:SetWordWrap(true)
+ header.marker=N.ControlArrow(header,'down','RIGHT')
+ header.marker:SetSize(8,8)
+ header.marker:SetVertexColor(.44,.25,.10)
+ return header
+end
+local function routeActionButton(parent)
+ local button=CreateFrame('Button',nil,parent)
+ button:RegisterForClicks('LeftButtonUp')
+ button.fill=button:CreateTexture(nil,'BACKGROUND')
+ button.fill:SetAllPoints()
+ button.fill:SetColorTexture(.75,.46,.16,.20)
+ button.edge=button:CreateTexture(nil,'ARTWORK')
+ button.edge:SetPoint('TOPLEFT')
+ button.edge:SetPoint('BOTTOMLEFT')
+ button.edge:SetWidth(2)
+ button.edge:SetColorTexture(.59,.34,.12,1)
+ button.label=text(button,15)
+ button.label:SetWordWrap(true)
+ button.detail=text(button,12)
+ button.detail:SetWordWrap(true)
+ button.count=text(button,13)
+ button.count:SetJustifyH('RIGHT')
+ button.marker=N.ControlArrow(button,'right','RIGHT')
+ button.marker:SetSize(8,8)
+ button.marker:SetVertexColor(.55,.29,.10)
+ button:SetScript('OnClick',function(self,key)
+  if key and key~='LeftButton' then return end
+  if ns.HandleItemChatClick(self.item) then return end
+  local steps=ns.GroupedQuestSteps
+  if not (self.action and self.action.state=='ready' and steps and steps.SelectRouteAction(self.route,self.action.id)) then return end
+  W.selection='step'
+  local compass=ns.NavigationCompass
+  if compass then compass.age=1 end
+  N.Refresh()
+ end)
+ button:SetScript('OnEnter',function(self)
+  if self.item then W.Tooltip(self,self.item,self.label:GetText()) end
+ end)
+ local function hideRouteTooltip(self)
+  if W.tooltip and W.tooltip:GetOwner()==self then hideTip() end
+ end
+ button:SetScript('OnLeave',hideRouteTooltip)
+ button:SetScript('OnHide',hideRouteTooltip)
+ return button
+end
+local function layoutStepDetails(step,body,content,width)
+ local routeStep=step.routeGroup and step
+ local route=routeStep and routeStep.routeGroup
+ local activeAction
+ if route then
+  for _,section in ipairs(route.sections) do
+   for _,action in ipairs(section.actions) do
+    if action.id==route.activeID then activeAction=action;break end
    end
+   if activeAction then break end
   end
+  step=activeAction and activeAction.row and N.WorkflowLive(activeAction.row) or {}
  end
  local sections=step.craftingSections
  local description=sections and step.craftingBody or step.body or ''
  body:SetWidth(width)
- body:SetText(description)
+ body:SetText(route and '' or description)
  body:SetHeight(0)
- local bodyHeight=description~='' and body:GetStringHeight()+4 or 0
- if step.objectiveDetails or step.materialBoard then nextQuest=nil end
+ local bodyHeight=not route and description~='' and body:GetStringHeight()+4 or 0
  local counters=step.resourceCounters
- if not sections and not nextQuest and not step.objectiveDetails and not step.materialBoard and not(counters and #counters>0) then
+ if not route and not sections and not step.objectiveDetails and not step.materialBoard and not(counters and #counters>0) then
   if stepDetails then stepDetails:Hide()end
-  return math.max(1,bodyHeight)
+  N.root.routeCardDetails=nil
+  return bodyHeight
  end
  if not stepDetails then
   stepDetails=CreateFrame('Frame',nil,content)
   stepDetails.texts,stepDetails.tiles,stepDetails.counters,stepDetails.confirmations,stepDetails.mapButtons={},{},{},{},{}
   stepDetails.materialFills,stepDetails.materialEdges={},{}
+  stepDetails.routeSections,stepDetails.routeActions={},{}
  end
  local details=stepDetails
+ N.root.routeCardDetails=route and details or nil
  local textCount,tileCount,counterCount,dividerCount,confirmationCount,y=0,0,0,0,0,0
  local mapCount,materialCount=0,0
+ local routeSectionCount,routeActionCount,activeY=0,0
  local function line(value,size,usable,muted,indent,gap,item)
   textCount=textCount+1
   local label=details.texts[textCount]
@@ -5454,120 +5527,206 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
   end
   fill:Show();edge:Show();y=y+4
  end
- local board=step.materialBoard
- if board then
-  for _,material in ipairs(board.materials)do
-   local start=y;y=y+5
-   local countWidth=countAt(material.progress or '—',true)
-   line(material.title,16,width-countWidth-23,nil,10,2,material.itemID)
-   if material.source then line(material.source,13,width-20,true,10,1) end
-   local instruction=material.status=='unknown' and material.unknownInstruction or material.instruction
-   if instruction then line(instruction,13,width-20,true,10,1) end
-   y=y+4
-   materialBacking(start,0,false)
-   if material==board.tracked then
-    local phase=material.phase
-    start=y;y=y+5
-    local trackedWidth=countAt(phase.destination and 'Tracked' or 'Current',true,true)
-    line(phase.title,16,width-trackedWidth-35,nil,20,2)
-    if phase.summary or phase.body then line(phase.summary or phase.body,13,width-30,true,20,2) end
-    if phase.upcoming and phase.upcoming[1] then line('Next: '..phase.upcoming[1],13,width-30,true,20,1) end
-    if phase.destination then mapButton(phase.destination,20,true) end
+ local function layoutActionDetails()
+  if route and description~='' and description~=activeAction.title and description~=activeAction.detail then
+   line(description,13,nil,true,9,4,step.itemLink or step.itemID)
+  end
+  local board=step.materialBoard
+  if board then
+   for _,material in ipairs(board.materials)do
+    local start=y;y=y+5
+    local countWidth=countAt(material.progress or '—',true)
+    line(material.title,16,width-countWidth-23,nil,10,2,material.itemID)
+    if material.source then line(material.source,13,width-20,true,10,1) end
+    local instruction=material.status=='unknown' and material.unknownInstruction or material.instruction
+    if instruction then line(instruction,13,width-20,true,10,1) end
     y=y+4
-    materialBacking(start,10,true)
+    materialBacking(start,0,false)
+    if material==board.tracked then
+     local phase=material.phase
+     start=y;y=y+5
+     local trackedWidth=countAt(phase.destination and 'Tracked' or 'Current',true,true)
+     line(phase.title,16,width-trackedWidth-35,nil,20,2)
+     if phase.summary or phase.body then line(phase.summary or phase.body,13,width-30,true,20,2) end
+     if phase.upcoming and phase.upcoming[1] then line('Next: '..phase.upcoming[1],13,width-30,true,20,1) end
+     if phase.destination then mapButton(phase.destination,20,true) end
+     y=y+4
+     materialBacking(start,10,true)
+    end
+   end
+  end
+  for index,group in ipairs(step.objectiveDetails or{})do
+   if index>1 then
+    details.dividers=details.dividers or {}
+    dividerCount=dividerCount+1
+    local divider=details.dividers[dividerCount]
+    if not divider then
+     divider=details:CreateTexture(nil,'ARTWORK');divider:SetColorTexture(.36,.21,.09,.28)
+     details.dividers[dividerCount]=divider
+    end
+    point(divider,details,0,y+1,width,1);divider:Show();y=y+8
+   end
+   if step.groupObjectives then line(group.questTitle,14,nil,false,nil,3)end
+   for _,entry in ipairs(group.entries)do
+    if entry.phaseCount and entry.phaseCount>1 then
+     line(('Step %d of %d'):format(entry.phaseNumber,entry.phaseCount),13,nil,true)
+    end
+    local action=(entry.action and entry.action..' 'or'')..entry.label
+    if not route or action~=activeAction.title or entry.count and entry.count~=activeAction.count then
+     local countWidth
+     if entry.count then countWidth=countAt(entry.count) end
+     line(action,16,countWidth and width-countWidth-5,nil,nil,nil,entry.itemID)
+    end
+    if entry.prerequisite then line('First · '..entry.prerequisite,13,nil,true)end
+    if entry.source then line(entry.source,13,nil,true)end
+    if entry.materials then
+     line('Materials',13,nil,true)
+     for _,material in ipairs(entry.materials)do line(material.text,13,nil,true,8,2,material.itemID)end
+    end
+    if entry.nextAction then line('Next: '..entry.nextAction,13,nil,true)end
+    if entry.mapPoint then mapButton(entry.mapPoint) end
+    if entry.confirm then
+     confirmationCount=confirmationCount+1
+     local button=details.confirmations[confirmationCount]
+     local buttonWidth=math.min(width,185)
+     if not button then
+      button=N.MakeButton(details,'Done with this action',buttonWidth,function()N.ConfirmQuestAction(button.questAction)end)
+      details.confirmations[confirmationCount]=button
+     end
+     button.questAction=entry.confirm
+     point(button,details,0,y+2,buttonWidth,29)
+     button:Show()
+     y=y+36
+    end
+   end
+   if group.directions then
+    line('Quest instructions',13,nil,true)
+    line(group.directions,14)
+   end
+  end
+  for _,counter in ipairs(counters or {})do line(counter.text,14,nil,nil,nil,nil,counter.itemID)end
+  local columns=math.max(1,math.floor((width+6)/88))
+  local tileWidth=math.min(96,(width-6*(columns-1))/columns)
+  for _,section in ipairs(sections or {})do
+   line(section.title,16)
+   if section.tiles then
+    for index,info in ipairs(section.tiles)do
+     tileCount=tileCount+1
+     local tile=details.tiles[tileCount]
+     if not tile then
+      tile=addCraftTile(details)
+      details.tiles[tileCount]=tile
+     end
+     tile.info=info
+     local icon=info.itemID and E.Call(C_Item and C_Item.GetItemIconByID or GetItemIcon,info.itemID)
+     if not icon and info.spellID then icon=E.Call(C_Spell and C_Spell.GetSpellTexture or GetSpellTexture,info.spellID)end
+     tile.icon:SetTexture(icon or 'Interface\\Icons\\INV_Misc_Book_09')
+     if info.missing then
+      tile.back:SetColorTexture(.65,.18,.085,.28)
+      tile.label:SetTextColor(.49,.12,.045)
+     else
+      tile.back:SetColorTexture(.40,.26,.10,.13)
+      tile.label:SetTextColor(.18,.105,.045)
+     end
+     tile.label:SetText(info.name)
+     tile.quantity:SetText(info.quantity)
+     point(tile,details,((index-1)%columns)*(tileWidth+6),y+math.floor((index-1)/columns)*74,tileWidth,68)
+     tile:Show()
+    end
+    y=y+math.ceil(#section.tiles/columns)*74
+   else
+    for _,value in ipairs(section.lines)do
+     if type(value)=='table'then line(value.text,14,nil,nil,nil,nil,value.itemLink or value.itemID)else line(value,14)end
+    end
+    y=y+4
    end
   end
  end
- for index,group in ipairs(step.objectiveDetails or{})do
-  if index>1 then
-   details.dividers=details.dividers or {}
-   dividerCount=dividerCount+1
-   local divider=details.dividers[dividerCount]
-   if not divider then
-    divider=details:CreateTexture(nil,'ARTWORK');divider:SetColorTexture(.36,.21,.09,.28)
-    details.dividers[dividerCount]=divider
-   end
-   point(divider,details,0,y+1,width,1);divider:Show();y=y+8
-  end
-  if step.groupObjectives then line(group.questTitle,14,nil,false,nil,3)end
-  for _,entry in ipairs(group.entries)do
-   if entry.phaseCount and entry.phaseCount>1 then
-    line(('Step %d of %d'):format(entry.phaseNumber,entry.phaseCount),13,nil,true)
-   end
-   local action=(entry.action and entry.action..' 'or'')..entry.label
-   local countWidth
-   if entry.count then countWidth=countAt(entry.count) end
-   line(action,16,countWidth and width-countWidth-5,nil,nil,nil,entry.itemID)
-   if entry.prerequisite then line('First · '..entry.prerequisite,13,nil,true)end
-   if entry.source then line(entry.source,13,nil,true)end
-   if entry.materials then
-    line('Materials',13,nil,true)
-    for _,material in ipairs(entry.materials)do line(material.text,13,nil,true,8,2,material.itemID)end
-   end
-   if entry.nextAction then line('Next: '..entry.nextAction,13,nil,true)end
-   if entry.mapPoint then mapButton(entry.mapPoint) end
-   if entry.confirm then
-    confirmationCount=confirmationCount+1
-    local button=details.confirmations[confirmationCount]
-    local buttonWidth=math.min(width,185)
-    if not button then
-     button=N.MakeButton(details,'Done with this action',buttonWidth,function()N.ConfirmQuestAction(button.questAction)end)
-     details.confirmations[confirmationCount]=button
+ if not route then
+  layoutActionDetails()
+ else
+  for _,section in ipairs(route.sections) do
+   if #section.actions>0 then
+    local expanded=section.kind~='return'
+    if not expanded then
+     for _,action in ipairs(section.actions) do
+      if action.state=='ready' then expanded=true;break end
+     end
     end
-    button.questAction=entry.confirm
-    point(button,details,0,y+2,buttonWidth,29)
-    button:Show()
-    y=y+36
+    routeSectionCount=routeSectionCount+1
+    local header=details.routeSections[routeSectionCount]
+    if not header then
+     header=routeSectionHeader(details)
+     details.routeSections[routeSectionCount]=header
+    end
+    header.section,header.expanded=section,expanded
+    header.label:SetText(section.name)
+    point(header.label,header,7,4,width-24)
+    header.label:SetHeight(0)
+    header.marker:SetRotation(expanded and -math.pi/2 or 0)
+    header.marker:SetShown(section.kind=='return')
+    local height=math.max(24,header.label:GetStringHeight()+8)
+    point(header,details,0,y,width,height)
+    header:Show();y=y+height+2
+    if expanded then
+     for _,action in ipairs(section.actions) do
+      routeActionCount=routeActionCount+1
+      local button=details.routeActions[routeActionCount]
+      if not button then
+       button=routeActionButton(details)
+       details.routeActions[routeActionCount]=button
+      end
+      local tracked=action==activeAction
+      local ready=action.state=='ready'
+      button.route,button.action,button.tracked=routeStep,action,tracked
+      local row=action.row
+      button.item=action.itemLink or action.itemID or row and (row.itemLink or row.itemID or row.procedure and row.procedure.itemID)
+      button:EnableMouse(ready or button.item~=nil)
+      button.fill:SetShown(tracked);button.edge:SetShown(tracked);button.marker:SetShown(tracked)
+      button.label:SetText(action.title)
+      button.label:SetTextColor(ready and .19 or .37,ready and .105 or .26,ready and .045 or .17)
+      local count=action.count or (action.state=='done' and 'Done' or nil)
+      button.count:SetText(count or '')
+      button.count:SetShown(count~=nil)
+      local countWidth=count and button.count:GetStringWidth()+8 or 0
+      point(button.count,button,width-countWidth-19,4,countWidth,18)
+      point(button.label,button,7,4,width-countWidth-31)
+      button.label:SetHeight(0)
+      local height=button.label:GetStringHeight()+6
+      -- The pickup section already tells the player which quests unlock
+      -- the upcoming field objectives.
+      local hasDetail=action.detail and action.detail~='' and action.detail~=action.title
+       and (action.state~='later' or section.kind~='field')
+      if hasDetail then
+       button.detail:SetText(action.detail)
+       button.detail:SetTextColor(.36,.23,.13)
+       point(button.detail,button,7,height-1,width-18)
+       button.detail:SetHeight(0)
+       height=height+button.detail:GetStringHeight()+3
+      end
+      button.detail:SetShown(not not hasDetail)
+      height=math.max(24,height)
+      point(button,details,0,y,width,height)
+      button:Show()
+      if tracked then activeY=y end
+      y=y+height+2
+      if tracked then layoutActionDetails() end
+     end
+    end
+    y=y+3
    end
   end
-  if group.directions then
-   line('Quest instructions',13,nil,true)
-   line(group.directions,14)
-  end
+ end
+ for i=routeSectionCount+1,#details.routeSections do
+  local header=details.routeSections[i]
+  header.section=nil;header.expanded=nil;header:Hide()
+ end
+ for i=routeActionCount+1,#details.routeActions do
+  local button=details.routeActions[i]
+  button.action=nil;button.route=nil;button.item=nil;button.tracked=nil;button:Hide()
  end
  for i=mapCount+1,#details.mapButtons do details.mapButtons[i].mapPoint=nil;details.mapButtons[i]:Hide() end
  for i=materialCount+1,#details.materialFills do details.materialFills[i]:Hide();details.materialEdges[i]:Hide() end
- for _,counter in ipairs(counters or {})do line(counter.text,14,nil,nil,nil,nil,counter.itemID)end
- local columns=math.max(1,math.floor((width+6)/88))
- local tileWidth=math.min(96,(width-6*(columns-1))/columns)
- for _,section in ipairs(sections or {})do
-  line(section.title,16)
-  if section.tiles then
-   for index,info in ipairs(section.tiles)do
-    tileCount=tileCount+1
-    local tile=details.tiles[tileCount]
-    if not tile then
-     tile=addCraftTile(details)
-     details.tiles[tileCount]=tile
-    end
-    tile.info=info
-    local icon=info.itemID and E.Call(C_Item and C_Item.GetItemIconByID or GetItemIcon,info.itemID)
-    if not icon and info.spellID then icon=E.Call(C_Spell and C_Spell.GetSpellTexture or GetSpellTexture,info.spellID)end
-    tile.icon:SetTexture(icon or 'Interface\\Icons\\INV_Misc_Book_09')
-    if info.missing then
-     tile.back:SetColorTexture(.65,.18,.085,.28)
-     tile.label:SetTextColor(.49,.12,.045)
-    else
-     tile.back:SetColorTexture(.40,.26,.10,.13)
-     tile.label:SetTextColor(.18,.105,.045)
-    end
-    tile.label:SetText(info.name)
-    tile.quantity:SetText(info.quantity)
-    point(tile,details,((index-1)%columns)*(tileWidth+6),y+math.floor((index-1)/columns)*74,tileWidth,68)
-    tile:Show()
-   end
-   y=y+math.ceil(#section.tiles/columns)*74
-  else
-   for _,value in ipairs(section.lines)do
-    if type(value)=='table'then line(value.text,14,nil,nil,nil,nil,value.itemLink or value.itemID)else line(value,14)end
-   end
-   y=y+4
-  end
- end
- if nextQuest then
-  line('Next in Steps',16)
-  line(nextQuest,14)
- end
  for i=textCount+1,#details.texts do
   local label=details.texts[i]
   label:Hide()
@@ -5583,7 +5742,7 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  local gap=bodyHeight>0 and 6 or 0
  point(details,content,0,bodyHeight+gap,width,y)
  details:Show()
- return math.max(1,bodyHeight+gap+y)
+ return math.max(1,bodyHeight+gap+y),activeY
 end
 local function nearbyOpportunity(step,visible)
  local counter=step.resourceCounters and step.resourceCounters[1]
@@ -5721,6 +5880,7 @@ function N.LayoutStepRows(visible,start)
  local r=N.root;if not r then return 0 end
  local panel=r.panels[1];local compact=N.mode=='compact';local hidden=W.collapsed and not compact
  local body,bodyScroll,stepLabel,bodyContent,status=N.WorkflowBody()
+ r.routeCardDetails=nil
  bodyScroll:Hide();r.done:Hide();r.skip:Hide();status:Hide();if r.inlineFarm then r.inlineFarm:Hide()end;if r.inlineSearch then r.inlineSearch:Hide()end
  if r.stepContext then r.stepContext:Hide()end
  if r.groupDistance then r.groupDistance:Hide()end
@@ -5735,7 +5895,8 @@ function N.LayoutStepRows(visible,start)
  for i,row in ipairs(N.stepRows)do
   local step=visible[start+i-1];row:Hide();row.stepID,row.step=nil,nil;row.itemID=nil;row.itemLink=nil
   if step and not hidden and y+40<room then
-   step=N.WorkflowLive(step)
+   local route=step.routeGroup
+   if not route then step=N.WorkflowLive(step) end
    row.itemID=step.itemID or step.procedure and step.procedure.itemID
    row.itemLink=step.itemLink or step.procedure and step.procedure.itemLink
    local active=step.id==selected
@@ -5763,9 +5924,11 @@ function N.LayoutStepRows(visible,start)
       step.craftingBody=step.craftingBody:sub(#actionLine+1):gsub('^%s+','')
      end
     end
-    local opportunity,opportunityBody,opportunityID=nearbyOpportunity(step,visible)
-    local bodyY=step.materialBoard and h+8 or h+34
-    local available=math.max(1,math.min(step.materialBoard and 320 or 250,room-y-bodyY-40-(opportunity and 32 or 0)))
+    local opportunity,opportunityBody,opportunityID
+    if not route then opportunity,opportunityBody,opportunityID=nearbyOpportunity(step,visible) end
+    local bodyY=(route or step.materialBoard) and h+8 or h+34
+    local bodyLimit=route and room or step.materialBoard and 320 or 250
+    local available=math.max(1,math.min(bodyLimit,room-y-bodyY-(route and 66 or 40)-(opportunity and 32 or 0)))
     status:SetParent(row);point(status,row,10,h+4,width-20,26);status:Show()
     if step.materialBoard then status:Hide() end
     if step.groupObjectives then
@@ -5776,17 +5939,25 @@ function N.LayoutStepRows(visible,start)
     end
     bodyScroll:SetParent(row)
     bodyContent:SetWidth(width-20)
-    local contentHeight=layoutStepDetails(step,visible,start+i,body,bodyContent,width-38)
-    bodyContent:SetHeight(contentHeight)
-    local bh=math.min(available,math.max(1,contentHeight))
-    point(bodyScroll,row,10,bodyY,width-20,bh)
-    local scroll=step.id==W.detailStepID and bodyScroll:GetVerticalScroll() or 0
+    local contentHeight,activeY=layoutStepDetails(step,body,bodyContent,width-38)
+    bodyContent:SetHeight(math.max(1,contentHeight))
+    local bh=math.min(available,contentHeight)
+    point(bodyScroll,row,10,bodyY,width-20,math.max(1,bh))
+    local sameStep=step.id==W.detailStepID
+    local scroll=sameStep and bodyScroll:GetVerticalScroll() or 0
+    local routeAction=route and route.activeID
+    if activeY and (not sameStep or routeAction~=W.detailRouteAction)
+     and (activeY<scroll or activeY+34>scroll+bh) then
+     scroll=math.max(0,activeY-20)
+    end
     W.detailStepID=step.id
+    W.detailRouteAction=routeAction
     bodyScroll:SetVerticalScroll(math.min(scroll,math.max(0,contentHeight-bh)))
-    bodyScroll:Show()
+    bodyScroll:SetShown(bh>0)
     if W.ready then for j,b in ipairs(r.workflowBodyIndicators)do b:SetParent(row);point(b,row,width-24,j==1 and bodyY or bodyY+bh-26,20,24);b:SetShown(contentHeight>bh+2)end end
     local manual=step.kind~='profession'and step.kind~='farm'and step.kind~='grind'and step.kind~='objective'and step.kind~='accept'and step.kind~='turnin'
     r.done:SetParent(row);r.skip:SetParent(row);local by=bodyY+bh+8;local farm=W.StepFarmable and W.StepFarmable(step);local search=ns.NPCSearch and ns.NPCSearch.Active(step);local total=(farm or search)and 186 or manual and 164 or 78;local bx=math.max(10,(width-total)/2)
+    if route then point(status,row,10,by-4,width-20,24);by=by+26 end
     local prep=ns.DungeonPrep
     local dungeonRun=step.kind=='dungeonRun'
     local preparing=prep and prep.active~=nil and not (ns.FarmingPlanner and ns.FarmingPlanner.route)
@@ -5945,8 +6116,16 @@ end
 local refresh=N.Refresh
 function N.Refresh(...)
  local result=refresh(...);if N.root then
-  W.Layout();local n=N.model:Current();local id=n and n.id
-  if id~=W.currentStep then W.currentStep=id;if W.selection~='source'and n and(not U or U.pane~='Dungeons')then W.SelectMap(n.destination or(P.Destination and P.Destination()))end end
+  W.Layout()
+  local n=N.model:Current()
+  local id=n and n.id
+  local action=n and n.routeGroup and n.routeGroup.activeID
+  if id~=W.currentStep or action~=W.currentRouteAction then
+   local compass=ns.NavigationCompass
+   if compass and (action or W.currentRouteAction) then compass.age=1 end
+   W.currentStep,W.currentRouteAction=id,action
+   if W.selection~='source'and n and(not U or U.pane~='Dungeons')then W.SelectMap(n.destination or(P.Destination and P.Destination()))end
+  end
  end;return result
 end
 local setMode=N.SetMode
@@ -8099,6 +8278,10 @@ function K.Update(elapsed)
   else b:Hide()end
  end
  local caption=focus and(focus.name..'\n'..(focus.zone and focus.zone..' - 'or'')..math.floor(focus.distance+.5)..' yd')or''
+ local current=K.targets[1]
+ if caption=='' and current and current.active and not current.bearing and N.routeTravel then
+  caption=current.name..'\n'..N.routeTravel
+ end
  if K.captionText~=caption then K.captionText=caption;K.caption:SetText(caption)end
 end
 local heading=N.UpdateHeading

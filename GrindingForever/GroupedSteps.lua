@@ -489,11 +489,330 @@ function Steps.Details(step)
  return groups
 end
 
+-- A local loop must have a verified return to its pickup hub and reachable
+-- field work on the same map. Class chains use source prerequisites instead.
+local hubRadius, fieldRadius, sharedFieldRadius = 180, 1100, 700
+local locations = ns.QuestLocationEvidence or {}
+local narache = {[3376]=true,[757]=true,[780]=true}
+local route
+
+function Steps.ResetRoute()
+ route = nil
+end
+
+local function fits(point, anchor, radius)
+ if not point or not anchor or point.mapID ~= anchor.mapID then return false end
+ local yards = E.Distance(point, anchor)
+ return yards ~= nil and yards <= radius
+end
+
+local function closest(points, anchor, radius)
+ local best, distance
+ for _, point in ipairs(points or {}) do
+  if point.mapID == anchor.mapID then
+   local yards = E.Distance(point, anchor)
+   if yards and yards <= radius and (not distance or yards < distance) then best, distance = point, yards end
+  end
+ end
+ return best
+end
+
+local function localField(row, anchor, field)
+ local fact = locations[row.quest]
+ if not fact or not closest(fact.endPoints, anchor, hubRadius)
+  or row.kind == 'accept' and not closest(fact.startPoints, anchor, hubRadius) then return end
+ local site, firstSlot
+ for slot, goal in pairs(fact.objectives or {}) do
+  local best, distance
+  for _, point in ipairs(goal.points or {}) do
+   if fits(point, anchor, fieldRadius) and (not field or fits(point, field, sharedFieldRadius)) then
+    local yards = E.Distance(point, field or anchor)
+    if not distance or yards < distance then best, distance = point, yards end
+   end
+  end
+  if not best then return end
+  if not firstSlot or slot < firstSlot then site, firstSlot = best, slot end
+ end
+ return site
+end
+
+local function questRow(row)
+ return row.questStep and row.quest and not row.complete and not row._questRisk
+  and (row.kind == 'accept' or row.kind == 'objective' or row.kind == 'turnin')
+end
+
+local classLinks
+local function classChain(seed)
+ if not classLinks then
+  classLinks = {}
+  for id, quest in pairs(D.quests) do
+   if quest.classes and quest.classes > 0 then
+    for _, requirement in ipairs(quest.prerequisites or {}) do
+     local prior = D.quests[requirement.pre]
+     -- Breadcrumbs may share a card but never alter actual quest eligibility.
+     local druidForm = quest.classes == 1024 and (quest.min_level == 10 or quest.min_level == 16)
+     if prior and prior.classes == quest.classes
+      and (prior.title == quest.title or druidForm and prior.min_level == quest.min_level) then
+      classLinks[id] = classLinks[id] or {}
+      classLinks[requirement.pre] = classLinks[requirement.pre] or {}
+      table.insert(classLinks[id], requirement.pre)
+      table.insert(classLinks[requirement.pre], id)
+     end
+    end
+   end
+  end
+ end
+ local members, pending, first = {[seed]=true}, {seed}, seed
+ local index = 1
+ while pending[index] do
+  local id = pending[index]
+  index = index + 1
+  for _, linked in ipairs(classLinks[id] or {}) do
+   if not members[linked] then
+    members[linked] = true
+    pending[#pending+1] = linked
+    first = math.min(first, linked)
+   end
+  end
+ end
+ return members, first
+end
+
+local function classRoute(seed)
+ if not seed then return end
+ local quest = D.quests[seed.quest]
+ if not quest or not quest.classes or quest.classes <= 0 then return end
+ local members, first = classChain(seed.quest)
+ if next(classLinks[seed.quest] or {}) or ns.QuestProcedureData and ns.QuestProcedureData[seed.quest] then
+  local name = (members[5921] or members[5922]) and 'Bear Form'
+   or (members[30] or members[272]) and 'Aquatic Form'
+   or quest.title
+  return {id='quest-route:class:'..first, name=name, quests=members, class=true}
+ end
+end
+
+local function localRoute(rows, state, seed)
+ if seed.overworldTravel or not seed.destination then return end
+ local fact = locations[seed.quest]
+ local anchor = seed.kind ~= 'objective' and seed.destination
+  or fact and closest(fact.endPoints, seed.destination, fieldRadius)
+ if not anchor or not fits(anchor, state.position, fieldRadius) then return end
+ local fieldSite = localField(seed, anchor)
+ if not fieldSite then return end
+ local members, count = {}, 0
+ local namedLoop = narache[seed.quest]
+ for _, row in ipairs(rows) do
+  local candidate = row.quest and D.quests[row.quest]
+  if count < 4 and questRow(row) and not members[row.quest] and not row.overworldTravel
+   and not (candidate and candidate.classes and candidate.classes > 0)
+   and (not namedLoop or narache[row.quest]) and localField(row, anchor, fieldSite)
+   and (row.kind == 'objective' and (not row.destination or fits(row.destination, anchor, fieldRadius))
+    or row.kind ~= 'objective' and fits(row.destination, anchor, hubRadius)) then
+   members[row.quest], count = true, count + 1
+  end
+ end
+ if count < 2 then return end
+ local subzone = fits(anchor, state.position, hubRadius) and E.Call(GetSubZoneText)
+ local hub = namedLoop and 'Camp Narache' or pointArea(anchor, seed.quest)
+  or E.Public(subzone) and type(subzone) == 'string' and subzone:match('%S') and subzone or zoneName(anchor)
+ local field = namedLoop and 'Brambleblade Ravine' or pointArea(fieldSite, seed.quest)
+ return {id='quest-route:local:'..anchor.mapID..':'..seed.quest, name=hub..' route', hub=hub, field=field, anchor=anchor, quests=members}
+end
+
+local function beginRoute(rows, state)
+ local seed, activeClass
+ for _, row in ipairs(rows) do
+  if questRow(row) then
+   seed = seed or row
+   if row.kind ~= 'accept' and not activeClass then activeClass = classRoute(row) end
+  end
+ end
+ if seed then return classRoute(seed) or localRoute(rows, state, seed) or activeClass end
+end
+
+local function actionRow(parent, child)
+ if parent == child then return child end
+ local row = copy(parent)
+ row.objectives, row.procedure, row.slot = {child}, child.procedure, child.slot
+ row.destination, row.questDestination = child.destination, child.destination
+ row.zone, row.mobIDs = child.zone, child.mobIDs
+ row.itemID, row.itemLink = child.itemID, child.itemLink
+ return row
+end
+
+local function applyActive(parent, action)
+ local row = action.row
+ parent.routeGroup.activeID, parent.routeGroup.activeRow = action.id, row
+ parent.destination, parent.zone, parent.mobIDs = row.destination, row.zone, row.mobIDs
+ parent.starterTurnIn, parent.localQuestTurnIn = row.starterTurnIn, row.localQuestTurnIn
+ parent.localQuestPickup, parent.overworldTravel = row.localQuestPickup, row.overworldTravel
+end
+
+function Steps.SelectRouteAction(parent, id)
+ if not parent or not parent.routeGroup then return false end
+ for _, section in ipairs(parent.routeGroup.sections) do
+  for _, action in ipairs(section.actions) do
+   if action.id == id and action.state == 'ready' then
+    if route and route.id == parent.id then route.active = id end
+    applyActive(parent, action)
+    local planner = ns.ForeverQuestPlanner
+    if planner and planner.SelectTravelStep then planner.SelectTravelStep(action.row) end
+    return true
+   end
+  end
+ end
+ return false
+end
+
+local function role(row)
+ if row.kind == 'accept' then return 'pickup' end
+ if row.kind == 'turnin' then return 'return' end
+ return 'field'
+end
+
+local function routeRows(rows, state, current)
+ local located, ranked, consumed = {}, {}, {}
+ local sections = {
+  pickup={kind='pickup',name=current.hub and 'Pick up at '..current.hub or 'Pick up the quest',actions={}},
+  field={kind='field',name=current.field and 'Complete in '..current.field or 'Complete objectives',actions={}},
+  ['return']={kind='return',name=current.hub and 'Return to '..current.hub or 'Turn in the quest',actions={}},
+ }
+ local function add(kind, action)
+  sections[kind].actions[#sections[kind].actions+1] = action
+ end
+ for index, row in ipairs(rows) do
+  if questRow(row) and current.quests[row.quest] then
+   located[#located+1] = row
+   consumed[index] = true
+  end
+ end
+ if #located == 0 then return end
+ local firstIndex
+ for index, row in ipairs(rows) do
+  local questWork = consumed[index]
+  local professionWork = false
+  if not current.class and row.integratedProfession and not row.complete then
+   local goals = N.model and N.model.goals
+   if not goals or goals[row.category] ~= false then
+    if row.category == 'Crafting' and row.craftReady then
+     professionWork = fits(state.position, current.anchor, hubRadius)
+    elseif row.category == 'Gathering' and fits(row.destination, state.position, hubRadius) then
+     for _, member in ipairs(located) do
+      if member.kind == 'objective' and fits(row.destination, member.destination, hubRadius) then
+       professionWork = true
+       break
+      end
+     end
+    end
+   end
+  end
+  if questWork or professionWork then
+   consumed[index] = true
+   firstIndex = firstIndex or index
+   local children = not row.materialBoard and row.objectives or {row}
+   local actions = {}
+   for _, child in ipairs(children) do
+    local phase = child.procedure
+    local live = child.quest and state.quests[child.quest]
+    local display = child.kind == 'objective' and not child.materialBoard and Steps.Instruction(child, live, child.destination)
+    local title = display and ((display.action and display.action..' ' or '')..display.label) or child.title
+    local detail
+    if role(row) ~= 'field' then detail = child.destination and child.destination.name
+    elseif child.quest and not phase then detail = D.quests[child.quest] and D.quests[child.quest].title
+    elseif row.craftReady then detail = row.profession end
+    local action = {id=phase and child.id..':'..phase.id or child.id, title=title, detail=detail,
+     count=display and display.count, row=actionRow(row, child), state='ready', destination=child.destination}
+    actions[#actions+1] = action
+   end
+   -- The raw row's chosen waypoint already honors travel and proximity.
+   for at, action in ipairs(actions) do
+    if at > 1 and action.destination and action.destination == row.destination then
+     table.remove(actions, at)
+     table.insert(actions, 1, action)
+     break
+    end
+   end
+   for _, action in ipairs(actions) do ranked[#ranked+1] = action; add(role(row), action) end
+  end
+ end
+ local first = ranked[1]
+ if not first then return end
+
+ local returns, pickups = {}, {}
+ for _, row in ipairs(located) do
+  if row.kind == 'turnin' then returns[row.quest] = true end
+ end
+ for _, row in ipairs(located) do
+  local quest = D.quests[row.quest]
+  local fact = locations[row.quest]
+  if quest and fact and not returns[row.quest] then
+   returns[row.quest] = true
+   add('return',{id='planned-turnin:'..row.quest,state='later',title='Turn in '..quest.title,
+    detail=fact.endPoints and fact.endPoints[1] and fact.endPoints[1].name})
+  end
+  if not current.class and quest and fact and row.kind == 'accept' and not pickups[row.quest] then
+   pickups[row.quest] = true
+   local slots = {}
+   for slot in pairs(fact.objectives or {}) do slots[#slots+1] = slot end
+   table.sort(slots)
+   for _, slot in ipairs(slots) do
+    local goal = fact.objectives[slot]
+    local display = Steps.Instruction({quest=row.quest,slot=slot,objectiveEvidence=goal}, nil)
+    if display and display.label ~= 'Check the quest log for this objective.' then
+     add('field',{id='planned-objective:'..row.quest..':'..slot,state='later',
+      title=(display.action and display.action..' ' or '')..display.label,count=display.count,detail='After accepting '..quest.title})
+    end
+   end
+  end
+ end
+ local selected = first
+ if not (first.row.starterTurnIn or first.row.localQuestTurnIn or first.row.overworldTravel) then
+  for _, action in ipairs(ranked) do
+   if action.id == current.active then selected = action; break end
+  end
+ end
+ current.active = selected.id
+ local order = {'pickup','field','return'}
+ if first.row.starterTurnIn or first.row.localQuestTurnIn then order = {'return','pickup','field'} end
+ local view = {}
+ for _, kind in ipairs(order) do
+  local section = sections[kind]
+  if #section.actions > 0 then view[#view+1] = section end
+ end
+ local parent = {id=current.id,kind='objective',category='Questing',questStep=true,title=current.name,
+  areaTask=false,routeGroup={sections=view}}
+ applyActive(parent, selected)
+ local output = {}
+ for i, row in ipairs(rows) do
+  if i == firstIndex then output[#output+1] = parent end
+  if not consumed[i] then output[#output+1] = row end
+ end
+ return output
+end
+
+function Steps.RouteGroups(rows, state)
+ local view = N.model and N.model.view
+ if not state or not state.position or state.questLogAvailable == false or (view and view ~= 'All' and view ~= 'Questing')
+  or E.db and E.db.journey == 'Completionist' then return rows end
+ if route and not route.class and not fits(route.anchor, state.position, fieldRadius + hubRadius) then route = nil end
+ if not route then route = beginRoute(rows, state) end
+ if not route then return rows end
+ if E.db and E.db.deferred and (E.db.deferred[route.id] or 0) > E.Time() then route = nil; return rows end
+ local grouped = routeRows(rows, state, route)
+ if grouped then return grouped end
+ route = beginRoute(rows, state)
+ if route and not (E.db and E.db.deferred and (E.db.deferred[route.id] or 0) > E.Time()) then
+  return routeRows(rows, state, route) or rows
+ end
+ return rows
+end
+
 local refresh = P.Refresh
 function P.Refresh(...)
  local rows = refresh(...)
- if ns.DungeonPrep and ns.DungeonPrep.active or ns.FarmingPlanner and ns.FarmingPlanner.route then return rows end
- P.steps = Steps.Group(rows, E.state)
+ if ns.DungeonPrep and (ns.DungeonPrep.active or ns.DungeonPrep.navigation)
+  or ns.FarmingPlanner and ns.FarmingPlanner.route then return rows end
+ P.steps = Steps.Group(Steps.RouteGroups(rows, E.state), E.state)
  P.firstPending = P.steps[1] and P.steps[1].id
  return P.steps
 end

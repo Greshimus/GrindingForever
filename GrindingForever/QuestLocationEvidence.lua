@@ -106070,4 +106070,96 @@ do
  quest.objectives = quest.objectives or {}
  quest.objectives[1] = {kind = "kill", target = 261367, name = terry.name,
   points = {terry}, source = revision}
+
+ -- Break Sharptusk!: recorded Forever interaction points and an NPC sighting.
+ do
+  local source = "ForeverDB confirmed Forever observations"
+  local function windfeather(x)
+   return {mapID = 1412, x = x, y = 77.1, name = "Brave Windfeather",
+    zone = "Mulgore", npcID = 3209, source = source}
+  end
+  local sharptusk = ns.QuestLocationEvidence[3376]
+  sharptusk.startPoints = {windfeather(44.2)}
+  sharptusk.endPoints = {windfeather(44.3)}
+  local objective = sharptusk.objectives[1]
+  objective.points = {{mapID = 1412, x = 60.6, y = 78.4, name = "Chief Sharptusk Thornmantle",
+   zone = "Mulgore", npcID = 8554, source = source}}
+  objective.source = source
+ end
+
+ -- Replace the older objective observations with the current spawn sets.
+ local function applySpawnPoints(questID, slot, spawns)
+  local objective = ns.QuestLocationEvidence[questID].objectives[slot]
+  local points = {}
+  for _, group in ipairs(spawns) do
+   local mapID, zone, coords = unpack(group)
+   for _, point in ipairs(coords) do
+    points[#points + 1] = {
+     mapID = mapID, x = point[1], y = point[2], name = objective.name,
+     zone = zone, npcID = objective.target, source = revision,
+    }
+   end
+  end
+  objective.points, objective.source = points, revision
+ end
+
+ -- The Broodmother
+ applySpawnPoints(96261, 1, {
+  {1412, "Mulgore", {
+   {33.74, 6.77},
+  }},
+ })
+
+ -- Defending the Dead
+ applySpawnPoints(96259, 1, {
+  {1412, "Mulgore", {
+   {31.89, 11.01}, {31.99, 10.09}, {32.11, 11.93}, {32.33, 13.61}, {32.6, 12.51},
+   {32.65, 10.35}, {32.74, 9.45}, {32.87, 11.63}, {32.98, 8.76}, {33.05, 10.97},
+   {33.08, 8}, {33.11, 15.37}, {33.14, 16.4}, {33.16, 13.9}, {33.22, 14.62},
+   {33.25, 9.65}, {33.28, 13.06}, {33.4, 10.52}, {33.44, 7.39}, {33.52, 8.24},
+   {33.52, 12.28}, {33.69, 13.31}, {33.72, 6.86}, {33.77, 9.27}, {33.83, 14.1},
+   {33.89, 12.67}, {33.94, 11.34}, {34.06, 7.94}, {34.11, 10.27}, {34.19, 8.7},
+   {34.19, 12.12}, {34.35, 13.73}, {34.51, 9.68}, {34.61, 12.61}, {34.64, 10.64},
+   {34.86, 11.59}, {35.08, 10.94}, {35.1, 9.89}, {35.1, 12.05}, {35.36, 12.51},
+   {35.56, 11.47}, {35.78, 12.93}, {36.02, 11.96}, {36.88, 12.39},
+  }},
+  {1442, "Stonetalon Mountains", {
+   {60.68, 94.46}, {61.78, 96.25},
+  }},
+ })
+ applySpawnPoints(96259, 2, {
+  {1412, "Mulgore", {
+   {31.8, 11.84}, {31.82, 11.12}, {31.94, 10.26}, {32.39, 10.56}, {32.41, 11.48},
+   {32.44, 9.86}, {32.53, 14.7}, {32.74, 12.16}, {32.86, 9.4}, {32.94, 11.54},
+   {32.96, 12.71}, {33.03, 8.8}, {33.12, 11.07}, {33.12, 14.01}, {33.13, 14.76},
+   {33.14, 13.25}, {33.14, 17.47}, {33.16, 16.1}, {33.18, 9.9}, {33.24, 8.08},
+   {33.27, 15.37}, {33.28, 16.71}, {33.38, 7.48}, {33.38, 10.6}, {33.56, 9.49},
+   {33.59, 12.19}, {33.71, 6.87}, {33.74, 13.51}, {33.78, 14.38}, {33.89, 12.65},
+   {33.94, 11.43}, {34.08, 8.41}, {34.13, 10.25}, {34.3, 7.65}, {34.32, 11.89},
+   {34.38, 13.72}, {34.44, 12.64}, {34.46, 8.97}, {34.58, 9.68}, {34.63, 7.19},
+   {34.66, 14.14}, {34.77, 8.11}, {34.81, 10.47}, {34.9, 11.5}, {34.91, 12.19},
+   {35.12, 9.67}, {35.38, 12.66}, {35.46, 11.08}, {35.59, 11.63}, {35.82, 13.22},
+   {35.87, 13.68}, {35.94, 12.16}, {36.25, 14.22}, {36.3, 12.81}, {36.44, 11.95},
+   {36.64, 12.35},
+  }},
+  {1442, "Stonetalon Mountains", {
+   {59.69, 91.82}, {59.9, 92.49}, {60.29, 91.46}, {60.4, 93.94}, {60.57, 93.32},
+   {61.2, 95.55},
+  }},
+  {1443, "Desolace", {
+   {82, 19.39}, {82.23, 19.97},
+  }},
+ })
+
+ -- Wrongly Blamed, Justly Corrected
+ applySpawnPoints(97250, 1, {
+  {1413, "The Barrens", {
+   {49.08, 76.96}, {49.15, 76.99},
+  }},
+ })
+ applySpawnPoints(97250, 2, {
+  {1413, "The Barrens", {
+   {49.11, 76.97},
+  }},
+ })
 end

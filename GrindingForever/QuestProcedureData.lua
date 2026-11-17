@@ -186,6 +186,30 @@ do
         text='From Ratchet, take the boat to Booty Bay, then speak with Caravaneer Ruzzgot.',
     }}
 
+    -- Keep the existing object destinations and explain how to reach each clue.
+    local cortello = {
+        [624]="Cross into the western Swamp of Sorrows from Deadwind Pass and take the northern fork. Look under the bridge for A Soggy Scroll. Read it and accept the next riddle.",
+        [625]="Enter Bloodfen Burrow in southwestern Dustwallow Marsh. Look inside the cave for the Musty Scroll, then accept the last riddle.",
+        [626]="Go to the waterfall at the eastern coast of the Hinterlands. Swim to its base and dive to open Cortello's Treasure.",
+    }
+    for quest, instruction in pairs(cortello) do
+        ns.QuestProcedureData[quest] = {slots={}, turnInInstruction={text=instruction}}
+    end
+
+    addAction(4005, 1, {
+        id='summon-aquementas', title='Use the Book of Aquor at Lost Rigger Cove',
+        action='use', itemID=11169,
+        body="Bring 11 Silvery Claws and 1 Irontree Heart. Read the Book of Aquor inside the stone circle and stay there until you receive the Silver Totem of Aquementas. Then take the totem to J.D. Collie at Marshal's Refuge in Un'Goro Crater.",
+        destination=site(1446, 'Tanaris', 70.4, 49.9, 'Aquementas summoning site'),
+        complete={kind='item', item=11522, objectiveSlot=1, count=1},
+    })
+    table.insert(ns.QuestProcedureData[4005].slots[1].phases, 1, {
+        id='unpack-eridans-supplies', title="Open Eridan's Supplies", action='use', itemID=11617,
+        body='Open the bag for the Book of Aquor, 11 Silvery Claws, and 1 Irontree Heart before leaving for Tanaris.',
+        complete={kind='any', conditions={{kind='item', item=11169}, {kind='item', item=11522, objectiveSlot=1}}},
+        source='QuestieDB Forever v1.1.2', showWithoutProgress=true,
+    })
+
     local function advisorTour(quest, item, advisor, location, room, leaders)
         addAction(quest, 0, {
             id='obtain-directions', action='talk', itemID=item, destination=location,
@@ -288,6 +312,77 @@ do
         body='Head north from Mazu’kon toward Gloomrise. Target a Gnawed Corpse, move close, and use the extractor. Repeat on other bodies until you have five samples.',
         destination=site(1412, 'Mulgore', 32.69, 16.99, 'Gnawed Corpse', 264096),
         complete={kind='item', item=273001, count=5, objectiveSlot=1}, groupable=true,
+    })
+end
+
+-- Outdoor procedures checked against QuestieDB Forever v1.1.2 and Forever quest text.
+do
+    local water = ns.QuestProcedureData[63].slots[1].phases
+    water[1].itemID = 6637
+    water[1].body = 'Take Water Sapta and the Remaining Drops of Purest Water from Islen Waterseer before leaving the Barrens for Silverpine Forest.'
+    water[2] = {
+        id='get-water-bracers', action='use', itemID=6637,
+        title='Drink Water Sapta at the shrine, then defeat the corrupt manifestation',
+        destination=site(1421, 'Silverpine Forest', 38.26, 44.56, 'Brazier of Everfount'),
+        body='Go to the coastal shrine west of the Sepulcher. Drink the Water Sapta beside the shrine to reveal the spirits. Kill the attackable Corrupt Minor Manifestation of Water and loot its bracers. Then use the nearby Brazier of Everfount to turn in the bracers and the Remaining Drops of Purest Water.',
+        complete={kind='any', conditions={{kind='item', item=7812, objectiveSlot=1}, {kind='quest', state='ready'}}},
+        showWithoutProgress=true, source='QuestieDB Forever v1.1.2 and ForeverDB player observations',
+    }
+
+    -- These are representative catch sites in the catalog. Cast in open
+    -- water in the named subzone, and visit the sites in any order.
+    for slot, fish in ipairs({
+        {id=16967, name='Feralas Ahi', destination=site(1444, 'Feralas', 63.5, 53.6, 'Verdantis River'),
+            body='Follow the main road to the Verdantis River southeast of Dire Maul. Cast into the river from the bank by the bridge.'},
+        {id=16970, name='Misty Reed Mahi Mahi', destination=site(1435, 'Swamp of Sorrows', 86.2, 88.0, 'Misty Reed Strand'),
+            body='Find Misty Reed Strand on the eastern coast and cast into the sea from the beach.'},
+        {id=16968, name="Sar’theris Striker", destination=site(1443, 'Desolace', 25.9, 78.7, "Sar’theris Strand"),
+            body='From the coastline south of Shadowprey Village, fish the open sea where the minimap reads Sar’theris Strand.'},
+        {id=16969, name='Savage Coast Blue Sailfin', destination=site(1434, 'Stranglethorn Vale', 33.0, 32.1, 'The Savage Coast'),
+            body='Fish from the western shore south of Grom’gol Base Camp where the minimap reads The Savage Coast.'},
+    }) do
+        addAction(6607, slot, {
+            id='catch-quest-fish', action='collect', itemID=fish.id, title='Fish for '..fish.name,
+            destination=fish.destination, body=fish.body,
+            complete={kind='item', item=fish.id, objectiveSlot=slot}, groupable=true,
+        })
+    end
+
+    addAction(3628, 1, {
+        id='summon-razelikh', action='use', itemID=10757, title='Reach the altar and summon Razelikh',
+        destination=site(1419, 'Blasted Lands', 48.16, 23.13, 'Deathly Usher', 8816),
+        body='Bring a group and keep the Ward of the Defiler. At the north base of the Rise of the Defiler, use the teleport rune or speak with the Deathly Usher to reach the summit. Use the ward at the Altar of the Defiler, defeat Razelikh, and loot the Severed Horn. Keep the ward for the turn-in.',
+        complete={kind='item', item=10759, objectiveSlot=1},
+    })
+end
+
+-- Keep the quest items and NPCs in the documented order on these Alliance routes.
+do
+    local journal = {kind='item', item=7908, objectiveSlot=1}
+    ns.QuestProcedureData[2359] = {slots={[0]={phases={
+        {
+            id='pickpocket-tower-key', action='collect', itemID=7923,
+            title='Pickpocket the Defias Tower Key',
+            destination=site(1436, 'Westfall', 70.0, 75.5, 'Malformed Defias Drone', 7051),
+            body="Read Kearnen's Journal for her notes. Stealth to the tower and use Pick Pocket on a Malformed Defias Drone patrolling outside.",
+            complete={kind='any', conditions={{kind='item', item=7923, objectiveSlot=2}, journal}},
+            showWithoutProgress=true, source='QuestieDB Forever v1.1.2 and ForeverDB',
+        },
+        {
+            id='open-duskwood-chest', action='interact', itemID=7908,
+            title="Open the Duskwood Chest for Klaven Mortwake's Journal",
+            destination={mapID=1436, zone='Westfall', x=70.41, y=73.93, name='Duskwood Chest', objectID=123214},
+            body='Enter the Defias Tower with the key and loot the chest upstairs. Then take the journal to Master Mathias Shaw in Stormwind.',
+            complete=journal,
+            showWithoutProgress=true, source='QuestieDB Forever v1.1.2 and ForeverDB',
+        },
+    }}}}
+
+    addAction(2944, 1, {
+        id='photograph-gammerita', action='use', itemID=9328, title='Take a snapshot of Gammerita',
+        destination=site(1425, 'The Hinterlands', 80.40, 58.23, 'Gammerita', 7977),
+        body="Look for Gammerita on the eastern coast. Target her and use the Super Snapper FX from your bags. Bring the snapshot and camera to Daryn Lightwind in Rut'theran Village.",
+        complete={kind='item', item=9330, objectiveSlot=1},
     })
 end
 
