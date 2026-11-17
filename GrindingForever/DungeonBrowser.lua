@@ -978,13 +978,16 @@ function ns.ToggleDungeonBrowser()
                 if healthSource then healthText = healthText .. " (reference)" end
             end
             mechanicRow("Level " .. (levelText or "unverified") .. "  ·  " .. (healthText or "HP unverified"))
-            mechanicRow("Mechanics", nil, true)
-            if facts and type(facts.mechanics) == "table" and #facts.mechanics > 0 then
-                for _, mechanic in ipairs(facts.mechanics) do
+            mechanicRow("Abilities", nil, true)
+            local lookup = ns.GetDungeonEncounterVerifiedFacts
+            local verified = lookup and lookup(selected.name, boss.name, bossID)
+            local mechanics = verified and verified.mechanics or facts and facts.mechanics
+            if mechanics and #mechanics > 0 then
+                for _, mechanic in ipairs(mechanics) do
                     mechanicRow(mechanic.name, mechanic.description)
                 end
             else
-                mechanicRow("No verified Forever mechanics recorded.")
+                mechanicRow("No documented Forever abilities yet.")
             end
             drawDetailBlock(top)
         end
