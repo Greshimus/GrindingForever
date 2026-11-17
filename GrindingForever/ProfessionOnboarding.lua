@@ -20,15 +20,57 @@ local books = {
 local bookState, bookSequence, booksRead = {}, 0, false
 local quotes, liveQuote = {}, nil
 local nearTrainerYards, quoteLifetime = 90, 120
+local nearbyTrainers, deferredTrainers = {}, {}
+local candidatesByMap = {}
+
+for name, id in pairs(ns.ForeverFacts.professionIDs) do
+    if allowed[name] or isSecondary[name] then
+        -- Base Apprentice fees are 10c for primary and 1s for secondary professions.
+        -- The client's trainer quote takes precedence, including any discount.
+        local cost = isSecondary[name] and 100 or 10
+        for _, site in ipairs(ns.ProfessionOnboardingTrainers[id] or {}) do
+            if site.apprentice then
+                local candidates = nearbyTrainers[site.mapID] or {}
+                nearbyTrainers[site.mapID] = candidates
+                local key = site.npcID..':'..name
+                candidates[#candidates+1] = {key='trainer:'..key, cacheKey=key, profession=name,
+                    trainer=site.name, cost=cost, level=1, destination=site, catalog=true}
+            end
+        end
+    end
+end
 
 local function number(value)
     return E.Public(value) and type(value) == 'number' and value >= 0 and value < math.huge
 end
 
+local function trainerCandidates(mapID)
+    if candidatesByMap[mapID] then return candidatesByMap[mapID] end
+    local result, seen = {}, {}
+    local current = mapID
+    while current and not seen[current] do
+        seen[current] = true
+        for _, candidate in ipairs(nearbyTrainers[current] or {}) do
+            result[#result+1] = candidate
+        end
+        local info = E.Call(C_Map and C_Map.GetMapInfo, current)
+        local parent = type(info) == 'table' and info.parentMapID
+        current = number(parent) and parent > 0 and parent or nil
+    end
+    candidatesByMap[mapID] = result
+    return result
+end
+
 local function learned(state, name)
-    local skill = state.skills and state.skills[name]
-    local rank = skill and skill.rank
-    return E.Public(rank) and type(rank) == 'number' and rank > 0
+    local skills = state.skills
+    if not skills then return false end
+    local rank = skills[name] and skills[name].rank
+    if number(rank) and rank > 0 then return true end
+    local id = ns.ForeverFacts.professionIDs[name]
+    for _, skill in pairs(skills) do
+        if E.Public(skill.id) and skill.id == id and number(skill.rank) and skill.rank > 0 then return true end
+    end
+    return false
 end
 
 local function choices(state)
@@ -55,7 +97,7 @@ local function closestTrainer(state, name)
     local candidates = sites[ns.ForeverFacts.professionIDs[name]] or {}
     local best, nearest, bestLocal, bestLocalDistance
     for _, site in ipairs(candidates) do
-        if site.faction == state.faction or site.faction == 'Both' then
+        if site.apprentice and (site.faction == state.faction or site.faction == 'Both') then
             local yards = E.Distance(position, site)
             if yards and (not nearest or yards < nearest) then best, nearest = site, yards end
             if site.mapID == position.mapID and not yards then
@@ -117,13 +159,15 @@ local function readTraining()
     local key = id..':'..profession
     local _, status, _, level = E.Call(GetTrainerServiceInfo, index)
     local cost = E.Call(GetTrainerServiceCost, index)
-    local prior = quotes[key]
-    if not E.Public(status) or status ~= 'available' or not number(cost) or cost%1~=0 then
+    if not E.Public(status) then
         quotes[key] = nil
         return
     end
+    local available = status == 'available' and number(cost) and cost%1 == 0
+    local prior = quotes[key]
     local now = E.Time()
-    liveQuote = {key='trainer:'..key, cacheKey=key, profession=profession, trainer=trainer, cost=cost,
+    liveQuote = {key='trainer:'..key, cacheKey=key, profession=profession, trainer=trainer,
+        cost=available and cost or nil,
         level=number(level) and level or nil, expires=now+quoteLifetime,
         destination=exactTrainer(profession, id, E.CurrentPosition(), E.Call(UnitFactionGroup, 'player')),
         later=prior and prior.cost == cost and prior.later or nil}
@@ -167,31 +211,55 @@ function B.Opportunity(state, position)
             plan=not booked and free > 0, pair=pair, review=not booked and free == 0}
     end
 
-    position = position or state.position
+    if position == nil then position = state.position end
     local money = state.money
     if not number(money) then return end
+    if position then
+        for key, site in pairs(deferredTrainers) do
+            local yards = E.Distance(position, site)
+            if not yards or yards > nearTrainerYards then deferredTrainers[key] = nil end
+        end
+    end
+    local function canTrain(quote)
+        local name = quote.profession
+        return quote.cost and money >= quote.cost and not learned(state,name)
+            and (not quote.level or number(state.level) and state.level >= quote.level)
+            and (isSecondary[name] or available > 0 and (selected[name] or free > 0))
+    end
     local now, selectedQuote, selectedRange = E.Time()
     for key, quote in pairs(quotes) do
         local here = quote == liveQuote
         local yards = quote.destination and E.Distance(position, quote.destination)
         local near = here or (yards and yards <= nearTrainerYards)
-        local name = quote.profession
         if not near then quote.later = nil end
         if now > quote.expires and not here then
             quotes[key] = nil
-        elseif near and not quote.later and money >= quote.cost and not learned(state,name)
-            and (not quote.level or number(state.level) and state.level >= quote.level)
-            and (isSecondary[name] or available > 0 and (selected[name] or free > 0)) then
+        elseif near and not quote.later and not deferredTrainers[key] and canTrain(quote) then
             local range = here and -1 or yards
             if not selectedRange or range < selectedRange then selectedQuote, selectedRange = quote, range end
+        end
+    end
+    if not selectedQuote and position then
+        for _, candidate in ipairs(trainerCandidates(position.mapID)) do
+            local site, key = candidate.destination, candidate.cacheKey
+            if (site.faction == state.faction or site.faction == 'Both') and not quotes[key]
+                and not deferredTrainers[key] and canTrain(candidate) then
+                local yards = E.Distance(position, site)
+                if yards and yards <= nearTrainerYards and (not selectedRange or yards < selectedRange
+                    or yards == selectedRange and candidate.key < selectedQuote.key) then
+                    selectedQuote, selectedRange = candidate, yards
+                end
+            end
         end
     end
     if selectedQuote then
         local quote = selectedQuote
         return {kind='trainer', key=quote.key, profession=quote.profession, cost=quote.cost, trainer=quote.trainer,
-            destination=quote.destination, quote=quote, plan=allowed[quote.profession] and not selected[quote.profession],
+            destination=quote.destination, quote=quote,
+            plan=not quote.catalog and allowed[quote.profession] and not selected[quote.profession],
             title='Learn '..quote.profession,
-            body=quote.trainer..' offers Apprentice '..quote.profession..' · '..fee(quote.cost)..'.'}
+            body=quote.trainer..' offers Apprentice '..quote.profession..' · '..fee(quote.cost)
+                ..(quote.catalog and ' base price.' or '.')}
     end
 end
 
@@ -338,7 +406,12 @@ local function dismiss(offer)
         E.db.professionBooksLater=E.db.professionBooksLater or {}
         E.db.professionBooksLater[offer.itemID]=true
     elseif offer.quote then
-        offer.quote.later=true
+        local quote=offer.quote
+        if quote.destination and quote.destination.apprentice then
+            deferredTrainers[quote.cacheKey]=quote.destination
+        else
+            quote.later=true
+        end
     end
     N.Refresh(true)
 end
@@ -396,9 +469,10 @@ local function newCard(panel)
 end
 
 function B.LayoutOpportunity(root,panel,y,width,hidden)
+    B.opportunityHidden=hidden
     local state=P.character or E.state
     if state and B.panel and B.panel:IsShown() then showPlan(state) end
-    local offer=not hidden and B.Opportunity(state,E.CurrentPosition())
+    local offer=not hidden and B.Opportunity(state,E.CurrentPosition() or false)
     local card=root.professionOpportunity
     if not offer then
         if card then card.offer=nil;card:Hide() end
@@ -444,7 +518,7 @@ watch:SetScript('OnEvent',function(_,event)
     if event=='TRAINER_SHOW' then trainerOpen=true;readTraining()
     elseif event=='TRAINER_UPDATE' and trainerOpen then readTraining()
     elseif event=='TRAINER_CLOSED' then trainerOpen=false;liveQuote=nil
-    elseif event=='PLAYER_ENTERING_WORLD' then trainerOpen=false;liveQuote=nil;quotes={};readBooks()
+    elseif event=='PLAYER_ENTERING_WORLD' then trainerOpen=false;liveQuote=nil;quotes={};deferredTrainers={};readBooks()
     elseif event=='UPDATE_FACTION' then quotes={};liveQuote=nil;if trainerOpen then readTraining()end
     elseif event=='BAG_UPDATE_DELAYED' then readBooks() end
     P.dirty=true
@@ -458,11 +532,13 @@ function N.Tick(...)
     local result=tick(...)
     local now=E.Time()
     local card=N.root and N.root.professionOpportunity
-    if next(quotes) and N.root and N.root.panels[1]:IsShown() and N.frame:IsShown() and now>=checkedAt then
+    if not B.opportunityHidden and N.root and N.root.panels[1]:IsShown() and N.frame:IsShown() and now>=checkedAt then
         checkedAt=now+1
-        local offer=B.Opportunity(P.character or E.state,E.CurrentPosition())
+        local offer=B.Opportunity(P.character or E.state,E.CurrentPosition() or false)
         local previous=card and card.offer
-        if (offer and offer.key)~=(previous and previous.key) then N.Refresh(true) end
+        if (offer and offer.key)~=(previous and previous.key) or offer and previous and offer.body~=previous.body then
+            N.Refresh(true)
+        end
     end
     return result
 end
