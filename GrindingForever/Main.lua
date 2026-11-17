@@ -34,42 +34,85 @@ E.ItemName=item;E.SpellName=spell
 local function idFromLink(link)return public(link)and type(link)=='string'and tonumber(link:match('item:(%d+)'))end
 E.ItemID=idFromLink
 function E.RecipeItemID(record)
- return record and (record.learnableItemID or record.itemId or record.itemID or record.productID or record.craftedItemId)
+ return record and (record.learnableItemID or record.itemId or record.itemID or record.productLink or record.productID or record.craftedItemId)
 end
 do
  local pending
  local function itemHyperlink(link)
   return idFromLink(link) and link:find('|Hitem:',1,true) and link:find('|h',1,true)
  end
+ E.IsItemHyperlink=itemHyperlink
+ local function validItemID(value)
+  local id=num(value,1,1e9)
+  return id and id%1==0 and id or nil
+ end
  local function itemLink(id)
-  local _,link=call(C_Item and C_Item.GetItemInfo or GetItemInfo,id)
+  local _,link=call(C_Item and C_Item.GetItemInfo,id)
   if itemHyperlink(link) then return link end
+  if not C_Item or GetItemInfo~=C_Item.GetItemInfo then
+   _,link=call(GetItemInfo,id)
+   if itemHyperlink(link) then return link end
+  end
  end
  local function activeChat()
-  local edit=call(ChatFrameUtil and ChatFrameUtil.GetActiveWindow or ChatEdit_GetActiveWindow)
+  local edit=call(ChatEdit_GetActiveWindow) or call(ChatFrameUtil and ChatFrameUtil.GetActiveWindow)
   if public(edit) then return edit end
+ end
+ local function hasItemTooltip(tooltip)
+  local lines=call(tooltip.NumLines,tooltip)
+  if public(lines) and lines==0 then return usableItemLabel(call(tooltip.GetItem,tooltip))~=nil end
+  return true
+ end
+ function ns.SetNativeItemTooltip(tooltip,itemIDOrLink)
+  if not tooltip then return false end
+  if itemHyperlink(itemIDOrLink) then
+   if type(tooltip.SetHyperlink)=='function' and pcall(tooltip.SetHyperlink,tooltip,itemIDOrLink) then
+    return hasItemTooltip(tooltip)
+   end
+   itemIDOrLink=idFromLink(itemIDOrLink)
+  end
+  local id=validItemID(itemIDOrLink)
+  if not id then return false end
+  if type(tooltip.SetItemByID)=='function' and pcall(tooltip.SetItemByID,tooltip,id) then
+   return hasItemTooltip(tooltip)
+  end
+  if type(tooltip.SetHyperlink)=='function' and pcall(tooltip.SetHyperlink,tooltip,'item:'..id) then
+   return hasItemTooltip(tooltip)
+  end
+  return false
+ end
+ function ns.IsItemChatClick(itemIDOrLink)
+  return (validItemID(itemIDOrLink) or itemHyperlink(itemIDOrLink)) and call(IsModifiedClick,'CHATLINK')==true
  end
  local function insert(link)
   local result=call(ChatEdit_InsertLink or ChatFrameUtil and ChatFrameUtil.InsertLink,link)
   return public(result) and (result==true or result==1)
  end
- function ns.InsertItemChatLink(itemIDOrLink)
-  if call(IsModifiedClick,'CHATLINK')~=true then return false end
-  if itemHyperlink(itemIDOrLink) then pending=nil;return insert(itemIDOrLink) end
-  local id=num(itemIDOrLink,1,1e9)
-  if not id or id%1~=0 then return false end
+ local function linkItemToChat(itemIDOrLink)
   pending=nil
+  if itemHyperlink(itemIDOrLink) then return insert(itemIDOrLink) end
+  local id=itemIDOrLink
   local link=itemLink(id)
   if link then return insert(link) end
   local edit=activeChat()
   local request=C_Item and C_Item.RequestLoadItemDataByID
-  if not edit or type(request)~='function' then return false end
+  if not edit or (type(request)~='function' and type(GetItemInfo)~='function'
+   and type(C_Item and C_Item.GetItemInfo)~='function') then return false end
   local draft=call(edit.GetText,edit)
   if not public(draft) or type(draft)~='string' then return false end
   pending={id=id,edit=edit,draft=draft,at=E.Time()}
-  local ok=pcall(request,id)
-  if not ok then pending=nil end
-  return ok
+  -- On clients without an explicit request API, the item info lookup above queues the load.
+  if type(request)=='function' and not pcall(request,id) then pending=nil;return false end
+  return true
+ end
+ function ns.InsertItemChatLink(itemIDOrLink)
+  if not ns.IsItemChatClick(itemIDOrLink) then return false end
+  return linkItemToChat(itemIDOrLink)
+ end
+ function ns.HandleItemChatClick(itemIDOrLink)
+  if not ns.IsItemChatClick(itemIDOrLink) then return false end
+  linkItemToChat(itemIDOrLink)
+  return true
  end
  local listener=CreateFrame('Frame')
  listener:SetScript('OnEvent',function(_,_,id)
@@ -259,13 +302,24 @@ function E.WithSnapshot(fn,...)
  return unpack(result,2,result.n)
 end
 function E.ReadBook()
- local function add(id,name,learned,product,reagents,profession,required)
+ local function add(id,name,productLink,reagents,profession)
   if not id or profession=='Skinning'or profession=='Herbalism'or profession=='Fishing'then return end
-  if learned==true then E.known[id]=true elseif learned==false then E.known[id]=nil end
+  E.known[id]=true
   local r=E.recipes[id]or{spellID=id,name=name or spell(id),sources={},locations={}};E.recipes[id]=r
-  r.name=name or r.name;r.requiredSkill=required or r.requiredSkill;r.productID=product or r.productID;r.reagents=reagents or r.reagents;r.observed=true
+  r.name=name or r.name;r.reagents=reagents or r.reagents;r.observed=true
   if type(profession)=='string' and profession~='' then r.profession=profession end
-  if product then E.crafted[product]=true end
+  local product=idFromLink(productLink)
+  if product then
+   local oldID,oldLink=r.productID,r.productLink
+   if E.IsItemHyperlink(productLink) then r.productLink=productLink
+   elseif product~=oldID then r.productLink=nil end
+   r.productID=product
+   E.crafted[product]=true
+   local catalog=ns.RecipeCatalog
+   if catalog and (product~=oldID or r.productLink~=oldLink) then
+    catalog.revision=catalog.revision+1
+   end
+  end
   for material in pairs(reagents or{})do E.reagents[material]=E.reagents[material]or{};if r.profession then E.reagents[material][r.profession]=true end end
  end
  if call(GetTradeSkillIsLinked)~=true then
@@ -274,7 +328,7 @@ function E.ReadBook()
    local link=call(GetTradeSkillRecipeLink,i);local id=type(link)=='string'and tonumber(link:match('enchant:(%d+)')or link:match('spell:(%d+)'));local reagents={}
    local slots=call(GetTradeSkillNumReagents,i) or 0;local complete=slots>0
    for k=1,slots do local material=idFromLink(call(GetTradeSkillReagentItemLink,i,k));local _,_,quantity=call(GetTradeSkillReagentInfo,i,k);if material and quantity then reagents[material]=(reagents[material] or 0)+quantity else complete=false end end
-   add(id,name,true,idFromLink(call(GetTradeSkillItemLink,i)),reagents,profession)
+   add(id,name,call(GetTradeSkillItemLink,i),reagents,profession)
    local yield=call(GetTradeSkillNumMade,i)
    if complete and id and E.recipes[id] and type(yield)=='number' and yield>0 then
     E.recipes[id].fulfillment={reagents=reagents,yield=yield}
@@ -283,7 +337,7 @@ function E.ReadBook()
  end
  -- Enchanting uses the legacy craft book on some Forever builds.
  local profession=call(GetCraftDisplaySkillLine)
- for i=1,call(GetNumCrafts)or 0 do local name,_,kind=call(GetCraftInfo,i);if kind~='header'then local link=call(GetCraftRecipeLink,i);local id=type(link)=='string'and tonumber(link:match('enchant:(%d+)')or link:match('spell:(%d+)'));local reagents={};for k=1,call(GetCraftNumReagents,i)or 0 do local material=idFromLink(call(GetCraftReagentItemLink,i,k));local _,_,quantity=call(GetCraftReagentInfo,i,k);if material and quantity then reagents[material]=quantity end end;add(id,name,true,idFromLink(call(GetCraftItemLink,i)),reagents,profession)end end
+ for i=1,call(GetNumCrafts)or 0 do local name,_,kind=call(GetCraftInfo,i);if kind~='header'then local link=call(GetCraftRecipeLink,i);local id=type(link)=='string'and tonumber(link:match('enchant:(%d+)')or link:match('spell:(%d+)'));local reagents={};for k=1,call(GetCraftNumReagents,i)or 0 do local material=idFromLink(call(GetCraftReagentItemLink,i,k));local _,_,quantity=call(GetCraftReagentInfo,i,k);if material and quantity then reagents[material]=quantity end end;add(id,name,call(GetCraftItemLink,i),reagents,profession)end end
 end
 function E.Known(r)
  local id=r.spellID
@@ -2833,7 +2887,7 @@ local function ensure()
  for i=1,13 do
   local row
   row=btn(left,"",180,function()
-   if ns.InsertItemChatLink(row.itemID) then return end
+   if ns.HandleItemChatClick(row.itemLink or row.itemID) then return end
    if row.stepID then session.index=row.stepID;activate();N.Refresh() end
   end);plainStepRow(row)
   row:SetHeight(39)
@@ -2917,7 +2971,7 @@ local function ensure()
   b.meta=text(b,11,"");b.meta:SetPoint("BOTTOMLEFT",b,"BOTTOMLEFT",10,4);b.meta:SetTextColor(.72,.64,.48)
   b:SetScript("OnClick",function(self)
    local record=self.result and self.result.records and self.result.records[1]
-   if ns.InsertItemChatLink(ns.Forever.RecipeItemID(record)) then return end
+   if ns.HandleItemChatClick(ns.Forever.RecipeItemID(record)) then return end
    N.ChooseSearchResult(self.resultIndex)
   end);root.searchRows[i]=b
  end
@@ -3702,7 +3756,19 @@ function N.RefreshRecipes()
    if farm then b.farm:ClearAllPoints();b.farm:SetPoint('TOPLEFT',36,-height);b.farm.label:SetText(E.farmFlags[r.spellID or r.learnableItemID]and'Unflag'or'Farm');b.farm:Show();height=height+36 end
   end
   b:SetHeight(height);b:SetScript('OnClick',function(self)local row=self.record;if row.kind=='trainer'then U.expanded[row.id]=not U.expanded[row.id]elseif row.kind=='boss'then U.expanded[row.name]=not U.expanded[row.name]elseif not row.kind then N.selectedRecipe=N.selectedRecipe~=row and row or nil end;N.RefreshRecipes()end)
-  b:SetScript('OnEnter',function(self)self.menuHighlight:Show();local row=self.record;local itemID=row.itemID or row.learnableItemID or row.productID;if itemID and GameTooltip.SetItemByID then GameTooltip:SetOwner(self,'ANCHOR_RIGHT');GameTooltip:SetItemByID(itemID);GameTooltip:Show()end end);b:SetScript('OnLeave',function(self)self.menuHighlight:Hide();GameTooltip:Hide()end)
+  b:SetScript('OnEnter',function(self)
+   self.menuHighlight:Show()
+   local item=E.RecipeItemID(self.record)
+   if item and GameTooltip then
+    GameTooltip:SetOwner(self,'ANCHOR_RIGHT')
+    if not ns.SetNativeItemTooltip(GameTooltip,item) then GameTooltip:AddLine(self.record.name)end
+    GameTooltip:Show()
+   end
+  end)
+  b:SetScript('OnLeave',function(self)
+   self.menuHighlight:Hide()
+   if GameTooltip and GameTooltip:GetOwner()==self then GameTooltip:Hide()end
+  end)
   b:Show();y=y+height+4
  end
  for i=#records+1,#root.recipeRows do root.recipeRows[i]:Hide()end
@@ -4770,13 +4836,13 @@ function W.SelectMap(loc)
  W.mapLocation=loc;W.settingZone=true;N.SetZone(zone);W.settingZone=false
  N.mapCenterX=loc.x/100;N.mapCenterY=loc.y/100;N.mapZoom=1;N.UpdateMapView();return true
 end
-function W.Tooltip(owner,itemID,heading,addLines)
+function W.Tooltip(owner,itemIDOrLink,heading,addLines)
  local root=N.root;if not root then return end
  if not W.tooltip then
   W.tooltip=CreateFrame('GameTooltip','GrindingForeverRecipeTooltip',UIParent,'GameTooltipTemplate');W.tooltip:SetClampedToScreen(true)
  end
  local t=W.tooltip;t:SetOwner(owner,'ANCHOR_NONE');t:SetFrameStrata('TOOLTIP');t:SetFrameLevel(N.frame:GetFrameLevel()+220);t:ClearLines()
- if itemID then t:SetHyperlink('item:'..tostring(itemID))elseif heading then t:AddLine(heading,1,.84,.52)end
+ if not ns.SetNativeItemTooltip(t,itemIDOrLink) and heading then t:AddLine(heading,1,.84,.52)end
  if addLines then addLines(t)end
  t:Show();t:ClearAllPoints()
  local scale=t:GetEffectiveScale();local screen=UIParent:GetWidth()*UIParent:GetEffectiveScale()/scale
@@ -4812,12 +4878,22 @@ function W.Ensure()
  r.recipeScroll:HookScript('OnMouseWheel',function()W.ScrollState()end)
  for _,row in ipairs(N.stepRows)do
   row:HookScript('OnClick',function()
+   if ns.IsItemChatClick(row.itemLink or row.itemID) then return end
    W.selection='step';W.activeSource=nil;W.activeTrainer=nil;W.expandedRecipe=nil;N.selectedRecipe=nil
    for i,n in ipairs(N.visible or{})do if n.id==row.stepID then N.rowStart=i;break end end
    local n=N.model:Current();local loc=n and n.destination
    if not loc and P.Destination then loc=P.Destination()end
    W.SelectMap(loc);N.Refresh(true);N.RefreshRecipes()
   end)
+  row:HookScript('OnEnter',function(self)
+   local item=self.itemLink or self.itemID
+   if item then W.Tooltip(self,item,self.label:GetText())end
+  end)
+  local function hideStepTooltip(self)
+   if W.tooltip and W.tooltip:GetOwner()==self then hideTip()end
+  end
+  row:HookScript('OnLeave',hideStepTooltip)
+  row:HookScript('OnHide',hideStepTooltip)
  end
  N.frame:HookScript('OnHide',hideTip)
  W.ready=true
@@ -4903,7 +4979,7 @@ local function addCraftTile(details)
  local tile=CreateFrame('Button',nil,details)
  tile:RegisterForClicks('LeftButtonUp')
  tile:SetScript('OnClick',function(self)
-  if self.info then ns.InsertItemChatLink(self.info.itemID)end
+  if self.info then ns.InsertItemChatLink(self.info.itemLink or self.info.itemID)end
  end)
  tile.back=tile:CreateTexture(nil,'BACKGROUND')
  tile.back:SetAllPoints()
@@ -4922,7 +4998,7 @@ local function addCraftTile(details)
  tile:SetScript('OnEnter',function(self)
   local info=self.info
   if not info then return end
-  W.Tooltip(self,nil,info.name,function(tip)
+  W.Tooltip(self,info.itemLink or info.itemID,info.name,function(tip)
    if info.details then
     tip:AddLine('Ingredients',1,.84,.52)
     for _,input in ipairs(info.details)do tip:AddLine(input,1,1,1,true)end
@@ -4993,7 +5069,7 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  local details=stepDetails
  local textCount,tileCount,counterCount,dividerCount,confirmationCount,y=0,0,0,0,0,0
  local mapCount,materialCount=0,0
- local function line(value,size,usable,muted,indent,gap,itemID)
+ local function line(value,size,usable,muted,indent,gap,item)
   textCount=textCount+1
   local label=details.texts[textCount]
   if not label then
@@ -5007,14 +5083,21 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
   label:SetHeight(0)
   label:Show()
   local linkButton=label.itemLinkButton
-  if itemID then
+  if item then
    if not linkButton then
     linkButton=CreateFrame('Button',nil,details)
     linkButton:RegisterForClicks('LeftButtonUp')
     linkButton:SetScript('OnClick',function(self)ns.InsertItemChatLink(self.itemID)end)
+    linkButton:SetScript('OnEnter',function(self)W.Tooltip(self,self.itemID,label:GetText())end)
+    local function hideItemTooltip(self)
+     if W.tooltip and W.tooltip:GetOwner()==self then hideTip()end
+    end
+    linkButton:SetScript('OnLeave',hideItemTooltip)
+    linkButton:SetScript('OnHide',hideItemTooltip)
     label.itemLinkButton=linkButton
    end
-   linkButton.itemID=itemID
+   if W.tooltip and W.tooltip:GetOwner()==linkButton and linkButton.itemID~=item then hideTip()end
+   linkButton.itemID=item
    point(linkButton,details,indent or 0,y,math.min(usable or width-(indent or 0),label:GetStringWidth()),label:GetStringHeight())
    linkButton:Show()
   elseif linkButton then linkButton:Hide()end
@@ -5172,7 +5255,7 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
    y=y+math.ceil(#section.tiles/columns)*74
   else
    for _,value in ipairs(section.lines)do
-    if type(value)=='table'then line(value.text,14,nil,nil,nil,nil,value.itemID)else line(value,14)end
+    if type(value)=='table'then line(value.text,14,nil,nil,nil,nil,value.itemLink or value.itemID)else line(value,14)end
    end
    y=y+4
   end
@@ -5346,10 +5429,11 @@ function N.LayoutStepRows(visible,start)
  y=layoutDungeonOffer(r,panel,y,width,hidden)
  for _,b in ipairs(r.workflowBodyIndicators or{})do b:Hide()end
  for i,row in ipairs(N.stepRows)do
-  local step=visible[start+i-1];row:Hide();row.stepID=nil;row.itemID=nil
+  local step=visible[start+i-1];row:Hide();row.stepID=nil;row.itemID=nil;row.itemLink=nil
   if step and not hidden and y+40<room then
    step=N.WorkflowLive(step)
    row.itemID=step.itemID or step.procedure and step.procedure.itemID
+   row.itemLink=step.itemLink or step.procedure and step.procedure.itemLink
    local active=step.id==selected
    local headline,context,actionLine
    if active then headline,context,actionLine=objectiveHeadline(step)end
@@ -5527,7 +5611,7 @@ function N.RefreshRecipes()
   end
   b:SetHeight(h);b.menuHighlight:SetShown(active)
   b:SetScript('OnClick',function(self)W.selection='source';W.activeSource=key;if record.kind=='trainer'then W.activeTrainer=W.activeTrainer~=record.id and record.id or nil end;W.expandedRecipe=key;N.selectedRecipe=record;W.SelectMap(loc);N.selectedRecipe=record;N.RefreshRecipes();W.Layout()end)
-  b:SetScript('OnEnter',function(self)self.menuHighlight:Show();W.Tooltip(self,record.learnableItemID or record.itemId or record.itemID or record.productID,record.name)end)
+  b:SetScript('OnEnter',function(self)self.menuHighlight:Show();W.Tooltip(self,E.RecipeItemID(record),record.name)end)
   b:SetScript('OnLeave',function(self)self.menuHighlight:SetShown(W.activeSource==key);hideTip()end)
   b:Show();y=y+h+5
   elseif r.recipeRows[i]then r.recipeRows[i]:Hide()end
@@ -7932,14 +8016,10 @@ local function farmList(parent)
  end
 end
 
-local function tooltip(widget,title,detail,material)
+local function tooltip(widget,title,detail,material,anchor)
  if not GameTooltip then return end
- GameTooltip:SetOwner(widget,"ANCHOR_RIGHT")
- if material and GameTooltip.SetItemByID then
-  GameTooltip:SetItemByID(material.id)
- elseif material and GameTooltip.SetHyperlink then
-  GameTooltip:SetHyperlink("item:"..material.id)
- else
+ GameTooltip:SetOwner(widget,anchor or "ANCHOR_RIGHT")
+ if not ns.SetNativeItemTooltip(GameTooltip,material and (material.itemLink or material.id)) then
   GameTooltip:AddLine(title)
   if material then ns.Forever.AddCookingRecipeTooltip(GameTooltip,material.id) end
  end
@@ -7960,10 +8040,11 @@ local function buildResource(parent)
  b.label=text(b,14)
  b.label:SetJustifyH("CENTER");b.label:SetJustifyV("TOP");b.label:SetWordWrap(true)
  b:SetScript("OnClick",function(self)
-  if not ns.InsertItemChatLink(self.material and self.material.id)then R.ToggleMaterial(self.material)end
+  if not ns.HandleItemChatClick(self.material and (self.material.itemLink or self.material.id))then R.ToggleMaterial(self.material)end
  end)
  b:SetScript("OnEnter",function(self)
-  if not self.openYields or not self.openYields(self) then tooltip(self,self.material.name,self.note,self.material) end
+  local anchor=self.openYields and self.openYields(self)
+  tooltip(self,self.material.name,self.note,self.material,anchor or nil)
  end)
  b:SetScript("OnLeave",hideTip)
  return b
@@ -8118,7 +8199,6 @@ function R.Open()
    local list=anchor.byproducts
    if not list or #list==0 then closeYields();return false end
    menuHost:Hide()
-   hideTip()
    local unit=N.PixelSize(f,1)
    local cols=math.min(3,#list)
    local tileWidth,tileHeight=90*unit,74*unit
@@ -8130,7 +8210,8 @@ function R.Open()
    yieldPanel.scroll=resources:GetVerticalScroll()
    yieldPanel.grace=.14
    yieldPanel:ClearAllPoints()
-   if right+width*rootScale>UIParent:GetWidth() then
+   local opensLeft=right+width*rootScale>UIParent:GetWidth()
+   if opensLeft then
     yieldPanel:SetPoint("TOPRIGHT",anchor,"TOPLEFT",0,0)
    else
     yieldPanel:SetPoint("TOPLEFT",anchor,"TOPRIGHT",0,0)
@@ -8153,7 +8234,7 @@ function R.Open()
    end
    for i=#list+1,#yieldTiles do yieldTiles[i]:Hide() end
    yieldPanel:Show()
-   return true
+   return opensLeft and "ANCHOR_RIGHT" or "ANCHOR_LEFT"
   end
   yieldPanel:SetScript("OnUpdate",function(self,elapsed)
    local anchor=self.anchor
@@ -8378,7 +8459,7 @@ function R.Open()
      b.icon=b:CreateTexture(nil,"ARTWORK");b.icon:SetAllPoints()
      N.BronzeRectangle(b)
      b:SetScript("OnClick",function(self)
-      if ns.InsertItemChatLink(self.material and self.material.id)then return end
+      if ns.HandleItemChatClick(self.material and (self.material.itemLink or self.material.id))then return end
       hideTip();R.ToggleMaterial(self.material)
      end)
      b:SetScript("OnEnter",function(self)tooltip(self,self.material.name,"Click to remove",self.material)end)
@@ -8742,7 +8823,7 @@ N.RefreshRecipes=function(...)
   if b.compassFlag then b.compassFlag:Hide()end
   if b:IsShown()and b.record then local old=b:GetScript('OnClick');local record=b.record;local key=record.workflowKey or record.id or record.spellID or record.name
    b:SetScript('OnClick',function(self,...)
-    if record.kind~='trainer' and ns.InsertItemChatLink(E.RecipeItemID(record))then return end
+    if record.kind~='trainer' and ns.HandleItemChatClick(E.RecipeItemID(record))then return end
     if W.recipeSelection100==key and K.recipePin then W.recipeSelection100=nil;W.activeSource=nil;W.expandedRecipe=nil;W.selection=nil;W.mapLocation=nil;N.selectedRecipe=nil;K.Unpin(K.recipePin);N.RefreshRecipes();N.UpdateMapView();return end
     W.recipeSelection100=key;K.Unpin(K.recipePin);W.sourceSelection100=true;if old then old(self,...)end;W.sourceSelection100=nil
     local loc=record.location or record.locations and record.locations[1];if loc and loc.mapID and loc.x and loc.y then local id=K.FlagKey(record,loc);K.recipePin=id;K.pins[id]={key=id,name=loc.name or record.name,zone=loc.zone,location=loc,icon=K.professionPinTexture,professionPin=true,pin=true};K.age=1 end
@@ -9205,7 +9286,7 @@ function Q.ShoppingList(plan,itemName,purchaseSource)
    inputs[#inputs+1]=(recipe.reagents[id]*count)..' '..itemName(id)
   end
   lines[#lines+1]=recipe.name..' x'..count..' - '..table.concat(inputs,', ')
-  section.tiles[#section.tiles+1]={name=recipe.name,itemID=recipe.product,spellID=recipe.id,
+  section.tiles[#section.tiles+1]={name=recipe.name,itemID=recipe.product,itemLink=recipe.productLink,spellID=recipe.id,
    quantity='×'..count,details=inputs}
  end
  local gathers, prepares=false,false
@@ -9391,7 +9472,9 @@ function R.CaptureBook()
    local id=type(link)=='string'and tonumber(link:match('enchant:(%d+)')or link:match('spell:(%d+)'))
    if id then
     local r={id=id,name=title,profession=profession,known=true,bookRank=rank,orange=kind=='optimal',reagents={},kind=kind or'unknown',index=i}
-    r.product=itemID(read(GetTradeSkillItemLink,i));r.output=read(GetTradeSkillNumMade,i)
+    local productLink=read(GetTradeSkillItemLink,i)
+    r.product=itemID(productLink);r.output=read(GetTradeSkillNumMade,i)
+    if E.IsItemHyperlink(productLink) then r.productLink=productLink end
     local total=read(GetTradeSkillNumReagents,i)
     local complete=type(total)=='number'and total>0
     if complete then
@@ -9418,7 +9501,9 @@ function R.CaptureCraftBook()
   local id=type(link)=='string'and tonumber(link:match('enchant:(%d+)')or link:match('spell:(%d+)'))
   if title and id and kind~='header'and kind~='subheader'then
    local r={id=id,name=title,profession=profession,known=true,bookRank=skill.rank,orange=kind=='optimal',reagents={},kind=kind or'unknown'}
-   r.product=itemID(read(GetCraftItemLink,i));r.output=read(GetCraftNumMade,i)
+   local productLink=read(GetCraftItemLink,i)
+   r.product=itemID(productLink);r.output=read(GetCraftNumMade,i)
+   if E.IsItemHyperlink(productLink) then r.productLink=productLink end
    local total=read(GetCraftNumReagents,i)
    local complete=type(total)=='number'and total>0
    if complete then

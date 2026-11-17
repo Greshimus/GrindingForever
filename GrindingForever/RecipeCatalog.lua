@@ -254,6 +254,18 @@ local function hasText(value)
     return type(value) == "string" and value:find("%S") ~= nil
 end
 
+-- Create Item effects in Forever 1.60.1.70938 SpellEffect.db2 (confirmed in ItemSparse).
+local clientProductIDs = {
+    [3276] = 2581, [3277] = 3530, [3278] = 3531, [7928] = 6450, [7934] = 6452,
+    [1262975] = 279948, [1262980] = 279964, [1262985] = 279969,
+    [1262990] = 279965, [1262996] = 279940, [1263005] = 279970,
+}
+-- Forever teaches these potion recipes under First Aid. Trainer offers come from the observed Forever catalog.
+local firstAidPotions = {
+    {spellID = 1244432, name = "Lesser Healing Potion", productID = 858, requiredSkill = 55},
+    {spellID = 1244433, name = "Healing Potion", productID = 929, requiredSkill = 110},
+}
+
 function Catalog.Browse()
     local rows, bySpell, byItem = {}, {}, {}
     local function merge(recipe)
@@ -265,7 +277,13 @@ function Catalog.Browse()
             row = {locations = {}, sourceIndexes = {}}
             rows[#rows + 1] = row
         end
-        for _, key in ipairs({"spellID", "productID", "profession", "faction", "skill", "requiredSkill", "knowledgeVerified", "learned",
+        if recipe.productID and row.productID ~= recipe.productID then
+            row.productID, row.productLink = recipe.productID, nil
+        end
+        if recipe.productLink and E.ItemID(recipe.productLink) == row.productID then
+            row.productLink = recipe.productLink
+        end
+        for _, key in ipairs({"spellID", "profession", "faction", "skill", "requiredSkill", "knowledgeVerified", "learned",
             "minLevel", "maxLevel", "requiredQuest", "reputationID", "reputationStanding", "specializationSpell"}) do
             if recipe[key] ~= nil and (key ~= "profession" or hasText(recipe[key])) then row[key] = recipe[key] end
         end
@@ -275,8 +293,27 @@ function Catalog.Browse()
         for _, loc in ipairs(recipe.locations or {}) do addLocation(row, loc) end
     end
     for _, recipe in ipairs(buildFacts()) do merge(recipe) end
-    for _, recipe in pairs(E.recipes) do merge(recipe) end
+    local offers = ns.ForeverCatalog and ns.ForeverCatalog.recipes
+    for _, potion in ipairs(firstAidPotions) do
+        local locations = {}
+        for _, trainer in ipairs(offers and offers[potion.spellID] or {}) do
+            locations[#locations + 1] = {
+                name = trainer.name, source = trainer.kind, npcID = trainer.npcID,
+                mapID = trainer.mapID, zone = trainer.zone, x = trainer.x, y = trainer.y,
+                faction = trainer.faction, price = trainer.price,
+            }
+        end
+        merge({
+            spellID = potion.spellID, name = potion.name, productID = potion.productID,
+            profession = "First Aid", requiredSkill = potion.requiredSkill, locations = locations,
+        })
+    end
+    for _, recipe in pairs(E.recipes) do
+        local oldAlchemyPotion = recipe.spellID == 2337 or recipe.spellID == 3447
+        if not oldAlchemyPotion or recipe.observed then merge(recipe) end
+    end
     for _, recipe in ipairs(rows) do
+        recipe.productID = recipe.productID or clientProductIDs[recipe.spellID]
         if not hasText(recipe.name) then
             local spellName = recipe.spellID and E.SpellName(recipe.spellID)
             recipe.name = hasText(spellName) and spellName or "Unnamed Recipe"

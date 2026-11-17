@@ -97,6 +97,7 @@ local function showRecipes()
     local pageSize, syncScroll = 8
     local expanded, selected
     local recipes, revision
+    local pendingItemNames = {}
     local mergedScope
     local scope, source, profession = "Local", "All", nil
     local chosenContinent, chosenZone
@@ -376,14 +377,34 @@ local function showRecipes()
         sourceButtons[#sourceButtons+1] = button
     end
 
-    local function recipeIcon(recipe)
-        local itemID = recipe.productID or recipe.learnableItemID
+    local function recipeIcon(recipe, productID)
+        local itemID = productID or recipe.learnableItemID or recipe.productID
         local icon = itemID and E.Call(C_Item and C_Item.GetItemIconByID or GetItemIcon, itemID)
         if not E.Public(icon) then icon = nil end
+        if productID then
+            return icon or "Interface\\Icons\\INV_Misc_QuestionMark"
+        end
         if not icon and recipe.spellID then
             icon = E.Call(C_Spell and C_Spell.GetSpellTexture or GetSpellTexture, recipe.spellID)
         end
         return E.Public(icon) and icon or "Interface\\Icons\\INV_Scroll_03"
+    end
+
+    local function recipeItemLabel(id, link)
+        if not id then return end
+        local name = link and link:match("|h%[(.-)%]|h") or E.ItemLabel(id)
+        if not name then pendingItemNames[id] = true end
+        return name
+    end
+
+    local function matchesName(name, query)
+        return name and name:lower():find(query, 1, true)
+    end
+
+    local function rowItem(row)
+        local recipe = row.recipe
+        if row.productID then return recipe.productLink or row.productID end
+        return recipe.learnableItemID or recipe.productLink or recipe.productID
     end
 
     local function priceText(loc)
@@ -451,6 +472,7 @@ local function showRecipes()
 
     local function draw()
         rowOffset = math.min(rowOffset, math.max(0, #rows-pageSize))
+        local tooltipOwner = GameTooltip and GameTooltip:GetOwner()
         for i, button in ipairs(buttons) do
             local row = i<=pageSize and rows[rowOffset+i]
             button.record = row
@@ -461,9 +483,17 @@ local function showRecipes()
                     or (expanded == recipe.key and not loc) and .20 or 0)
                 button.icon:SetTexture(loc and (loc.source=="Trainer" and W.TrainerIcon(recipe)
                     or loc.source=="Vendor" and "Interface\\Icons\\INV_Misc_Coin_01"
-                    or "Interface\\Icons\\INV_Misc_Map_01") or recipeIcon(recipe))
-                button.disclosure:SetShown(not loc and not row.summary)
-                if row.summary then
+                    or "Interface\\Icons\\INV_Misc_Map_01") or recipeIcon(recipe, row.productID))
+                button.disclosure:SetShown(not loc and not row.summary and not row.productID)
+                local iconInset = N.PixelSize(panel, row.productID and 24 or 16)
+                local textInset = N.PixelSize(panel, row.productID and 54 or 46)
+                button.icon:SetPoint("LEFT", button, "LEFT", iconInset, 0)
+                button.label:SetPoint("TOPLEFT", button, "TOPLEFT", textInset, -N.PixelSize(panel, 4))
+                button.detail:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", textInset, N.PixelSize(panel, 3))
+                if row.productID then
+                    button.label:SetText(recipeItemLabel(row.productID, recipe.productLink) or ("Item "..row.productID))
+                    button.detail:SetText("Crafted item")
+                elseif row.summary then
                     button.label:SetText(row.summary.label)
                     button.detail:SetText(row.summary.detail)
                 elseif loc then
@@ -477,6 +507,9 @@ local function showRecipes()
                     button.detail:SetText(skillText(recipe).." · "..sourceCountText(row))
                 end
             end
+            if tooltipOwner == button then
+                if row then button:GetScript("OnEnter")(button) else GameTooltip:Hide() end
+            end
         end
         status:SetText(#rows==0 and "No recipes match these filters" or
             ("%d–%d of %d"):format(rowOffset+1,math.min(#rows,rowOffset+pageSize),#rows))
@@ -488,7 +521,7 @@ local function showRecipes()
         fitLabel(professionButton, profession or "All Professions", captionSize(15), N.PixelSize(panel, 32))
     end
 
-    refresh = function(keepPage)
+    refresh = function(keepPage, revealProduct)
         local zone,mapID=selectedZone()
         local scopeKey=(zone or "All Zones")..":"..tostring(mapID or "")
         if not recipes or revision ~= catalog.revision or mergedScope~=scopeKey then
@@ -519,10 +552,10 @@ local function showRecipes()
         rows={}
         for _,recipe in ipairs(recipes) do
             if E.Eligible(recipe,state) then
-                local itemID = recipe.learnableItemID or recipe.productID
-                local name = query~="" and itemID and E.Call(GetItemInfo,itemID)
-                if query=="" or recipe.name:lower():find(query,1,true)
-                    or E.Public(name) and type(name)=="string" and name:lower():find(query,1,true) then
+                if query=="" or matchesName(recipe.name, query)
+                    or matchesName(recipeItemLabel(recipe.productID, recipe.productLink), query)
+                    or (recipe.learnableItemID ~= recipe.productID
+                        and matchesName(recipeItemLabel(recipe.learnableItemID), query)) then
                     local matched={}
                     for _, loc in ipairs(recipe.locations) do
                         local inZone = not zone or loc.zone==zone or loc.dungeon==zone or mapID and loc.mapID==mapID
@@ -539,6 +572,9 @@ local function showRecipes()
                         local row = {recipe=recipe,sources=matched,known=E.Known(recipe)==true}
                         rows[#rows+1]=row
                         if expanded==recipe.key then
+                            if recipe.productID then
+                                rows[#rows+1]={recipe=recipe,productID=recipe.productID}
+                            end
                             local detail=scope=="Local" and (source=="All" or source=="Drops") and describeWorldDrop(recipe)
                             if detail then rows[#rows+1]={recipe=recipe,summary=detail} end
                             local limit=detail and not zone and 12 or #matched
@@ -553,6 +589,14 @@ local function showRecipes()
             end
         end
         if keepPage~=true then rowOffset=0 end
+        if revealProduct then
+            for index, row in ipairs(rows) do
+                if row.productID and row.recipe.key==revealProduct then
+                    rowOffset = math.max(index-pageSize, math.min(rowOffset, index-2))
+                    break
+                end
+            end
+        end
         draw()
     end
 
@@ -590,15 +634,15 @@ local function showRecipes()
                 tip:Show()
                 return
             end
-            local itemID=recipe.learnableItemID or recipe.productID
-            local nativeTitle=false
-            if itemID then
-                E.Call(tip.SetHyperlink,tip,"item:"..itemID)
-                local count=E.Call(tip.NumLines,tip)
-                local name=E.Call(tip.GetItem,tip)
-                nativeTitle=E.Public(count) and type(count)=="number" and count>0
-                    or E.Public(name) and type(name)=="string" and name~=""
+            if row.productID then
+                if not ns.SetNativeItemTooltip(tip, rowItem(row)) then
+                    line(recipeItemLabel(row.productID, recipe.productLink) or ("Item "..row.productID))
+                end
+                tip:Show()
+                return
             end
+            local item = rowItem(row)
+            local nativeTitle = item and ns.SetNativeItemTooltip(tip, item)
             if not nativeTitle then line(recipe.name) end
             if not nativeTitle or not recipe.learnableItemID then line(skillText(recipe)) end
             if loc then
@@ -626,15 +670,15 @@ local function showRecipes()
         button:SetScript("OnClick",function(self)
             local row=self.record
             if row and not row.summary and not row.location then
-                local itemID=row.recipe.learnableItemID or row.recipe.productID
-                if itemID and ns.InsertItemChatLink(itemID) then return end
+                local item = rowItem(row)
+                if item and ns.HandleItemChatClick(item) then return end
             end
             closeMenus()
-            if not row or row.summary then return end
+            if not row or row.summary or row.productID then return end
             local recipe,loc=row.recipe,row.location
             if not loc then
-                expanded=expanded==recipe.key and false or recipe.key
-                refresh(true)
+                if expanded==recipe.key then expanded=nil else expanded=recipe.key end
+                refresh(true, expanded)
                 return
             end
             if not catalog.HasWaypoint(loc) then
@@ -726,9 +770,34 @@ local function showRecipes()
         function() return math.max(0,#rows-pageSize) end,3)
     N.PanelChrome(panel,{"Recipe","Sources"},500,430,resize)
     N.LiveLayout(panel,resize)
-    panel:HookScript("OnShow",function() resize();refresh() end)
+    local pendingSearch
+    local function queueRefresh(keepPage)
+        if pendingSearch then
+            if keepPage then return end
+            pendingSearch:Cancel()
+        end
+        if not (C_Timer and C_Timer.NewTimer) then refresh(keepPage); return end
+        pendingSearch = C_Timer.NewTimer(.18, function()
+            pendingSearch = nil
+            if panel:IsShown() then refresh(keepPage) end
+        end)
+    end
+    panel:SetScript("OnEvent",function(_,_,id,success)
+        if not E.Public(success) or not success or not E.Public(id) or not pendingItemNames[id] then return end
+        pendingItemNames[id] = nil
+        queueRefresh(true)
+    end)
+    panel:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+    panel:HookScript("OnShow",function()
+        panel:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+        resize()
+        refresh()
+    end)
     panel:HookScript("OnHide",function()
+        panel:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
         recipes,rows=nil,{}
+        pendingItemNames={}
+        if pendingSearch then pendingSearch:Cancel(); pendingSearch = nil end
         closeMenus()
         local owner=GameTooltip:GetOwner()
         if owner and owner.GetParent and owner:GetParent()==viewport then GameTooltip:Hide() end
@@ -736,15 +805,7 @@ local function showRecipes()
     search:SetScript("OnEditFocusGained",closeMenus)
     search:SetScript("OnEnterPressed",function(self) self:ClearFocus();refresh() end)
     search:SetScript("OnEscapePressed",function(self) self:ClearFocus();closeMenus() end)
-    local pendingSearch
-    search:SetScript("OnTextChanged",function()
-        if pendingSearch then pendingSearch:Cancel() end
-        if not (C_Timer and C_Timer.NewTimer) then refresh();return end
-        pendingSearch=C_Timer.NewTimer(.18,function()
-            pendingSearch=nil
-            if panel:IsShown() then refresh() end
-        end)
-    end)
+    search:SetScript("OnTextChanged",function() queueRefresh(false) end)
     resize()
     refresh()
 end

@@ -530,7 +530,7 @@ function ns.ToggleDungeonBrowser()
     end
 
     local function activateRow(row, mouseButton)
-        if row.itemID and mouseButton == "LeftButton" and ns.InsertItemChatLink(row.itemLink or row.itemID) then return end
+        if row.itemID and mouseButton == "LeftButton" and ns.HandleItemChatClick(row.itemLink or row.itemID) then return end
         if row.action then row.action(row, mouseButton) end
     end
 
@@ -582,12 +582,8 @@ function ns.ToggleDungeonBrowser()
             local function showTooltip(self)
                 if not self.itemID or not GameTooltip then return end
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                if self.itemLink then
-                    GameTooltip:SetHyperlink(self.itemLink)
-                elseif GameTooltip.SetItemByID then
-                    GameTooltip:SetItemByID(self.itemID)
-                else
-                    GameTooltip:SetHyperlink("item:" .. self.itemID)
+                if not ns.SetNativeItemTooltip(GameTooltip, self.itemLink or self.itemID) then
+                    GameTooltip:AddLine(self.label:GetText())
                 end
                 GameTooltip:Show()
             end
