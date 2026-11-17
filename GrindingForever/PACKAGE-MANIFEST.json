@@ -1,5 +1,5 @@
 {
-  "Build": 48,
+  "Build": 49,
   "ExternalCompanionRequired": false,
   "Files": {
     "DungeonBrowser.lua": {
@@ -56,7 +56,7 @@
     },
     "GrindingForever.toc": {
       "Bytes": 750,
-      "SHA256": "07FFAA5E762EDDA2FC14E2DF6ABF66E52DFC51FD60EF6F79B716840577EC95A0"
+      "SHA256": "93C5F42F550AC14B3E32FEA413FFFDEF90AA7024D4EECB57D2EB928EF326CB1C"
     },
     "GroupedSteps.lua": {
       "Bytes": 23249,
@@ -1015,8 +1015,8 @@
       "SHA256": "88B8CB080A28B9D71B57648F85D263A4DF7D83F506800CACD730CE1733E47A7B"
     },
     "QuestProcedureData.lua": {
-      "Bytes": 828837,
-      "SHA256": "75880716C8D8F49D5CB8A728AEB4668F1632FC92800BB6DBF0038ED9B9A14BAE"
+      "Bytes": 829057,
+      "SHA256": "E7509B81A36419D6BC301C8AF04EB1D916372A595D25416EA7FAC9710CCD1032"
     },
     "QuestProcedures.lua": {
       "Bytes": 21121,

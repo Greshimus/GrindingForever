@@ -276,7 +276,9 @@ do
         addAction(quest, 1, {
             id='complete-steam-pools-ritual', action='use', itemID=268582,
             title='Use the Corrupted Totems at the Steam Pools',
-            body='Go northwest of Freewind Post to the Steam Pools in Thousand Needles. Look for the small blue circle beneath a hanging bag along the south edge. Use the Corrupted Totems there, stay close through the waves, then defeat the elite Ravaging Tempest and loot the Eye of the Tempest.',
+            -- Search area based on the Ravaging Tempest sightings. The ritual circle is unverified.
+            destination=site(1441, 'Thousand Needles', 37.0, 40.0, 'Steam Pools (approximate)'),
+            body='The pin marks the search area. Look for the blue circle beneath a hanging bag on the south side of the Steam Pools, northwest of Freewind Post. Use the Corrupted Totems at the circle and stay nearby through the waves. Defeat Ravaging Tempest right beside the circle, then loot the Eye of the Tempest.',
             complete={kind='item', item=212792, objectiveSlot=1}, showWithoutProgress=true,
         })
     end
