@@ -3,11 +3,33 @@ local E = ns.Forever
 local Procedures = {}
 ns.QuestProcedures = Procedures
 
+-- Forever quest text and manifestation spawns from QuestieDB v1.1.2.
+-- Three variants share NPC 5891, so the site must be keyed by quest ID.
+local saptaSites = {
+    [1517] = {name='Spirit Rock', mapID=1411, x=44.03, y=76.20, zone='Durotar', npcID=5891},
+    [1520] = {name='Kodo Rock', mapID=1412, x=51.99, y=80.40, zone='Mulgore', npcID=5891},
+    [92467] = {name='the Rise of Spirits', mapID=2521, x=49.67, y=23.80, zone='Zephras Isle', npcID=251166},
+    [94374] = {name='the Spirit Stone', mapID=1426, x=24.84, y=61.86, zone='Dun Morogh', npcID=5891},
+}
+local saptaProcedures = {}
+for quest, site in pairs(saptaSites) do
+    local body = 'Use the Earth Sapta from your bags here. Sapta Sight lets you speak to the Minor Manifestation of Earth.'
+    if quest == 1517 then
+        body = body..' If you need another Sapta, return to Canaga Earthcaller in the Valley of Trials.'
+    end
+    saptaProcedures[quest] = {beforeTurnIn=true, slots={[0]={phases={{
+        id='drink-earth-sapta', title='Drink the Earth Sapta at '..site.name,
+        action='use', itemID=6635, body=body, destination=site, source='QuestieDB Forever',
+        complete={kind='aura', spellID=E.earthSaptaSight},
+    }}}}}
+end
+
 local function positiveInteger(value)
     return type(value) == 'number' and value > 0 and value < math.huge and value % 1 == 0
 end
 
 local function recordFor(quest)
+    if saptaProcedures[quest] then return saptaProcedures[quest] end
     local record = ns.QuestProcedureData and ns.QuestProcedureData[quest]
     if type(record) == 'table' and type(record.slots) == 'table' then return record end
 end
@@ -141,6 +163,9 @@ local function evaluate(condition, context, slot, phase, confirm, depth)
     elseif kind == 'objective' then
         local targetSlot = condition.slot or slot
         if positiveInteger(targetSlot) then return objectiveEvidence(context.live, targetSlot, condition.count) end
+    elseif kind == 'aura' then
+        local auras = context.state and context.state.auras
+        return type(auras) == 'table' and type(auras[condition.spellID]) == 'table'
     elseif kind == 'quest' then
         local quest = condition.quest or context.quest
         if not positiveInteger(quest) then return end
@@ -258,7 +283,9 @@ local function current(context, slot)
     if slot ~= 0 and not positiveInteger(slot) then return nil, 'fallback' end
     local live = context.live
     if not live or live.status == 'unavailable' then return nil, 'fallback' end
-    if trueValue(live.rewarded) or trueValue(live.ready) or trueValue(live.complete) then return nil, 'complete' end
+    if trueValue(live.rewarded) then return nil, 'complete' end
+    if not (slot == 0 and context.record.beforeTurnIn)
+        and (trueValue(live.ready) or trueValue(live.complete)) then return nil, 'complete' end
     if not trueValue(live.inLog) then return nil, 'inactive' end
     if slot > 0 and objectiveEvidence(live, slot) then return nil, 'complete' end
 
@@ -293,6 +320,7 @@ local function current(context, slot)
             return {
                 id = display.id, quest = context.quest, slot = slot,
                 title = display.title, body = display.body, action = display.action or phase.action,
+                itemID = display.itemID or phase.itemID,
                 summary = display.summary,
                 label = display.label or display.title, source = phase.source, relatedQuest = phase.relatedQuest,
                 count = displayCount(context, slot, phase), destination = destination,
@@ -377,6 +405,21 @@ function Procedures.Current(quest, slot, live, state)
     local context = contextFor(quest, live, state)
     if not context then return nil, 'fallback' end
     return current(context, slot)
+end
+
+function Procedures.BlocksTurnIn(quest, live, state)
+    local record = recordFor(quest)
+    if not (record and record.beforeTurnIn) then return false end
+    local _, status = Procedures.Current(quest, 0, live, state)
+    return status ~= 'complete'
+end
+
+function Procedures.TurnInSite(quest)
+    local site = saptaSites[quest]
+    if not site then return end
+    local contact = destinationFor(site)
+    contact.name = 'Minor Manifestation of Earth'
+    return contact
 end
 
 function Procedures.Candidates(quest, live, state)

@@ -33,6 +33,57 @@ local function spell(id)return call(C_Spell and C_Spell.GetSpellName,id)or call(
 E.ItemName=item;E.SpellName=spell
 local function idFromLink(link)return public(link)and type(link)=='string'and tonumber(link:match('item:(%d+)'))end
 E.ItemID=idFromLink
+function E.RecipeItemID(record)
+ return record and (record.learnableItemID or record.itemId or record.itemID or record.productID or record.craftedItemId)
+end
+do
+ local pending
+ local function itemHyperlink(link)
+  return idFromLink(link) and link:find('|Hitem:',1,true) and link:find('|h',1,true)
+ end
+ local function itemLink(id)
+  local _,link=call(C_Item and C_Item.GetItemInfo or GetItemInfo,id)
+  if itemHyperlink(link) then return link end
+ end
+ local function activeChat()
+  local edit=call(ChatFrameUtil and ChatFrameUtil.GetActiveWindow or ChatEdit_GetActiveWindow)
+  if public(edit) then return edit end
+ end
+ local function insert(link)
+  local result=call(ChatEdit_InsertLink or ChatFrameUtil and ChatFrameUtil.InsertLink,link)
+  return public(result) and (result==true or result==1)
+ end
+ function ns.InsertItemChatLink(itemIDOrLink)
+  if call(IsModifiedClick,'CHATLINK')~=true then return false end
+  if itemHyperlink(itemIDOrLink) then pending=nil;return insert(itemIDOrLink) end
+  local id=num(itemIDOrLink,1,1e9)
+  if not id or id%1~=0 then return false end
+  pending=nil
+  local link=itemLink(id)
+  if link then return insert(link) end
+  local edit=activeChat()
+  local request=C_Item and C_Item.RequestLoadItemDataByID
+  if not edit or type(request)~='function' then return false end
+  local draft=call(edit.GetText,edit)
+  if not public(draft) or type(draft)~='string' then return false end
+  pending={id=id,edit=edit,draft=draft,at=E.Time()}
+  local ok=pcall(request,id)
+  if not ok then pending=nil end
+  return ok
+ end
+ local listener=CreateFrame('Frame')
+ listener:SetScript('OnEvent',function(_,_,id)
+  local chat=pending
+  if not chat or not public(id) or id~=chat.id then return end
+  pending=nil
+  if E.Time()-chat.at>5 or activeChat()~=chat.edit then return end
+  local draft=call(chat.edit.GetText,chat.edit)
+  if not public(draft) or draft~=chat.draft then return end
+  local link=itemLink(id)
+  if link then insert(link) end
+ end)
+ listener:RegisterEvent('GET_ITEM_INFO_RECEIVED')
+end
 function E.NPCID(guid)if public(guid)and type(guid)=='string'and guid:match('^Creature%-')then local t={};for p in guid:gmatch('[^%-]+')do t[#t+1]=p end;return tonumber(t[6])end end
 function E.Time()return call(GetTime)or 0 end
 function E.Position()
@@ -70,6 +121,7 @@ local wellFedXP, wellFedSpell = 1243969, 1249521
 local campBenefits, campWarmup, campNearby = 1229741, 1229739, 1283391
 local sleepingBagItem, wellRested, bagTracking = 211527, 429959, 429960
 local unrollBag = 429961
+E.earthSaptaSight = 8202
 local partyBags = {}
 local partyBagRadius = 60
 local partyBagDuration = 20*60
@@ -95,7 +147,7 @@ local function readPlayerAuras()
    add(a.spellId,a.name,a.duration,a.expirationTime,a.applications)
   end
   -- Some of these auras are hidden from the default buff bar.
-  for _,id in ipairs({wellFedXP,campBenefits,campWarmup,campNearby,wellRested,bagTracking})do
+  for _,id in ipairs({wellFedXP,campBenefits,campWarmup,campNearby,wellRested,bagTracking,E.earthSaptaSight})do
    if not auras[id] then
     local a=call(api.GetPlayerAuraBySpellID,id)
     if not public(a) then unreadable=true
@@ -120,7 +172,8 @@ local function enhancementSignature(auras,fed,readable)
  local stacks=rested and rested.stacks
  return table.concat({readable and 1 or 0,fed and 1 or 0,auras[campBenefits] and 1 or 0,
   auras[campWarmup] and 1 or 0,auras[campNearby] and 1 or 0,
-  rested and (type(stacks)=='number' and stacks or 3) or 0,auras[bagTracking] and 1 or 0},':')
+  rested and (type(stacks)=='number' and stacks or 3) or 0,auras[bagTracking] and 1 or 0,
+  auras[E.earthSaptaSight] and 1 or 0},':')
 end
 function E.CheckEnhancementAuras()
  local auras,fed,readable=readPlayerAuras()
@@ -2779,7 +2832,10 @@ local function ensure()
  root.listNote=text(left,12,"",N.sideMaterial=="parchment");root.listNote:SetPoint("TOPLEFT",left,"TOPLEFT",28,-112);root.listNote:Hide();root.listNote:SetPoint("RIGHT",left,"RIGHT",-20,0)
  for i=1,13 do
   local row
-  row=btn(left,"",180,function() if row.stepID then session.index=row.stepID;activate();N.Refresh() end end);plainStepRow(row)
+  row=btn(left,"",180,function()
+   if ns.InsertItemChatLink(row.itemID) then return end
+   if row.stepID then session.index=row.stepID;activate();N.Refresh() end
+  end);plainStepRow(row)
   row:SetHeight(39)
   row.label:ClearAllPoints();row.label:SetPoint("LEFT",row,"LEFT",10,0);row.label:SetJustifyH("LEFT")
   local font=select(1,row.label:GetFont());row.label:SetFont("Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf",18,"");row.label:SetWordWrap(true);row.category=text(row,15,"",N.sideMaterial=="parchment");row.category:SetWordWrap(false);row.category:SetHeight(26);row.category:SetJustifyV("MIDDLE");rows[i]=row
@@ -2859,7 +2915,11 @@ local function ensure()
   local b=CreateFrame("Button",nil,popup,"BackdropTemplate");b.enamelPieces={};b.label=text(b,14,"");plainMenuOption(b);b:SetHeight(38);b:SetPoint("TOPLEFT",popup,"TOPLEFT",4,-4-(i-1)*38)
   b.label:ClearAllPoints();b.label:SetPoint("TOPLEFT",b,"TOPLEFT",10,-4);b.label:SetPoint("TOPRIGHT",b,"TOPRIGHT",-8,-4);b.label:SetHeight(17);b.label:SetWordWrap(false)
   b.meta=text(b,11,"");b.meta:SetPoint("BOTTOMLEFT",b,"BOTTOMLEFT",10,4);b.meta:SetTextColor(.72,.64,.48)
-  b:SetScript("OnClick",function() N.ChooseSearchResult(b.resultIndex) end);root.searchRows[i]=b
+  b:SetScript("OnClick",function(self)
+   local record=self.result and self.result.records and self.result.records[1]
+   if ns.InsertItemChatLink(ns.Forever.RecipeItemID(record)) then return end
+   N.ChooseSearchResult(self.resultIndex)
+  end);root.searchRows[i]=b
  end
  root.searchNote=text(popup,11,"");root.searchNote:SetPoint("BOTTOMLEFT",popup,"BOTTOMLEFT",10,7)
  popup:EnableMouseWheel(true);popup:SetScript("OnMouseWheel",function(_,delta)N.ScrollSearch(-delta*3)end);popup:Hide()
@@ -3832,7 +3892,7 @@ local function qs(id,s)
  return Q.states[id]
 end
 -- Profession introductions are relevant only after learning that profession.
-Q.professionQuests={}
+Q.professionQuests={[96873]='Enchanting'} -- QuestieDB Forever v1.1.2, skill line 333 at rank 1.
 for id,q in pairs(D.quests)do local name=q.title and q.title:match('^Camping 101:%s*(.-)%s*$');if name then Q.professionQuests[id]=name end end
 -- GF_SEASONAL_STEPS: catalog inclusion is never proof of holiday availability.
 Q.seasonalQuests={}
@@ -4052,8 +4112,10 @@ for id,q in pairs(locations)do
   zone[id]=true
  end
 end
-function Q.Ready(live)
+function Q.Ready(live,id,s)
  if not live or live.inLog~=true then return false end
+ local procedures=ns.QuestProcedures
+ if procedures and procedures.BlocksTurnIn(id,live,s)then return false end
  local required,finished=0,true
  for _,o in ipairs(live.objectives or{})do if not o.isOptional then
   required=required+1
@@ -4086,6 +4148,9 @@ end
 local function questContact(id,kind,s)
  local q,evidence=D.quests[id] or {},locations[id] or {}
  if kind=='accept' then return Q.NearestSource(q.starts,s,evidence.startPoints) end
+ local procedures=ns.QuestProcedures
+ local site=procedures and procedures.TurnInSite(id)
+ if site then return site end
  return Q.NearestSource(q.ends,s,evidence.endPoints)
 end
 local liveKinds={monster='kill',kill='kill',item='item',object='object',event='event',explore='event',talk='talk'}
@@ -4277,7 +4342,7 @@ function Q.Build(s)
  end
  local function wriggle(live)
   local have=E.Call(GetItemCount,278265,false)
-  local ready=Q.Ready(live)
+ local ready=Q.Ready(live,97583,s)
   local kind=live.inLog and (ready and 'turnin' or 'objective') or 'accept'
   local loc
   if not ready and (not E.Public(have) or type(have)~='number' or have<1)then
@@ -4320,7 +4385,7 @@ function Q.Build(s)
   if not q then
    if live.inLog then
     local title=live.title or ('quest '..id)
-    if Q.Ready(live) then
+    if Q.Ready(live,id,s) then
      add(id,'turnin',nil,questContact(id,'turnin',s),'Turn in '..title)
     else
      if not addWholeProcedure(id,live) then addObjectives(id,{title=title},live) end
@@ -4341,7 +4406,7 @@ function Q.Build(s)
    return
   end
   if live.inLog then
-   if Q.Ready(live)then
+   if Q.Ready(live,id,s)then
     add(id,'turnin',nil,questContact(id,'turnin',s),'Turn in '..q.title)
    else
     if addWholeProcedure(id,live) then return end
@@ -4433,7 +4498,7 @@ E.Eligible=function(row,s,levelsDescribeNPC)
   if not live.inLog and not Q.Eligible(row.quest,s)then return false end
   if row.kind=='accept'and live.inLog then return false end
   if(row.kind=='objective'or row.kind=='turnin')and not(s.quests and s.quests[row.quest]and s.quests[row.quest].inLog==true)then return false end
-  if row.kind=='turnin'and not Q.Ready(live)then return false end
+  if row.kind=='turnin'and not Q.Ready(live,row.quest,s)then return false end
  end
  return eligible(row,s,levelsDescribeNPC)
 end
@@ -4757,8 +4822,11 @@ end
 N.WorkflowLayout=W.Layout
 local stepDetails
 local function addCraftTile(details)
- local tile=CreateFrame('Frame',nil,details)
- tile:EnableMouse(true)
+ local tile=CreateFrame('Button',nil,details)
+ tile:RegisterForClicks('LeftButtonUp')
+ tile:SetScript('OnClick',function(self)
+  if self.info then ns.InsertItemChatLink(self.info.itemID)end
+ end)
  tile.back=tile:CreateTexture(nil,'BACKGROUND')
  tile.back:SetAllPoints()
  tile.icon=tile:CreateTexture(nil,'ARTWORK')
@@ -4834,7 +4902,8 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  body:SetHeight(0)
  local bodyHeight=description~='' and body:GetStringHeight()+4 or 0
  if step.objectiveDetails or step.materialBoard then nextQuest=nil end
- if not sections and not nextQuest and not step.objectiveDetails and not step.materialBoard then
+ local counters=step.resourceCounters
+ if not sections and not nextQuest and not step.objectiveDetails and not step.materialBoard and not(counters and #counters>0) then
   if stepDetails then stepDetails:Hide()end
   return math.max(1,bodyHeight)
  end
@@ -4846,7 +4915,7 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  local details=stepDetails
  local textCount,tileCount,counterCount,dividerCount,confirmationCount,y=0,0,0,0,0,0
  local mapCount,materialCount=0,0
- local function line(value,size,usable,muted,indent,gap)
+ local function line(value,size,usable,muted,indent,gap,itemID)
   textCount=textCount+1
   local label=details.texts[textCount]
   if not label then
@@ -4859,6 +4928,18 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
   point(label,details,indent or 0,y,usable or width-(indent or 0))
   label:SetHeight(0)
   label:Show()
+  local linkButton=label.itemLinkButton
+  if itemID then
+   if not linkButton then
+    linkButton=CreateFrame('Button',nil,details)
+    linkButton:RegisterForClicks('LeftButtonUp')
+    linkButton:SetScript('OnClick',function(self)ns.InsertItemChatLink(self.itemID)end)
+    label.itemLinkButton=linkButton
+   end
+   linkButton.itemID=itemID
+   point(linkButton,details,indent or 0,y,math.min(usable or width-(indent or 0),label:GetStringWidth()),label:GetStringHeight())
+   linkButton:Show()
+  elseif linkButton then linkButton:Hide()end
   y=y+label:GetStringHeight()+(gap or 4)
  end
  local function countAt(value,material,tracked)
@@ -4913,7 +4994,7 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
   for _,material in ipairs(board.materials)do
    local start=y;y=y+5
    local countWidth=countAt(material.progress or '—',true)
-   line(material.title,16,width-countWidth-23,nil,10,2)
+   line(material.title,16,width-countWidth-23,nil,10,2,material.itemID)
    if material.source then line(material.source,13,width-20,true,10,1) end
    local instruction=material.status=='unknown' and material.unknownInstruction or material.instruction
    if instruction then line(instruction,13,width-20,true,10,1) end
@@ -4951,10 +5032,13 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
    local action=(entry.action and entry.action..' 'or'')..entry.label
    local countWidth
    if entry.count then countWidth=countAt(entry.count) end
-   line(action,16,countWidth and width-countWidth-5)
+   line(action,16,countWidth and width-countWidth-5,nil,nil,nil,entry.itemID)
    if entry.prerequisite then line('First · '..entry.prerequisite,13,nil,true)end
    if entry.source then line(entry.source,13,nil,true)end
-   if entry.materials then line('Materials · '..entry.materials,13,nil,true)end
+   if entry.materials then
+    line('Materials',13,nil,true)
+    for _,material in ipairs(entry.materials)do line(material.text,13,nil,true,8,2,material.itemID)end
+   end
    if entry.nextAction then line('Next: '..entry.nextAction,13,nil,true)end
    if entry.mapPoint then mapButton(entry.mapPoint) end
    if entry.confirm then
@@ -4978,6 +5062,7 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
  end
  for i=mapCount+1,#details.mapButtons do details.mapButtons[i].mapPoint=nil;details.mapButtons[i]:Hide() end
  for i=materialCount+1,#details.materialFills do details.materialFills[i]:Hide();details.materialEdges[i]:Hide() end
+ for _,counter in ipairs(counters or {})do line(counter.text,14,nil,nil,nil,nil,counter.itemID)end
  local columns=math.max(1,math.floor((width+6)/88))
  local tileWidth=math.min(96,(width-6*(columns-1))/columns)
  for _,section in ipairs(sections or {})do
@@ -5008,15 +5093,21 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
    end
    y=y+math.ceil(#section.tiles/columns)*74
   else
-   for _,value in ipairs(section.lines)do line(value,14)end
+   for _,value in ipairs(section.lines)do
+    if type(value)=='table'then line(value.text,14,nil,nil,nil,nil,value.itemID)else line(value,14)end
+   end
    y=y+4
   end
  end
  if nextQuest then
-  line('Next quest',16)
+  line('Next in Steps',16)
   line(nextQuest,14)
  end
- for i=textCount+1,#details.texts do details.texts[i]:Hide()end
+ for i=textCount+1,#details.texts do
+  local label=details.texts[i]
+  label:Hide()
+  if label.itemLinkButton then label.itemLinkButton:Hide()end
+ end
  for i=tileCount+1,#details.tiles do details.tiles[i]:Hide()end
  for i=counterCount+1,#details.counters do details.counters[i]:Hide()end
  for i=confirmationCount+1,#details.confirmations do
@@ -5174,9 +5265,10 @@ function N.LayoutStepRows(visible,start)
  y=layoutDungeonOffer(r,panel,y,width,hidden)
  for _,b in ipairs(r.workflowBodyIndicators or{})do b:Hide()end
  for i,row in ipairs(N.stepRows)do
-  local step=visible[start+i-1];row:Hide();row.stepID=nil
+  local step=visible[start+i-1];row:Hide();row.stepID=nil;row.itemID=nil
   if step and not hidden and y+40<room then
    step=N.WorkflowLive(step)
+   row.itemID=step.itemID or step.procedure and step.procedure.itemID
    local active=step.id==selected
    local headline,context,actionLine
    if active then headline,context,actionLine=objectiveHeadline(step)end
@@ -7786,7 +7878,9 @@ local function buildResource(parent)
  b.wash=b:CreateTexture(nil,"BACKGROUND");b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.20)
  b.label=text(b,14)
  b.label:SetJustifyH("CENTER");b.label:SetJustifyV("TOP");b.label:SetWordWrap(true)
- b:SetScript("OnClick",function(self)R.ToggleMaterial(self.material)end)
+ b:SetScript("OnClick",function(self)
+  if not ns.InsertItemChatLink(self.material and self.material.id)then R.ToggleMaterial(self.material)end
+ end)
  b:SetScript("OnEnter",function(self)
   if not self.openYields or not self.openYields(self) then tooltip(self,self.material.name,self.note,self.material) end
  end)
@@ -8202,7 +8296,10 @@ function R.Open()
      b=CreateFrame("Button",nil,f)
      b.icon=b:CreateTexture(nil,"ARTWORK");b.icon:SetAllPoints()
      N.BronzeRectangle(b)
-     b:SetScript("OnClick",function(self)hideTip();R.ToggleMaterial(self.material)end)
+     b:SetScript("OnClick",function(self)
+      if ns.InsertItemChatLink(self.material and self.material.id)then return end
+      hideTip();R.ToggleMaterial(self.material)
+     end)
      b:SetScript("OnEnter",function(self)tooltip(self,self.material.name,"Click to remove",self.material)end)
      b:SetScript("OnLeave",hideTip)
      tray[i]=b
@@ -8533,7 +8630,10 @@ N.RefreshRecipes=function(...)
  for _,boss in ipairs(d and d.bosses or{})do add(boss)end;if d and d.otherLoot then add({name='Trash/Object',loot=d.otherLoot})end
  r.recipesText:SetText(V.boss=='Select A Boss'and'Dungeon Quests | Select A Boss For Loot'or'Dungeon Quests & Loot');N.visibleRecipes=rows;r.dungeonLootRows=r.dungeonLootRows or{};local width=math.max(100,r.recipeScroll:GetWidth()-24);r.recipeContent:SetWidth(width);local y=0
  for i,v in ipairs(rows)do local b=r.dungeonLootRows[i]
-  if not b then b=CreateFrame('Button',nil,r.recipeContent);b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetSize(26,26);b.icon:SetPoint('TOPLEFT',2,-5);b.label=text(b,17);b.label:SetPoint('TOPLEFT',36,-4);b.detail=text(b,13);r.dungeonLootRows[i]=b end
+  if not b then
+   b=CreateFrame('Button',nil,r.recipeContent);b.icon=b:CreateTexture(nil,'ARTWORK');b.icon:SetSize(26,26);b.icon:SetPoint('TOPLEFT',2,-5);b.label=text(b,17);b.label:SetPoint('TOPLEFT',36,-4);b.detail=text(b,13);r.dungeonLootRows[i]=b
+   b:SetScript('OnClick',function(self)ns.InsertItemChatLink(self.record and self.record.itemID)end)
+  end
   b.record=v;b:ClearAllPoints();b:SetPoint('TOPLEFT',r.recipeContent,'TOPLEFT',0,-y);b:SetWidth(width);b.label:SetWidth(width-40);b.label:SetHeight(0);b.label:SetWordWrap(true);b.label:SetText(v.name);b.detail:ClearAllPoints();b.detail:SetPoint('TOPLEFT',b.label,'BOTTOMLEFT',0,-3);b.detail:SetWidth(width-40);b.detail:SetText(v.source);b.icon:SetTexture(v.quest and 'Interface\\GossipFrame\\AvailableQuestIcon' or read(GetItemIcon,v.itemID));local h=math.max(52,b.label:GetStringHeight()+b.detail:GetStringHeight()+14);b:SetHeight(h);b:SetScript('OnEnter',function(self)if self.record.itemID then W.Tooltip(self,self.record.itemID)end end);b:SetScript('OnLeave',function()if W.tooltip then W.tooltip:Hide()end end);b:Show();y=y+h
  end
  for i=#rows+1,#r.dungeonLootRows do r.dungeonLootRows[i]:Hide()end;r.recipeContent:SetHeight(math.max(1,y));r.recipeScroll:SetVerticalScroll(0);N.UpdateMapView();W.ScrollState();V.Controls()
@@ -8561,6 +8661,7 @@ N.RefreshRecipes=function(...)
   if b.compassFlag then b.compassFlag:Hide()end
   if b:IsShown()and b.record then local old=b:GetScript('OnClick');local record=b.record;local key=record.workflowKey or record.id or record.spellID or record.name
    b:SetScript('OnClick',function(self,...)
+    if record.kind~='trainer' and ns.InsertItemChatLink(E.RecipeItemID(record))then return end
     if W.recipeSelection100==key and K.recipePin then W.recipeSelection100=nil;W.activeSource=nil;W.expandedRecipe=nil;W.selection=nil;W.mapLocation=nil;N.selectedRecipe=nil;K.Unpin(K.recipePin);N.RefreshRecipes();N.UpdateMapView();return end
     W.recipeSelection100=key;K.Unpin(K.recipePin);W.sourceSelection100=true;if old then old(self,...)end;W.sourceSelection100=nil
     local loc=record.location or record.locations and record.locations[1];if loc and loc.mapID and loc.x and loc.y then local id=K.FlagKey(record,loc);K.recipePin=id;K.pins[id]={key=id,name=loc.name or record.name,zone=loc.zone,location=loc,icon=K.professionPinTexture,professionPin=true,pin=true};K.age=1 end
@@ -9070,7 +9171,7 @@ function Q.ShoppingList(plan,itemName,purchaseSource)
    end
    local purchase=need.missing..' '..itemName(id)..(source and ' - '..source or '')
    lines[#lines+1]=purchase
-   heading.lines[#heading.lines+1]=purchase
+   heading.lines[#heading.lines+1]={text=purchase,itemID=id}
   end
  end
  return table.concat(lines,'\n'),view
@@ -9104,8 +9205,6 @@ function Q.Rewrite(rows,plan,options)
       end
      end
      n.craftingBody=table.concat(questBody,'\n')
-    else
-     for _,counter in ipairs(n.resourceCounters)do n.body=n.body..'\n'..counter.text end
     end
    end
    out[#out+1]=n
@@ -9422,9 +9521,9 @@ function R.CraftRows(plan)
    local materials={}
    for itemID,amount in pairs(action.reagents or {})do
     local label=materialLabel(itemID)or('Item '..itemID)
-    materials[#materials+1]=(amount*work.count)..' × '..label
+    materials[#materials+1]={text=(amount*work.count)..' × '..label,itemID=itemID}
    end
-   table.sort(materials)
+   table.sort(materials,function(a,b)return a.text<b.text end)
    local instructions={}
    if p.conversions[1] then instructions[#instructions+1]='Prepare these materials before crafting '..r.name..'.' end
    if action.product and type(action.output)=='number'and action.output>0 then
@@ -9435,7 +9534,7 @@ function R.CraftRows(plan)
    out[#out+1]={id=id,kind='profession',integratedProfession=true,profession=action.profession,category='Crafting',
     title='Craft '..work.count..' × '..action.name,body=detail,craftingBody=detail,
     craftingSections={{title='Materials for this craft',lines=materials}},
-    recipe={name=action.name,spellID=action.id},craftReady=true}
+    itemID=action.product,recipe={name=action.name,spellID=action.id},craftReady=true}
   end
  end
  return out
@@ -9451,7 +9550,7 @@ function R.FarmRow(plan,sources)
     if loc and d and (not yards or d<yards or d==yards and id<best.material)then
      yards=d
      best={id=key,kind='profession',integratedProfession=true,profession=source.kind,category='Gathering',
-      material=id,materialTarget=need.target,title=name(id)..': '..need.have..'/'..need.target,
+      material=id,itemID=id,materialTarget=need.target,title=name(id)..': '..need.have..'/'..need.target,
       body='Gather '..name(id)..' near '..(loc.name or 'the marked location')..'.',destination=loc}
     end
    end
@@ -9650,7 +9749,7 @@ end)(ADDON,GF)
     slots[i]=done and '1' or '0'
    end
    if not(E.Public(live.ready)and E.Public(live.complete))then return end
-    local shape=id..':'..(Q.Ready(live)and 'ready' or table.concat(slots))
+    local shape=id..':'..(Q.Ready(live,id,s)and 'ready' or table.concat(slots))
     local procedures=ns.QuestProcedures
     if procedures and procedures.Has(id)then shape=shape..':'..procedures.Signature(id,live,s) end
     parts[#parts+1]=shape
@@ -9762,7 +9861,6 @@ end)(ADDON,GF)
    row.actionLine=label
   end
   if step.recommendationReason then lines[#lines+1]=step.recommendationReason end
-  for _,counter in ipairs(step.resourceCounters or{})do lines[#lines+1]=counter.text end
   row.body=table.concat(lines,'\n')
   if step.craftingSections then row.craftingBody=row.body end
   if step.craftingShopping then

@@ -46,7 +46,7 @@ local function mergeItems(static, legacy, additional)
     return rows
 end
 
-local function withLiveItems(id, countFn, itemFn, offline)
+local function withLiveItems(id, countFn, itemFn, offline, rewardKind)
     if not id or not itemFn then return offline end
     local total = number(E.Call(countFn, id))
     if not total or total <= 0 then return offline end
@@ -55,15 +55,20 @@ local function withLiveItems(id, countFn, itemFn, offline)
         if item.id then offlineByID[item.id] = item end
     end
     local seen = {}
+    -- The quest-log link API uses the selected quest on some clients.
+    local selected = number(E.Call(C_QuestLog and C_QuestLog.GetSelectedQuest)) == id
     for slot = 1, total do
         local name, _, count, _, _, itemID = E.Call(itemFn, slot, id)
         itemID = positive(itemID)
         if itemID and not seen[itemID] then
             local prior = offlineByID[itemID]
+            local link = selected and text(E.Call(GetQuestLogItemLink, rewardKind, slot))
+            if link and tonumber(link:match("|Hitem:(%d+)[:|]")) ~= itemID then link = nil end
             rows[#rows + 1] = {
                 id = itemID,
                 name = text(name) or prior and prior.name,
                 count = positive(count) or prior and prior.count,
+                link = link or nil,
             }
             seen[itemID] = true
         end
@@ -174,8 +179,8 @@ function R.ForQuest(id, record, supplemental, loaded)
         record.additionalRewardItems)
     local choices = mergeItems(offline.choices, record.rewardChoice and record.rewardItems or nil)
     local cached = id and (loaded or R.IsCached(id))
-    fixed = withLiveItems(id, GetNumQuestLogRewards, GetQuestLogRewardInfo, fixed)
-    choices = withLiveItems(id, GetNumQuestLogChoices, GetQuestLogChoiceInfo, choices)
+    fixed = withLiveItems(id, GetNumQuestLogRewards, GetQuestLogRewardInfo, fixed, "reward")
+    choices = withLiveItems(id, GetNumQuestLogChoices, GetQuestLogChoiceInfo, choices, "choice")
     local selectable = {}
     for _, item in ipairs(choices) do
         if item.id then selectable[item.id] = true end

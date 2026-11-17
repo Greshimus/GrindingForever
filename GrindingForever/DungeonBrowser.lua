@@ -495,42 +495,7 @@ function ns.ToggleDungeonBrowser()
         row.icon:SetTexture(E.Public(icon) and icon or "Interface\\Icons\\INV_Misc_QuestionMark")
     end
 
-    local function itemLink(id)
-        local _, link = E.Call(C_Item and C_Item.GetItemInfo or GetItemInfo, id)
-        if E.Public(link) and type(link) == "string" and link:find("|Hitem:", 1, true) then return link end
-    end
-
-    local function activeChatWindow()
-        local edit = E.Call(ChatFrameUtil and ChatFrameUtil.GetActiveWindow or ChatEdit_GetActiveWindow)
-        if E.Public(edit) then return edit end
-    end
-
-    local function insertItemLink(link)
-        E.Call(ChatEdit_InsertLink or ChatFrameUtil and ChatFrameUtil.InsertLink, link)
-    end
-
-    local pendingLink
-    local function linkItemInChat(id)
-        pendingLink = nil
-        local link = itemLink(id)
-        if link then insertItemLink(link); return end
-        local edit = activeChatWindow()
-        local request = C_Item and C_Item.RequestLoadItemDataByID
-        if edit and type(request) == "function" then
-            local draft = E.Call(edit.GetText, edit)
-            if E.Public(draft) and type(draft) == "string" then
-                pendingLink = { id = id, edit = edit, draft = draft, time = E.Time() }
-            end
-            E.Call(request, id)
-        end
-    end
-
     local openRewardQuests, rewardRequests = {}, {}
-    window:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-    E.Call(window.RegisterEvent, window, "QUEST_DATA_LOAD_RESULT")
-    for _, event in ipairs({"QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN"}) do
-        E.Call(window.RegisterEvent, window, event)
-    end
     window:SetScript("OnEvent", function(self, event, itemID, success)
         if event == "QUEST_DATA_LOAD_RESULT" then
             if not E.Public(itemID) or type(itemID) ~= "number" or not rewardRequests[itemID] then return end
@@ -543,16 +508,6 @@ function ns.ToggleDungeonBrowser()
             return
         end
         if not E.Public(itemID) or type(itemID) ~= "number" then return end
-        if pendingLink and pendingLink.id == itemID then
-            local chat = pendingLink
-            pendingLink = nil
-            local draft = E.Call(chat.edit.GetText, chat.edit)
-            if self:IsShown() and E.Time() - chat.time <= 5 and activeChatWindow() == chat.edit
-                and E.Public(draft) and draft == chat.draft then
-                local link = itemLink(itemID)
-                if link then insertItemLink(link) end
-            end
-        end
         if not pendingItems[itemID] then return end
         pendingItems[itemID] = false
         if not self:IsShown() then return end
@@ -561,6 +516,11 @@ function ns.ToggleDungeonBrowser()
             if row.itemID == itemID then paintItem(row) end
         end
     end)
+    window:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+    E.Call(window.RegisterEvent, window, "QUEST_DATA_LOAD_RESULT")
+    for _, event in ipairs({"QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN"}) do
+        E.Call(window.RegisterEvent, window, event)
+    end
 
     local function detailFill(frame, sublevel)
         local fill = frame:CreateTexture(nil, "BACKGROUND", nil, sublevel or 0)
@@ -569,7 +529,12 @@ function ns.ToggleDungeonBrowser()
         return fill
     end
 
-    local function addRow(label, action, itemID, detail, actionLabel, boss, heading, completed, underway, framed, inDetailBlock)
+    local function activateRow(row, mouseButton)
+        if row.itemID and mouseButton == "LeftButton" and ns.InsertItemChatLink(row.itemLink or row.itemID) then return end
+        if row.action then row.action(row, mouseButton) end
+    end
+
+    local function addRow(label, action, itemID, detail, actionLabel, boss, heading, completed, underway, framed, inDetailBlock, itemLink)
         local index = content.visibleRows + 1
         content.visibleRows = index
         local row = rows[index]
@@ -617,7 +582,9 @@ function ns.ToggleDungeonBrowser()
             local function showTooltip(self)
                 if not self.itemID or not GameTooltip then return end
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                if GameTooltip.SetItemByID then
+                if self.itemLink then
+                    GameTooltip:SetHyperlink(self.itemLink)
+                elseif GameTooltip.SetItemByID then
                     GameTooltip:SetItemByID(self.itemID)
                 else
                     GameTooltip:SetHyperlink("item:" .. self.itemID)
@@ -630,20 +597,18 @@ function ns.ToggleDungeonBrowser()
             row:SetScript("OnEnter", showTooltip)
             row:SetScript("OnLeave", hideTooltip)
             row:SetScript("OnHide", hideTooltip)
+            row:SetScript("OnClick", activateRow)
             row.itemButton = CreateFrame("Button", nil, row)
             row.itemButton:SetAllPoints(row.icon)
             row.itemButton:RegisterForClicks("LeftButtonUp")
             row.itemButton:SetScript("OnEnter", function() showTooltip(row) end)
             row.itemButton:SetScript("OnLeave", function() hideTooltip(row) end)
             row.itemButton:SetScript("OnClick", function(_, mouseButton)
-                if not row.itemID then return end
-                if E.Call(IsModifiedClick, "CHATLINK") then linkItemInChat(row.itemID); return end
-                local action = row:GetScript("OnClick")
-                if action then action(row, mouseButton) end
+                if row.itemID then activateRow(row, mouseButton) end
             end)
             rows[index] = row
         end
-        row.itemID, row.itemName = itemID, label
+        row.itemID, row.itemName, row.itemLink, row.action = itemID, label, itemLink, action
         local showUnderway = type(underway) == "string"
         local chainMarker = showUnderway and completed == true
         local woodenRow = boss ~= nil or showUnderway
@@ -731,7 +696,6 @@ function ns.ToggleDungeonBrowser()
         row:SetPoint("TOPRIGHT",content,"TOPRIGHT",0,-content.rowY)
         row:SetHeight(height)
         content.rowY=content.rowY+height+(selector and 5 or 0)
-        row:SetScript("OnClick", action)
         row:EnableMouse(action ~= nil or itemID ~= nil)
         row:Show()
         return row
@@ -1125,8 +1089,8 @@ function ns.ToggleDungeonBrowser()
         local _, class = E.Call(UnitClass, "player")
         local questData = ns.ForeverQuestData
         local data = questData.quests
-        local function blockRow(title, detail, itemID, action, command, heading)
-            return addRow(title, action, itemID, detail, command, nil, heading, nil, nil, nil, true)
+        local function blockRow(title, detail, itemID, action, command, heading, itemLink)
+            return addRow(title, action, itemID, detail, command, nil, heading, nil, nil, nil, true, itemLink)
         end
         local function nameKey(name, questName)
             if type(name) ~= "string" or name == questName or name == "Inside the dungeon"
@@ -1423,7 +1387,8 @@ function ns.ToggleDungeonBrowser()
                     blockRow("Rewards", detail, nil, nil, nil, true)
                     local function rewardItem(item)
                         local name = item.name or ("Item " .. item.id)
-                        blockRow(name, item.count and item.count > 1 and ("Quantity: " .. item.count) or nil, item.id)
+                        blockRow(name, item.count and item.count > 1 and ("Quantity: " .. item.count) or nil,
+                            item.id, nil, nil, nil, item.link)
                     end
                     for _, item in ipairs(fixed) do rewardItem(item) end
                     if options > 0 then

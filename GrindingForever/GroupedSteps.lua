@@ -194,12 +194,13 @@ local function craftDetail(id, remaining)
   end
   local have, need = bagCount(item), quantity * crafts
   local name = E.ItemLabel(item) or D.names['item:'..item] or 'Item '..item
-  materials[#materials+1] = ('%d %s%s'):format(need, name, have and (' (%d in bags)'):format(have) or '')
+  local label = ('%d %s%s'):format(need, name, have and (' (%d in bags)'):format(have) or '')
+  materials[#materials+1] = {text=label,itemID=item}
  end
- table.sort(materials)
+ table.sort(materials, function(a,b) return a.text < b.text end)
  -- The live book may report a minimum yield for variable-output recipes.
  return action, ('%s · Up to %d %s.'):format(description, crafts, crafts == 1 and 'craft' or 'crafts'),
-  prerequisite, table.concat(materials, ', ')
+  prerequisite, materials
 end
 
 local function itemAcquisition(target, preferred, catalog, supplement, name, remaining)
@@ -252,7 +253,7 @@ function Steps.Instruction(child, live, preferred)
  local phase = child.procedure
  if phase then
   return {
-   label=phase.title, count=phase.count, source=phase.body,
+   label=phase.title, count=phase.count, source=phase.body, itemID=phase.itemID,
    phaseNumber=phase.phaseNumber, phaseCount=phase.phaseCount,
    nextAction=phase.upcoming and phase.upcoming[1],
    mapPoint=phase.destination,
@@ -295,10 +296,11 @@ function Steps.Instruction(child, live, preferred)
  end
  local count
  if total and total > 0 then count = have and string.format('%d/%d', have, total) or string.format('Need %d', total) end
- local source, prerequisite, materials
+ local source, prerequisite, materials, itemID
  if kind == 'item' and (not liveType or liveType == 'item') then
   local target = catalog and catalog.target or fact and fact.target or extra and extra.target
   if target and describesItem(liveText, name or E.ItemLabel(target)) then
+   itemID = target
    local held = have or bagCount(target)
    local remaining = total and held and math.max(0, total - held)
    if remaining ~= 0 then
@@ -308,7 +310,7 @@ function Steps.Instruction(child, live, preferred)
    end
   end
  end
- return {action=action, label=label, count=count, source=source, prerequisite=prerequisite, materials=materials}
+ return {action=action, label=label, count=count, source=source, prerequisite=prerequisite, materials=materials, itemID=itemID}
 end
 
 local function zoneName(point)

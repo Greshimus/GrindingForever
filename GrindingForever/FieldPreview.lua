@@ -621,8 +621,12 @@ local function showRecipes()
         end)
         button:SetScript("OnLeave",function() GameTooltip:Hide() end)
         button:SetScript("OnClick",function(self)
-            closeMenus()
             local row=self.record
+            if row and not row.summary and not row.location then
+                local itemID=row.recipe.learnableItemID or row.recipe.productID
+                if itemID and ns.InsertItemChatLink(itemID) then return end
+            end
+            closeMenus()
             if not row or row.summary then return end
             local recipe,loc=row.recipe,row.location
             if not loc then
