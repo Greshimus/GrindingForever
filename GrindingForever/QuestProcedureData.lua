@@ -23,11 +23,161 @@ ns.QuestProcedureData = {
  [76240]={["slots"]={{["phases"]={{["action"]="collect",["complete"]={["conditions"]={{["count"]=1,["item"]=6291,["kind"]="item"},{["count"]=1,["item"]=206345,["kind"]="item"}},["kind"]="any"},["id"]="get-smallfish",["source"]="QuestieDB Forever",["title"]="Buy or catch 1 Raw Brilliant Smallfish"},{["action"]="use",["body"]="Fillet the Raw Brilliant Smallfish in front of Boarton in Thunder Bluff.",["complete"]={["conditions"]={{["count"]=1,["item"]=206345,["kind"]="item"},{["kind"]="quest",["state"]="ready"}},["kind"]="any"},["id"]="fillet-fish",["source"]="QuestieDB Forever",["title"]="Use the Knife Set in front of Boarton Shadetotem"}}}},["version"]=1},
  [95036]={["version"]=2,["suggestPickup"]=true,["slots"]={[0]={["phases"]={{["id"]="collect-trevans-notes",["title"]="Get Trevan’s Weapon Notes",["complete"]={["kind"]="item",["item"]=267454,["count"]=1,["objectiveSlot"]=1},["source"]="QuestieDB Forever v1.1.0",["body"]="Speak to Trevan Rol at the Sepulcher in Silverpine Forest (43.40, 41.10) and take his weapon notes. You can right-click them for the clues. Keep them in your bags.",["action"]="talk",["destination"]={["mapID"]=1421,["x"]=43.4,["y"]=41.1,["name"]="Trevan Rol",["zone"]="Silverpine Forest",["npcID"]=248840},["progress"]={["kind"]="item",["item"]=267454,["count"]=1}}}},[3]={["phases"]={{["id"]="get-enchanted-silver-ingot",["title"]="Collect the Enchanted Silver Ingot",["complete"]={["kind"]="item",["item"]=267361,["count"]=1,["objectiveSlot"]=3},["source"]="QuestieDB Forever v1.1.0",["body"]="Enter Shadowfang Keep in Silverpine Forest. Take the ingot from the table beside Archmage Arugal.",["action"]="collect",["destination"]={["mapID"]=1421,["x"]=44.8,["y"]=67.8,["name"]="Shadowfang Keep entrance",["zone"]="Silverpine Forest"},["progress"]={["kind"]="item",["item"]=267361,["count"]=1}}}},[2]={["phases"]={{["id"]="loot-whitestone-oak-lumber",["title"]="Loot Whitestone Oak Lumber",["complete"]={["kind"]="item",["item"]=6994,["count"]=1,["objectiveSlot"]=2},["source"]="QuestieDB Forever v1.1.0",["body"]="Bring Trevan’s notes to The Deadmines in Westfall. After Rhahk’Zor, go to the lumber room. Loot the lumber from Goblin Woodcarvers in Sneed’s room.",["action"]="collect",["destination"]={["mapID"]=1436,["x"]=42.5,["y"]=71.7,["name"]="The Deadmines entrance",["zone"]="Westfall"},["progress"]={["kind"]="item",["item"]=6994,["count"]=1}}}},[4]={["phases"]={{["id"]="accept-seeking-the-kor-gem",["title"]="Accept Seeking the Kor Gem",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=272448,["count"]=1,["objectiveSlot"]=4},{["kind"]="quest",["quest"]=95042,["state"]="inLog"},{["kind"]="quest",["quest"]=95042,["state"]="rewarded"}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Talk to Ulric Frostveil at Zoram’gar Outpost in Ashenvale (11.84, 34.47) and accept Seeking the Kor Gem.",["action"]="accept",["destination"]={["mapID"]=1440,["x"]=11.84,["y"]=34.47,["name"]="Ulric Frostveil",["zone"]="Ashenvale",["npcID"]=259649},["relatedQuest"]=95042,["summary"]="Accept from Ulric Frostveil at Zoram’gar Outpost (11.84, 34.47)."},{["id"]="loot-corrupted-kor-gem",["title"]="Loot a Corrupted Kor Gem",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=272448,["count"]=1,["objectiveSlot"]=4},{["kind"]="item",["item"]=6995,["count"]=1,["objectiveSlot"]=1,["objectiveQuest"]=95042},{["kind"]="quest",["quest"]=95042,["state"]="ready"},{["kind"]="quest",["quest"]=95042,["state"]="rewarded"}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Hunt Blackfathom Tide Priestesses in the Blackfathom Deeps entrance tunnels in Ashenvale (13.55, 12.06). Keep the Corrupted Kor Gem and take it back to Ulric.",["action"]="collect",["destination"]={["mapID"]=1440,["x"]=13.55,["y"]=12.06,["name"]="Blackfathom Tide Priestess",["zone"]="Ashenvale",["npcID"]=4802},["groupable"]=true,["progress"]={["kind"]="item",["item"]=6995,["count"]=1},["summary"]="Loot from Blackfathom Tide Priestesses in the entrance tunnels (13.55, 12.06).",["relatedQuest"]=95042},{["id"]="purify-kor-gem",["title"]="Turn in Seeking the Kor Gem",["complete"]={["kind"]="item",["item"]=272448,["count"]=1,["objectiveSlot"]=4},["source"]="QuestieDB Forever v1.1.0",["body"]="Return the Corrupted Kor Gem to Ulric Frostveil at Zoram’gar Outpost (11.84, 34.47). Keep the Purified Kor Gem for Trevan Rol.",["action"]="turnin",["destination"]={["mapID"]=1440,["x"]=11.84,["y"]=34.47,["name"]="Ulric Frostveil",["zone"]="Ashenvale",["npcID"]=259649},["progress"]={["kind"]="item",["item"]=272448,["count"]=1},["relatedQuest"]=95042,["summary"]="Return to Ulric Frostveil (11.84, 34.47) to purify the gem.",["alternate"]={["id"]="find-purified-kor-gem",["title"]="Find your Purified Kor Gem",["body"]="You already turned in Seeking the Kor Gem. Check your bank for the Purified Kor Gem and put it back in your bags before returning to Trevan Rol.",["summary"]="You turned in the side quest. Check your bank for the purified gem.",["action"]="review",["when"]={["kind"]="quest",["quest"]=95042,["state"]="rewarded"}}}}}},["materialBoard"]={["notes"]={["slot"]=0,["objectiveSlot"]=1,["itemID"]=267454},["materials"]={{["slot"]=3,["itemID"]=267361,["title"]="Enchanted Silver Ingot",["source"]="Shadowfang Keep · Silverpine Forest",["instruction"]="Take the ingot from the table beside Archmage Arugal.",["unknownInstruction"]="Check your quest log or bags for the ingot."},{["slot"]=2,["itemID"]=6994,["title"]="Whitestone Oak Lumber",["source"]="The Deadmines · Westfall",["instruction"]="Loot the lumber from Goblin Woodcarvers in Sneed’s room.",["unknownInstruction"]="Check your quest log or bags for the lumber."},{["slot"]=4,["itemID"]=272448,["title"]="Purified Kor Gem",["source"]="Blackfathom Deeps · Ashenvale",["instruction"]="Complete Seeking the Kor Gem to have Ulric Frostveil purify the gem.",["unknownInstruction"]="Check your bags and whether Seeking the Kor Gem is active or completed."}}}},
  [95042]={["version"]=1,["slots"]={[0]={["phases"]={{["id"]="loot-corrupted-kor-gem",["title"]="Loot a Corrupted Kor Gem",["complete"]={["kind"]="item",["item"]=6995,["count"]=1,["objectiveSlot"]=1},["source"]="QuestieDB Forever v1.1.0",["body"]="Hunt Blackfathom Tide Priestesses in the Blackfathom Deeps entrance tunnels in Ashenvale (13.55, 12.06). Keep the Corrupted Kor Gem and take it back to Ulric.",["action"]="collect",["destination"]={["mapID"]=1440,["x"]=13.55,["y"]=12.06,["name"]="Blackfathom Tide Priestess",["zone"]="Ashenvale",["npcID"]=4802},["groupable"]=true,["progress"]={["kind"]="item",["item"]=6995,["count"]=1}}}}}},
- [97485]={["slots"]={[0]={["phases"]={{["action"]="buy",["complete"]={["conditions"]={{["count"]=1,["item"]=278079,["kind"]="item"},{["count"]=1,["item"]=278078,["kind"]="item"}},["kind"]="any"},["destination"]={["mapID"]=1456,["name"]="Nida Winterhoof",["x"]=49.6,["y"]=39.6,["zone"]="Thunder Bluff"},["id"]="buy-278079",["source"]="QuestieDB Forever",["title"]="Buy Bundle of Herbs from Nida Winterhoof"},{["action"]="buy",["complete"]={["conditions"]={{["count"]=1,["item"]=278080,["kind"]="item"},{["count"]=1,["item"]=278078,["kind"]="item"}},["kind"]="any"},["destination"]={["mapID"]=1456,["name"]="Nata Dawnstrider",["x"]=45,["y"]=38.8,["zone"]="Thunder Bluff"},["id"]="buy-278080",["source"]="QuestieDB Forever",["title"]="Buy Bundle of Dried Cedar Twigs from Nata Dawnstrider"},{["action"]="buy",["complete"]={["conditions"]={{["count"]=1,["item"]=278081,["kind"]="item"},{["count"]=1,["item"]=278078,["kind"]="item"}},["kind"]="any"},["destination"]={["mapID"]=1456,["name"]="Mahu",["x"]=43.8,["y"]=45.1,["zone"]="Thunder Bluff"},["id"]="buy-278081",["source"]="QuestieDB Forever",["title"]="Buy Sinew Thread from Mahu"},{["action"]="buy",["complete"]={["conditions"]={{["count"]=1,["item"]=278083,["kind"]="item"},{["count"]=1,["item"]=278078,["kind"]="item"}},["kind"]="any"},["destination"]={["mapID"]=1456,["name"]="Naal Mistrunner",["x"]=51,["y"]=52.5,["zone"]="Thunder Bluff"},["id"]="buy-278083",["source"]="QuestieDB Forever",["title"]="Buy Ceremonial Flint and Tinder from Naal Mistrunner"},{["action"]="combine",["body"]="The components can be purchased in any order.",["complete"]={["count"]=1,["item"]=278078,["kind"]="item"},["id"]="prepare-incense",["source"]="QuestieDB Forever",["title"]="Combine the four components to make Prepared Incense"},{["action"]="use",["body"]="Use the Incense Burner at the marked point.",["complete"]={["kind"]="quest",["state"]="ready"},["destination"]={["mapID"]=1456,["name"]="Incense Burner",["objectID"]=665373,["source"]="QuestieDB Forever v1.1.0",["x"]=53.02,["y"]=87.84,["zone"]="Thunder Bluff"},["id"]="spread-incense",["source"]="QuestieDB Forever",["title"]="Spread the incense at the south-facing cliff of Hunter's Rise"}}}},["version"]=1},
+ [97485]={version=1,slots={[0]={phases={
+  {id="buy-278081",action="buy",itemID=278081,title="Buy Sinew Thread from Mahu",
+   body="From Eylah, climb the stairs inside the central totem and exit at the Middle Rise. Find Mahu inside Thunder Bluff Armorers.",
+   destination={mapID=1456,x=43.8,y=45.1,name="Mahu",npcID=3005,zone="Thunder Bluff"},
+   complete={kind="any",conditions={{kind="item",item=278081,count=1},{kind="item",item=278078,count=1}}},
+   source="QuestieDB Forever"},
+  {id="buy-278080",action="buy",itemID=278080,title="Buy Bundle of Dried Cedar Twigs from Nata Dawnstrider",
+   body="Stay on the Middle Rise and head north to Dawnstrider Enchanters.",
+   destination={mapID=1456,x=45,y=38.8,name="Nata Dawnstrider",npcID=3012,zone="Thunder Bluff"},
+   complete={kind="any",conditions={{kind="item",item=278080,count=1},{kind="item",item=278078,count=1}}},
+   source="QuestieDB Forever"},
+  {id="buy-278079",action="buy",itemID=278079,title="Buy Bundle of Herbs from Nida Winterhoof",
+   body="Stay on the Middle Rise and head east to Holistic Herbalism.",
+   destination={mapID=1456,x=49.6,y=39.6,name="Nida Winterhoof",npcID=3014,zone="Thunder Bluff"},
+   complete={kind="any",conditions={{kind="item",item=278079,count=1},{kind="item",item=278078,count=1}}},
+   source="QuestieDB Forever"},
+  {id="buy-278083",action="buy",itemID=278083,title="Buy Ceremonial Flint and Tinder from Naal Mistrunner",
+   body="Return to the central totem and climb one more level to the High Rise. Find Naal by Aska's Kitchen.",
+   destination={mapID=1456,x=51,y=52.5,name="Naal Mistrunner",npcID=3027,zone="Thunder Bluff"},
+   complete={kind="any",conditions={{kind="item",item=278083,count=1},{kind="item",item=278078,count=1}}},
+   source="QuestieDB Forever"},
+  {id="prepare-incense",action="combine",itemID=278081,title="Combine the four components to make Prepared Incense",
+   body="Right-click Sinew Thread in your bags to combine the four components.",
+   complete={kind="item",item=278078,count=1},source="QuestieDB Forever"},
+  {id="spread-incense",action="use",itemID=278078,title="Spread the incense at the south-facing cliff of Hunter's Rise",
+   body="Take the rope bridge from the High Rise to Hunter's Rise. Use Prepared Incense beside the Incense Burner on the south-facing cliff.",
+   destination={mapID=1456,x=53.02,y=87.84,name="Incense Burner",objectID=665373,zone="Thunder Bluff",
+    source="QuestieDB Forever v1.1.0"},
+   complete={kind="quest",state="ready"},source="QuestieDB Forever"},
+ }}}},
  [2879]={["version"]=1,["slots"]={[1]={["phases"]={{["id"]="essence-lahassa",["title"]="Loot Lahassa Essence",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9255,["count"]=1},{["kind"]="item",["item"]=9306,["count"]=1}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Open the Flame of Lahassa in the Ruins of Ravenwind, Feralas (37.75, 12.18).",["action"]="collect",["destination"]={["mapID"]=1444,["x"]=37.75,["y"]=12.18,["name"]="Flame of Lahassa",["zone"]="Feralas",["objectID"]=142186},["groupable"]=true,["progress"]={["kind"]="item",["item"]=9255,["count"]=1}},{["id"]="essence-imbel",["title"]="Loot Imbel Essence",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9256,["count"]=1},{["kind"]="item",["item"]=9306,["count"]=1}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Open the Flame of Imbel in the Ruins of Ravenwind, Feralas (39.92, 9.44).",["action"]="collect",["destination"]={["mapID"]=1444,["x"]=39.92,["y"]=9.44,["name"]="Flame of Imbel",["zone"]="Feralas",["objectID"]=142187},["groupable"]=true,["progress"]={["kind"]="item",["item"]=9256,["count"]=1}},{["id"]="essence-samha",["title"]="Loot Samha Essence",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9257,["count"]=1},{["kind"]="item",["item"]=9306,["count"]=1}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Open the Flame of Samha in the Ruins of Ravenwind, Feralas (40.54, 12.66). Climb the rubble to reach the flame on the roof.",["action"]="collect",["destination"]={["mapID"]=1444,["x"]=40.54,["y"]=12.66,["name"]="Flame of Samha",["zone"]="Feralas",["objectID"]=142188},["groupable"]=true,["progress"]={["kind"]="item",["item"]=9257,["count"]=1}},{["id"]="essence-byltan",["title"]="Loot Byltan Essence",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9258,["count"]=1},{["kind"]="item",["item"]=9306,["count"]=1}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Open the Flame of Byltan in the Ruins of Ravenwind, Feralas (38.50, 15.79).",["action"]="collect",["destination"]={["mapID"]=1444,["x"]=38.5,["y"]=15.79,["name"]="Flame of Byltan",["zone"]="Feralas",["objectID"]=142185},["groupable"]=true,["progress"]={["kind"]="item",["item"]=9258,["count"]=1}},{["id"]="energize-stave",["title"]="Use Troyas' Stave at the Equinex Monolith",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9306,["count"]=1},{["kind"]="quest",["state"]="ready"}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Stand at the monolith in the Ruins of Ravenwind (38.83, 13.17). Use the stave from your bags with all four essences, then interact with the monolith to turn in.",["action"]="use",["destination"]={["mapID"]=1444,["x"]=38.83,["y"]=13.17,["name"]="Equinex Monolith",["zone"]="Feralas",["objectID"]=144063},["progress"]={["kind"]="item",["item"]=9306,["count"]=1}}}}}},
  [2930]={["version"]=1,["slots"]={[1]={["phases"]={{["id"]="obtain-white-card",["title"]="Loot 1 White Punch Card outside Gnomeregan",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9279,["count"]=1},{["kind"]="item",["item"]=9280,["count"]=1},{["kind"]="item",["item"]=9282,["count"]=1},{["kind"]="item",["item"]=9281,["count"]=1},{["kind"]="item",["item"]=9316,["count"]=1},{["kind"]="quest",["state"]="ready"}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Start in the outer tunnels in Dun Morogh (21.79, 33.69). Kill Caverndeep Pillagers, Invaders, or Looters until a card drops. Irradiated Invaders and Addled Lepers can also drop it.",["action"]="collect",["destination"]={["mapID"]=1426,["x"]=21.79,["y"]=33.69,["name"]="Caverndeep Pillager",["zone"]="Dun Morogh",["source"]="QuestieDB Forever v1.1.0",["npcID"]=6210},["groupable"]=true,["progress"]={["kind"]="item",["item"]=9279,["count"]=1}},{["id"]="punch-card-a",["title"]="Use Matrix Punchograph 3005-A",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9280,["count"]=1},{["kind"]="item",["item"]=9282,["count"]=1},{["kind"]="item",["item"]=9281,["count"]=1},{["kind"]="item",["item"]=9316,["count"]=1},{["kind"]="quest",["state"]="ready"}}},["source"]="QuestieDB Forever v1.1.0 and ForeverDungeonJournal quest directions",["body"]="Dun Morogh (21.99, 32.58). Look on the raised platform in the Train Depot or by the Workshop entrance, outside the instance. Insert your White Punch Card to get 1 Yellow Punch Card.",["action"]="interact",["destination"]={["mapID"]=1426,["x"]=21.99,["y"]=32.58,["name"]="Matrix Punchograph 3005-A",["zone"]="Dun Morogh",["source"]="QuestieDB Forever v1.1.0",["objectID"]=142345},["progress"]={["kind"]="item",["item"]=9280,["count"]=1}},{["id"]="punch-card-b",["title"]="Use Matrix Punchograph 3005-B",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9282,["count"]=1},{["kind"]="item",["item"]=9281,["count"]=1},{["kind"]="item",["item"]=9316,["count"]=1},{["kind"]="quest",["state"]="ready"}}},["source"]="QuestieDB Forever v1.1.0 and ForeverDungeonJournal quest directions",["body"]="Inside Gnomeregan, enter the Dormitory just past the Clean Zone. Insert your Yellow Punch Card to get 1 Blue Punch Card.",["action"]="interact",["progress"]={["kind"]="item",["item"]=9282,["count"]=1}},{["id"]="punch-card-c",["title"]="Use Matrix Punchograph 3005-C",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9281,["count"]=1},{["kind"]="item",["item"]=9316,["count"]=1},{["kind"]="quest",["state"]="ready"}}},["source"]="QuestieDB Forever v1.1.0 and ForeverDungeonJournal quest directions",["body"]="Find the terminal on Electrocutioner 6000's upper platform in the Launch Bay. Insert your Blue Punch Card to get 1 Red Punch Card.",["action"]="interact",["progress"]={["kind"]="item",["item"]=9281,["count"]=1}},{["id"]="punch-card-d",["title"]="Use Matrix Punchograph 3005-D",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=9316,["count"]=1},{["kind"]="quest",["state"]="ready"}}},["source"]="QuestieDB Forever v1.1.0 and ForeverDungeonJournal quest directions",["body"]="In the Engineering Labs, take the elevator down. Look in the first passage on the right. Insert your Red Punch Card to get 1 Prismatic Punch Card. Take the card to Master Mechanic Castpipe in Tinker Town, Ironforge.",["action"]="interact",["progress"]={["kind"]="item",["item"]=9316,["count"]=1}}}}}},
  [5149]={["version"]=1,["slots"]={[1]={["phases"]={{["id"]="doll-head",["title"]="Loot Pamela's Doll's Head",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=12886,["count"]=1},{["kind"]="item",["item"]=12885,["count"]=1}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Search the ruined houses in Darrowshire at 32.58, 79.56 or 34.07, 77.28. Check the other spot if this one is empty.",["action"]="collect",["destination"]={["mapID"]=1423,["x"]=32.58,["y"]=79.56,["name"]="Pamela's Doll's Head",["zone"]="Eastern Plaguelands",["objectID"]=176116},["groupable"]=true,["progress"]={["kind"]="item",["item"]=12886,["count"]=1},["alternateDestinations"]={{["mapID"]=1423,["x"]=34.07,["y"]=77.28,["name"]="Pamela's Doll's Head",["zone"]="Eastern Plaguelands",["objectID"]=176116}}},{["id"]="doll-left-side",["title"]="Loot Pamela's Doll's Left Side",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=12887,["count"]=1},{["kind"]="item",["item"]=12885,["count"]=1}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Search the ruined houses in Darrowshire at 33.95, 79.75 or 32.72, 79.12. Check the other spot if this one is empty.",["action"]="collect",["destination"]={["mapID"]=1423,["x"]=33.95,["y"]=79.75,["name"]="Pamela's Doll's Left Side",["zone"]="Eastern Plaguelands",["objectID"]=176142},["groupable"]=true,["progress"]={["kind"]="item",["item"]=12887,["count"]=1},["alternateDestinations"]={{["mapID"]=1423,["x"]=32.72,["y"]=79.12,["name"]="Pamela's Doll's Left Side",["zone"]="Eastern Plaguelands",["objectID"]=176142}}},{["id"]="doll-right-side",["title"]="Loot Pamela's Doll's Right Side",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=12888,["count"]=1},{["kind"]="item",["item"]=12885,["count"]=1}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Search the ruined houses in Darrowshire at 33.93, 77.25 or 33.10, 79.67. Check the other spot if this one is empty.",["action"]="collect",["destination"]={["mapID"]=1423,["x"]=33.93,["y"]=77.25,["name"]="Pamela's Doll's Right Side",["zone"]="Eastern Plaguelands",["objectID"]=176143},["groupable"]=true,["progress"]={["kind"]="item",["item"]=12888,["count"]=1},["alternateDestinations"]={{["mapID"]=1423,["x"]=33.1,["y"]=79.67,["name"]="Pamela's Doll's Right Side",["zone"]="Eastern Plaguelands",["objectID"]=176143}}},{["id"]="assemble-doll",["title"]="Assemble Pamela's Doll",["complete"]={["kind"]="any",["conditions"]={{["kind"]="item",["item"]=12885,["count"]=1},{["kind"]="quest",["state"]="ready"}}},["source"]="QuestieDB Forever v1.1.0",["body"]="Use a doll part in your bags to join all three pieces. Return to Pamela Redpath at 31.15, 77.98 in Darrowshire.",["action"]="combine",["progress"]={["kind"]="item",["item"]=12885,["count"]=1}}}}}},
 }
+
+-- Starter quest actions checked against QuestieDB Forever v1.1.2. Pins use
+-- catalog object/NPC spawns, with the bundled walkthrough as a fallback.
+local function site(mapID, zone, x, y, name, npcID)
+    return {mapID=mapID, zone=zone, x=x, y=y, name=name, npcID=npcID}
+end
+
+local function addAction(quest, slot, phase)
+    phase.source = 'QuestieDB Forever v1.1.2'
+    phase.complete = phase.complete or (slot == 0 and {kind='quest', state='ready'} or {kind='objective'})
+    phase.showWithoutProgress = true
+    local record = ns.QuestProcedureData[quest]
+    if not record then
+        record = {slots={}}
+        ns.QuestProcedureData[quest] = record
+    end
+    record.slots[slot] = {phases={phase}}
+end
+
+for _, well in ipairs({
+    {quest=754, item=5411, name='Winterhoof', x=51.85, y=68.53},
+    {quest=758, item=5415, name='Thunderhorn', x=44.15, y=50.97},
+    {quest=760, item=5416, name='Wildmane', x=42.70, y=24.88},
+}) do
+    local wellName = well.name..' Water Well'
+    addAction(well.quest, 1, {
+        id='cleanse-well', title='Use the '..well.name..' Cleansing Totem', action='use', itemID=well.item,
+        body='Use the totem at '..wellName..', then return to Mull Thunderhorn.',
+        destination=site(1412, 'Mulgore', well.x, well.y, wellName),
+    })
+end
+
+addAction(5441, 1, {
+    id='wake-peons', title="Wake Lazy Peons with the Foreman's Blackjack", action='use', itemID=16114,
+    body="Target sleeping Lazy Peons and use the blackjack until you have woken five. Return to Foreman Thazz'ril.",
+    destination=site(1411, 'Durotar', 44.98, 69.13, 'Lazy Peon', 10556),
+    progress={kind='objective', count=5},
+})
+
+for _, binding in ipairs({
+    {quest=1471, item=6284, tool='Runes of Summoning', map=1458, zone='Undercity', x=86.62, y=27.05},
+    {quest=1504, item=7464, tool='Glyphs of Summoning', map=1454, zone='Orgrimmar', x=49.43, y=50.04},
+    {quest=1689, item=6928, tool='Bloodstone Choker', map=1453, zone='Stormwind City', x=39.09, y=84.37},
+}) do
+    addAction(binding.quest, 1, {
+        id='summon-voidwalker', title='Summon and subdue the Voidwalker', action='use', itemID=binding.item,
+        body='Use the '..binding.tool..' at the Summoning Circle, then defeat the Voidwalker.',
+        destination=site(binding.map, binding.zone, binding.x, binding.y, 'Summoning Circle'),
+    })
+end
+
+for _, moonkin in ipairs({
+    {quest=6001, item=15208, tool='Cenarion Moondust', map=1439, zone='Darkshore', x=43.5, y=45.97},
+    {quest=6002, item=15710, tool='Cenarion Lunardust', map=1413, zone='The Barrens', x=42, y=60.87},
+}) do
+    addAction(moonkin.quest, 1, {
+        id='summon-lunaclaw', title='Summon Lunaclaw and speak to its spirit', action='use', itemID=moonkin.item,
+        body='Use the '..moonkin.tool..' at the Moonkin Stone. Defeat Lunaclaw, then speak to its spirit.',
+        destination=site(moonkin.map, moonkin.zone, moonkin.x, moonkin.y, 'Moonkin Stone'),
+    })
+end
+
+addAction(92474, 1, {
+    id='walk-on-air', title='Use Walk on Air as you fall', action='cast',
+    body='Jump from the top of the watchtower in Thendal Grove and cast Walk on Air to slow your fall.',
+    destination=site(2521, 'Zephras Isle', 43.68, 24.09, 'Thendal Grove Watchtower'),
+})
+addAction(92597, 1, {
+    id='read-leyline', title='Cast Read Leyline at the leyline', action='cast',
+    body='Use your Read Leyline racial ability beside the leyline in Thendal Grove.',
+    destination=site(2521, 'Zephras Isle', 46.29, 17.87, 'Ley Line'),
+})
+addAction(92598, 1, {
+    id='cast-skysight', title='Cast Skysight at the Elemental Convergence', action='cast',
+    body='Use your Skysight racial ability at the Elemental Convergence in Thendal Grove.',
+    destination=site(2521, 'Zephras Isle', 48.28, 20.62, 'Elemental Convergence'),
+})
+addAction(92683, 1, {
+    id='swat-flutterflies', title='Use the Flutterfly Swatter to collect Flutterfly Dust', action='use', itemID=253666,
+    body='Use the Flutterfly Swatter on Flutterflies around the Gustberry Lowlands and collect five Flutterfly Dust.',
+    destination=site(2521, 'Zephras Isle', 49.96, 76.86, 'Flutterfly', 251622),
+    progress={kind='objective', count=5},
+})
+for _, well in ipairs({
+    {slot=1, item=254546, name='Jansen Stead', x=56.62, y=18.69},
+    {slot=2, item=254547, name='Molsen Farm', x=46.08, y=38.14},
+}) do
+    addAction(92742, well.slot, {
+        id='sample-well-'..well.item, title='Use the sample kit at '..well.name, action='use', itemID=254545,
+        body='Use the Well Water Sample Kit at the '..well.name..' well. You can sample the two wells in either order.',
+        destination=site(1436, 'Westfall', well.x, well.y, well.name..' Water Well'),
+        complete={kind='item', item=well.item, count=1, objectiveSlot=well.slot},
+    })
+end
+addAction(92840, 1, {
+    id='record-windstone', title='Use the Index Esoteria on the Windstone Formations', action='use', itemID=254584,
+    body="Use the Index Esoteria on the Windstone Formations at the Overlook Standing Stones in Shen'dar Highlands.",
+    destination=site(2521, 'Zephras Isle', 47.5, 68.6, 'Windstone Formation'),
+})
+addAction(94438, 0, {
+    id='resurrect-falgan', title='Use the Symbol of Life on Deathguard Falgan', action='use', itemID=6866,
+    body='Resurrect Deathguard Falgan at Venomweb Vale before speaking to him. Return to Danitha Morr for a replacement if needed.',
+    destination=site(1420, 'Tirisfal Glades', 86.73, 47.72, 'Deathguard Falgan', 257663),
+})
+addAction(97245, 1, {
+    id='knock-kuramaa-stump', title="Knock on Kuramaa's Stump to summon Kuramaa", action='interact',
+    body="Interact with the stump, defeat Kuramaa, and loot Kuramaa's Mask.",
+    destination=site(2521, 'Zephras Isle', 42.35, 68.82, "Kuramaa's Stump"),
+})
+
+
+addAction(98601, 0, {
+    id='read-consecrated-scroll', title='Read the Consecrated Scroll', action='use', itemID=282423,
+    body='Right-click the Consecrated Scroll in your bags, then speak to Aramis Hammerhand in the Deathknell church.',
+    destination=site(1420, 'Tirisfal Glades', 31.01, 66.24, 'Aramis Hammerhand', 244808),
+})
+ns.QuestProcedureData[98601].turnInInstruction = {
+    text='Read the Consecrated Scroll before speaking to Aramis Hammerhand in the Deathknell church.',
+    itemID=282423,
+}
+
 ns.QuestProcedureGuidance = {
  [2]={["source"]="QuestieDB Forever",["text"]="Bring Sharptalon's Claw to Senani Thunderheart at Splintertree Post, Ashenvale."},
  [5]={["source"]="QuestieDB Forever",["text"]="Speak with Chef Grual."},

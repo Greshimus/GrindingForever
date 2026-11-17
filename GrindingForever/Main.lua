@@ -251,7 +251,20 @@ function E.Snapshot()
  local ids=call(C_QuestLog and C_QuestLog.GetAllCompletedQuestIDs)
  s.completedAvailable=type(ids)=='table';if s.completedAvailable then for _,id in ipairs(ids)do s.completed[id]=true end end
  local n=call(C_QuestLog and C_QuestLog.GetNumQuestLogEntries or GetNumQuestLogEntries);s.questLogAvailable=num(n,0,1e5)~=nil;n=s.questLogAvailable and n or 0
- for i=1,n do local q=call(C_QuestLog and C_QuestLog.GetInfo,i);if not q then local title,_,_,header,_,_,_,id=call(GetQuestLogTitle,i);if title and id then q={questID=id,isHeader=header,title=title}end end;if q and q.questID and not q.isHeader then s.quests[q.questID]=E.QuestState(q.questID);s.quests[q.questID].title=q.title;s.quests[q.questID].inLog=true;if q.isComplete==true or q.isComplete==1 then s.quests[q.questID].ready=true end end end
+ for i=1,n do
+  local q=call(C_QuestLog and C_QuestLog.GetInfo,i)
+  if not q then
+   local title,level,_,header,_,_,_,id=call(GetQuestLogTitle,i)
+   if title and id then q={questID=id,isHeader=header,title=title,level=level}end
+  end
+  if q and q.questID and not q.isHeader then
+   local live=E.QuestState(q.questID)
+   live.title,live.inLog=q.title,true
+   live.level=num(q.level,1,1000)
+   if q.isComplete==true or q.isComplete==1 then live.ready=true end
+   s.quests[q.questID]=live
+  end
+ end
  s.auras,s.wellFed,s.enhancementAurasReadable=readPlayerAuras()
  s.enhancementSignature=enhancementSignature(s.auras,s.wellFed,s.enhancementAurasReadable)
  for tab=1,call(GetNumTalentTabs)or 0 do for i=1,call(GetNumTalents,tab)or 0 do local name,_,_,_,rank,maxRank=call(GetTalentInfo,tab,i);if name then s.talents[name]={rank=rank,maxRank=maxRank}end end end
@@ -1738,7 +1751,10 @@ function GuideView.New()
   visible=visible or self:Visible()
   local current=self:Current(visible)
   local first=visible[1]
-  if not self.browsing and first and first.nearbyRecipeVendor then self.index=first.id;return end
+  if not self.browsing and first then
+   local saferQuest=(first.questStep or first.groupObjectives) and not first._questRisk and current and current._questRisk
+   if first.nearbyRecipeVendor or first.starterTurnIn or saferQuest then self.index=first.id;return end
+  end
   if not current or current.complete and not self.browsing then
    self.index=nil
    for _,node in ipairs(visible)do if not node.complete then self.index=node.id;break end end
@@ -2784,7 +2800,7 @@ function N.Resync()
 end
 function N.Step(value)
  local visible=session:Visible();local at=math.max(1,math.min(#visible,math.floor(value)))
- session.index=visible[at] and visible[at].id or nil;activate();N.Refresh()
+ session.index=visible[at] and visible[at].id or nil;session.browsing=true;activate();N.Refresh()
 end
 function N.Move(delta) session:Move(delta);activate();N.Refresh() end
 function N.SetView(value)
@@ -2888,7 +2904,7 @@ local function ensure()
   local row
   row=btn(left,"",180,function()
    if ns.HandleItemChatClick(row.itemLink or row.itemID) then return end
-   if row.stepID then session.index=row.stepID;activate();N.Refresh() end
+   if row.stepID then session.index=row.stepID;session.browsing=true;activate();N.Refresh() end
   end);plainStepRow(row)
   row:SetHeight(39)
   row.label:ClearAllPoints();row.label:SetPoint("LEFT",row,"LEFT",10,0);row.label:SetJustifyH("LEFT")
@@ -4140,6 +4156,13 @@ local function isPvPQuest(q)
  end
  return false
 end
+local function questRaceBit(s)
+ local rb=raceBits[s.race]
+ if not rb and E.Public(s.raceId) and type(s.raceId)=='number' and s.raceId>=1 and s.raceId<=53 and s.raceId%1==0 then
+  return 2^(s.raceId-1)
+ end
+ return rb
+end
 function Q.Eligible(id,s)
  local q=D.quests[id];if not q or isPvPQuest(q) or not Q.AllowsQuest(id,s.faction) then return false end
  local live=qs(id,s);if live.rewarded==true or live.rewarded==1 or s.completed[id]then return false end
@@ -4150,13 +4173,20 @@ function Q.Eligible(id,s)
  if profession then local skill=s.skills and s.skills[profession];if not skill or not E.Public(skill.rank)or type(skill.rank)~='number'or skill.rank<=0 or not offeredNow(id,s)then return false end end
  if (id==76156 or id==76160 or id==76240) and s.class~='ROGUE' and not offeredNow(id,s) then return false end
  if not mask(q.classes,classBits[s.class])then return false end
- local rb=raceBits[s.race]
- if not rb and E.Public(s.raceId) and type(s.raceId)=='number' and s.raceId>=1 and s.raceId<=53 and s.raceId%1==0 then
-  rb=2^(s.raceId-1)
- end
- if not mask(q.races,rb) and not offeredNow(id,s)then return false end
+ if not mask(q.races,questRaceBit(s)) and not offeredNow(id,s)then return false end
  for _,later in ipairs(Q.breadcrumbs[id]or{})do local nextState=qs(later,s);if nextState.inLog or nextState.rewarded==true or nextState.rewarded==1 or s.completed[later]then return false end end
  if q.min_level and q.min_level>s.level then return false end
+ -- An actual Forever offer resolves disagreements in the cached relationship records.
+ if q.sequenceVerified and not q.repeatable and offeredNow(id,s)then return true end
+ if q.disabledByQuest and qs(q.disabledByQuest,s).inLog==true then return false end
+ if q.availableUntilCompleted then
+  local blocker=qs(q.availableUntilCompleted,s)
+  if blocker.rewarded==true or blocker.rewarded==1 or s.completed[q.availableUntilCompleted]then return false end
+ end
+ if q.availableStartingWith then
+  local start=qs(q.availableStartingWith,s)
+  if not(start.inLog==true or start.rewarded==true or start.rewarded==1 or s.completed[q.availableStartingWith])then return false end
+ end
  local evidence=locations[id]
  for _,required in ipairs(evidence and evidence.requiredQuests or {})do
   if qs(required,s).rewarded~=true and not s.completed[required] then return false end
@@ -4168,6 +4198,80 @@ function Q.Eligible(id,s)
   if p.mode=='all'then all=all and done else hasAny=true;any=any or done end
  end end
  return all and(not hasAny or any)and not q.repeatable
+end
+-- Follow unresolved requirements of dungeon quests through their outdoor chains.
+function Q.PendingDungeonPrerequisites(s)
+ local prep=ns.DungeonPrep
+ if not prep or not prep.QuestTargets then return {} end
+ local pending,visited={},{}
+ local rb=questRaceBit(s)
+ local function rewarded(id)
+  local progress=qs(id,s)
+  return progress.rewarded==true or progress.rewarded==1 or s.completed[id]
+ end
+ local function canLead(id)
+  local q=D.quests[id]
+  if not q or not Q.AllowsQuest(id,s.faction) or isPvPQuest(q) then return false end
+  if not mask(q.classes,classBits[s.class]) or not mask(q.races,rb) then return false end
+  if q.min_level and q.min_level>s.level then return false end
+  if q.disabledByQuest and qs(q.disabledByQuest,s).inLog==true then return false end
+  return not q.availableUntilCompleted or not rewarded(q.availableUntilCompleted)
+ end
+ local visit
+ local function include(id)
+  if not rewarded(id) and canLead(id) then pending[id]=true;visit(id) end
+ end
+ visit=function(id,reference)
+  if visited[id] or not canLead(id) then return end
+  visited[id]=true
+  local q=D.quests[id]
+  local loc=locations[id]
+  if not (q.prerequisites and #q.prerequisites>0 or loc and loc.requiredQuests or q.availableStartingWith
+   or reference and reference.chain) then return end
+  if rewarded(id) or qs(id,s).inLog==true then return end
+  local overrides=loc and loc.requiredQuests or {}
+  for _,required in ipairs(overrides)do include(required)end
+  local start=q.availableStartingWith
+  if start and qs(start,s).inLog~=true then include(start) end
+  local group,hasRequirement={},#overrides>0 or start~=nil
+  local groupSatisfied=false
+  for _,req in ipairs(q.prerequisites or {})do
+   if not req.breadcrumb then
+    hasRequirement=true
+    local pre=math.abs(req.pre)
+    local progress=qs(pre,s)
+    local done=req.pre>0 and rewarded(pre) or req.pre<0 and progress.inLog==true
+    if req.mode=='all' then
+     if not done then include(pre) end
+    elseif done then
+     groupSatisfied=true
+    elseif canLead(pre) and not rewarded(pre) then
+     group[pre]=progress.inLog==true
+    end
+   end
+  end
+  if not groupSatisfied then
+   local only,active,count,activeCount=nil,nil,0,0
+   for pre,inLog in pairs(group)do
+    only,count=pre,count+1
+    if inLog then active,activeCount=pre,activeCount+1 end
+   end
+   -- A completed alternative closes the gate. Otherwise prefer an accepted
+   -- branch, or the sole option available to this character.
+   if count==1 then include(only)
+   elseif activeCount==1 then include(active) end
+  end
+  if not hasRequirement and reference then
+   for _,link in ipairs(reference.chain or {})do
+    if link[1]==id then break end
+    if link.prerequisite then include(link[1]) end
+   end
+  end
+ end
+ for id,reference in pairs(prep.QuestTargets(s))do
+  visit(id,reference~=true and reference or nil)
+ end
+ return pending
 end
 local continentMaps={[1414]=true,[1415]=true,[1945]=true,[947]=true}
 local starterItems, itemQuestStarts = {}, {}
@@ -4409,6 +4513,16 @@ function Q.Build(s)
    level=q.level,minLevel=not live.inLog and q.min_level or nil,questStep=true,objectivePoints=points,objectiveEvidence=catalogObjective,
    areaTask=kind=='objective',source='Bundled quest facts',xp=q.xp}
  end
+ local function addTurnIn(id,title)
+  add(id,'turnin',nil,questContact(id,'turnin',s),'Turn in '..title)
+  if procedures then
+   local instruction,itemID=procedures.TurnInInstruction(id)
+   if instruction then
+    out[#out].body=instruction
+    out[#out].itemID=itemID
+   end
+  end
+ end
  local function addProcedure(id,slot,phase)
   local loc=phase.destination
   add(id,'objective',slot,loc,phase.title,phase.groupable and loc and {loc} or nil)
@@ -4462,7 +4576,7 @@ function Q.Build(s)
    if phase then
     addProcedure(id,slot,phase)
     count=count+1
-   elseif not finished and procedureStatus~='blocked' then
+   elseif not finished and procedureStatus~='blocked' and procedureStatus~='complete' then
     local loc,points,catalogObjective=objectiveLocation(id,slot,s,live)
     local liveText=goal and E.Public(goal.text) and goal.text
     add(id,'objective',slot,loc,liveText or catalogObjective and (catalogObjective.text or catalogObjective.name) or q.title,points,catalogObjective)
@@ -4520,7 +4634,7 @@ function Q.Build(s)
    if live.inLog then
     local title=live.title or ('quest '..id)
     if Q.Ready(live,id,s) then
-     add(id,'turnin',nil,questContact(id,'turnin',s),'Turn in '..title)
+     addTurnIn(id,title)
     else
      if not addWholeProcedure(id,live) then addObjectives(id,{title=title},live) end
     end
@@ -4541,28 +4655,30 @@ function Q.Build(s)
   end
   if live.inLog then
    if Q.Ready(live,id,s)then
-    add(id,'turnin',nil,questContact(id,'turnin',s),'Turn in '..q.title)
+    addTurnIn(id,q.title)
    else
     if addWholeProcedure(id,live) then return end
     if id==97485 then
      local function hasItem(item)
-      local count=E.Call(GetItemCount,item,false)
+      local count=E.Call(C_Item and C_Item.GetItemCount or GetItemCount,item,false)
       return E.Public(count) and type(count)=='number' and count>0
      end
-     if not hasItem('Prepared Incense') then
+     if not hasItem(278078) then
       for index,step in ipairs({
-       {'Bundle of Herbs','Nida Winterhoof',49.6,39.6},
-       {'Bundle of Cedar Twigs','Nata Dawnstrider',45,38.8},
-       {'Sinew Thread','Mahu',43.8,45.1},
-       {'Ceremonial Flint and Tinder','Naal Mistrunner',51,52.5},
+       {278081,'Sinew Thread','Mahu',43.8,45.1},
+       {278080,'Bundle of Dried Cedar Twigs','Nata Dawnstrider',45,38.8},
+       {278079,'Bundle of Herbs','Nida Winterhoof',49.6,39.6},
+       {278083,'Ceremonial Flint and Tinder','Naal Mistrunner',51,52.5},
       })do
        if not hasItem(step[1])then
-        add(id,'objective',index+100,{mapID=1456,x=step[3],y=step[4],name=step[2],zone='Thunder Bluff'},
-         'Buy '..step[1]..' from '..step[2]..' (0/1)')
+        local item,name,vendor,x,y=unpack(step)
+        add(id,'objective',index+100,{mapID=1456,x=x,y=y,name=vendor,zone='Thunder Bluff'},
+         'Buy '..name..' from '..vendor..' (0/1)')
+        out[#out].itemID=item
         return
        end
       end
-      add(id,'objective',105,nil,'Combine the four components to make Prepared Incense')
+      add(id,'objective',105,nil,'Right-click Sinew Thread to make Prepared Incense')
       return
      end
      local loc=objectiveLocation(id,1,s,live)
@@ -4662,8 +4778,8 @@ end
 E.Priority=function(row,s)
  if row.urgentBags then return 10000 end
  if row.kind=='train'or row.professionChoice then return 1200 end
+ row.localQuestPickup,row.starterTurnIn=nil,nil
  if row.questStarterItem then return 1080 end
- row.localQuestPickup=nil
  if not row.questStep then return priority(row,s)end
  if row.questDestination then row.destination=row.questDestination;row.zone=row.destination.zone end
  local loc=row.destination
@@ -4675,6 +4791,11 @@ E.Priority=function(row,s)
  row._questPriority=loc and (row.kind~='accept' or nearbyPickup) and priorityQuest(q,s) or false
  row._questCluster=nil
  row.recommendationReason=nil
+ if row.kind=='turnin' and s.level<=5 and localZone and d and d<=450 then
+  row.starterTurnIn=true
+  row.recommendationReason='Hand this in before taking on more quests.'
+  return 1195-d/100
+ end
  -- Pick up quests within a short walk before leaving for a class objective.
  -- A distant restricted quest pickup belongs in the normal travel ranking.
  if row.kind=='accept' and localZone and d and d<=120 then
@@ -4715,7 +4836,7 @@ local function clusterObjectives(rows,s)
  if not playerWorld then return end
  for _,row in ipairs(rows)do
   local d=row._questDistance
-  if row.questStep and row.kind=='objective'and d and d<=650 then
+  if row.questStep and row.kind=='objective'and not row._questRisk and d and d<=650 then
    for _,goal in ipairs(row.objectives or {row})do
      local p=(not goal.procedure or goal.procedure.groupable) and goal.destination
     if p then
@@ -4750,16 +4871,70 @@ local function clusterObjectives(rows,s)
  end
 end
 
+-- Prefer level-appropriate work before dangerous or trivial quests. Keep the
+-- secondary choices visible and retain the existing travel ranking within each tier.
+local function rankQuestWork(rows,s)
+ local greenRange=E.Call(C_QuestLog and C_QuestLog.GetTrivialRange)
+ if not E.Public(greenRange) or type(greenRange)~='number' then greenRange=E.Call(GetQuestGreenRange)end
+ if not E.Public(greenRange) or type(greenRange)~='number' then greenRange=nil end
+ local leveling=not E.db or E.db.journey~='Completionist'
+ local safestFloor,highestDeferred,hasGray
+ for _,row in ipairs(rows)do
+  row._questRisk,row.dungeonPrerequisite=nil,nil
+  if row.questStep then
+   local live=s.quests and s.quests[row.quest]
+   local level=live and live.level or row.level
+   local delta=E.Public(level) and type(level)=='number' and level>0 and level-s.level or nil
+   local ready=row.kind=='turnin' or row.questStarterItem
+   if not ready and delta then
+    if delta>=5 then row._questRisk='red'
+    elseif delta>=3 then row._questRisk='orange'
+    elseif leveling and greenRange and delta < -2 and delta < -greenRange then
+     row._questRisk='gray'
+     hasGray=true
+    end
+   end
+  end
+ end
+ if hasGray then
+  local prerequisites=Q.PendingDungeonPrerequisites(s)
+  for _,row in ipairs(rows)do
+   if row._questRisk=='gray' and prerequisites[row.quest] then
+    row._questRisk=nil
+    row.dungeonPrerequisite=true
+   end
+  end
+ end
+ clusterObjectives(rows,s)
+ for _,row in ipairs(rows)do
+  local risk=row._questRisk
+  if risk then
+   local penalty=risk=='red' and 280 or risk=='gray' and 240 or 120
+   row._priority=row._priority-penalty
+   highestDeferred=math.max(highestDeferred or row._priority,row._priority)
+  elseif row.questStep and (row.destination or row.questStarterItem or row.procedure) then
+   safestFloor=math.min(safestFloor or row._priority,row._priority)
+  end
+ end
+ if safestFloor and highestDeferred and highestDeferred>=safestFloor then
+  local offset=highestDeferred-safestFloor+1
+  for _,row in ipairs(rows)do
+   if row._questRisk then row._priority=row._priority-offset end
+  end
+ end
+end
+
 local order=E.Order
 E.Order=function(rows,s)
- local out=order(rows,s,clusterObjectives)
+ local out=order(rows,s,rankQuestWork)
  local held=Q.held or E.db and E.db.questHeld;local heldRow,heldIndex
  for i,r in ipairs(out)do if r.id==held then heldRow,heldIndex=r,i;break end end
  local first=out[1];local service=first and(first.urgentBags or first.kind=='train'or first.professionChoice or first.kind=='farm')
  -- Keep the current objective only when both choices are comparable and
  -- close together. It must yield to a higher tier or a new local hub.
  if heldIndex and heldIndex>1 and first.questStep and first.kind=='objective'and heldRow.questStep and heldRow.kind=='objective'
-    and first._questPriority==heldRow._questPriority and first._questCluster==heldRow._questCluster
+    and first._questRisk==heldRow._questRisk and first._questPriority==heldRow._questPriority
+    and first._questCluster==heldRow._questCluster
     and first._questDistance and heldRow._questDistance and heldRow._questDistance<=first._questDistance+40 then
   local between=E.Distance(first.destination,heldRow.destination)
   if between and between<=clusterRange then table.remove(out,heldIndex);table.insert(out,1,heldRow)end
@@ -9776,7 +9951,7 @@ function R.Apply(rows)
  if mode()=='Farming'and #additions==0 then local farm=R.FarmRow(plan,sources);if farm then additions[1]=farm end end
  -- Preserve urgent services, training and immediately available hub turn-ins.
  local at=1
- while out[at]and(out[at].urgentBags or out[at].localQuestPickup or out[at].nearbyRecipeVendor or out[at].adaptiveVendor or out[at].kind=='sell'or out[at].kind=='train'or out[at].trainingRequired or out[at].professionChoice or out[at].kind=='turnin'and(distance(position(),out[at].destination)or math.huge)<=150)do at=at+1 end
+ while out[at]and(out[at].urgentBags or out[at].starterTurnIn or out[at].localQuestPickup or out[at].nearbyRecipeVendor or out[at].adaptiveVendor or out[at].kind=='sell'or out[at].kind=='train'or out[at].trainingRequired or out[at].professionChoice or out[at].kind=='turnin'and(distance(position(),out[at].destination)or math.huge)<=150)do at=at+1 end
  for i=#additions,1,-1 do table.insert(out,at,additions[i])end
  return out
 end
@@ -10189,21 +10364,27 @@ ns.DungeonPrep=prep
 local raid={["onyxias lair"]=true,["barrow deeps"]=true,["hyjal summit"]=true,
  ["molten core"]=true,["blackwing lair"]=true,["zulgurub"]=true,["ahnqiraj"]=true,
  ["temple of ahnqiraj"]=true,["ruins of ahnqiraj"]=true,naxxramas=true}
-local function allowed(quest,level)
+local function allowed(quest,level,state)
  local record=quest.reference or quest.record or {}
  local side=record.faction or record.side
- local faction=E.Call(UnitFactionGroup,'player')
- local _,class=E.Call(UnitClass,'player')
+ local faction,class
+ if state then
+  faction,class=state.faction,state.class
+ else
+  faction=E.Call(UnitFactionGroup,'player')
+  local _,token=E.Call(UnitClass,'player')
+  class=token
+ end
  local required=record.min_level or (type(record.requires)=='number' and record.requires) or 1
  return level>=required and (not record.classOnly or record.classOnly==class)
   and ((side~='Alliance' and side~='Horde') or side==faction)
   and (not ns.ForeverQuestPlanner or ns.ForeverQuestPlanner.AllowsQuest(quest.id,faction,record))
 end
-local function dungeonQuests(instance,level)
+local function dungeonQuests(instance,level,state)
  local rows,seen,references={},{},{}
  local data=ns.ForeverQuestData.quests
  local function add(row)
-  if row.id and not seen[row.id] and allowed(row,level) then
+  if row.id and not seen[row.id] and allowed(row,level,state) then
    seen[row.id]=row
    rows[#rows+1]=row
   end
@@ -10218,6 +10399,22 @@ local function dungeonQuests(instance,level)
   end
  end
  return rows,references
+end
+function prep.QuestTargets(state)
+ local targets,seen={},{}
+ if not N.model or not N.model.goals.Dungeons or not ns.DungeonQuestRows then return targets end
+ local function add(instance)
+  local key=ns.DungeonNameKey(instance.name)
+  if raid[key] or seen[key] then return end
+  seen[key]=true
+  local rows=dungeonQuests(instance,state.level,state)
+  for _,quest in ipairs(rows)do targets[quest.id]=quest.reference or targets[quest.id] or true end
+ end
+ for name,instance in pairs(E.dungeons)do
+  add(instance.name and instance or {name=name,quests=instance.quests})
+ end
+ for name in pairs(ns.DungeonReference or {})do add({name=name})end
+ return targets
 end
 local function startsInside(quest)
  local reference=quest.reference or {}

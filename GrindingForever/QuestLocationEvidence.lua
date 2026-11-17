@@ -106010,3 +106010,64 @@ do
  ns.QuestLocationEvidence[95042].startPoints={{["mapID"]=1440,["x"]=11.84,["y"]=34.47,["name"]="Ulric Frostveil",["zone"]="Ashenvale",["npcID"]=259649}}
  ns.QuestLocationEvidence[95042].endPoints={{["mapID"]=1440,["x"]=11.84,["y"]=34.47,["name"]="Ulric Frostveil",["zone"]="Ashenvale",["npcID"]=259649}}
 end
+
+-- Contact and objective corrections from QuestieDB Forever v1.1.2.
+-- Keep prior contacts where the snapshot has no replacement. Several of the
+-- removed alternates are the quest turn-in or a different quest's giver.
+do
+ local revision = "QuestieDB Forever v1.1.2"
+ local contacts = {
+  [491] = {start = {"object", 112888, 1421, 65.36, 24.81, "Dusty Shelf", "Silverpine Forest"}}, -- Wand to Bethor
+  [928] = {start = {"npc", 3514, 1438, 59.06, 39.45, "Tenaron Stormgrip", "Teldrassil"}}, -- Crown of the Earth
+  [1113] = {start = {"npc", 2055, 1458, 48.82, 69.28, "Master Apothecary Faranell", "Undercity"}}, -- Hearts of Zeal
+  [8922] = {start = {"npc", 16013, 1455, 43.53, 52.64, "Deliana", "Ironforge"}}, -- A Supernatural Device
+  [92434] = {start = {"npc", 2410, 1424, 61.6, 20.85, "Magus Wordeen Voidglare", "Hillsbrad Foothills"}}, -- Blood in the Streets
+  [92467] = {start = {"npc", 251374, 2521, 42.79, 23.58, "Windshaper Boro", "Zephras Isle"}}, -- Call of Earth
+  [93680] = {start = {"npc", 2410, 1424, 61.6, 20.85, "Magus Wordeen Voidglare", "Hillsbrad Foothills"}}, -- Key to the City
+  [93862] = {start = {"npc", 256386, 1413, 50.13, 29.37, "Dokimi", "The Barrens"}, finish = {"npc", 256386, 1413, 50.13, 29.37, "Dokimi", "The Barrens"}}, -- Crate Return
+  [93949] = {start = {"npc", 252383, 2521, 66.14, 76.63, "Valennia Stormfist", "Zephras Isle"}}, -- Bugged
+  [94280] = {finish = {"npc", 257437, 1418, 67.69, 51.7, "Garyanne Fleezlebop", "Badlands"}}, -- Craftsman's Writ: Mechanical Dragonling
+  [94314] = {finish = {"npc", 5598, 1425, 33.75, 75.21, "Atal'ai Exile", "The Hinterlands"}}, -- Craftsman's Writ: Cindercloth Robe
+  [94873] = {start = {"npc", 5412, 1443, 56.29, 59.68, "Gurda Wildmane", "Desolace"}}, -- Buying Friendship: Gelkis
+  [94911] = {start = {"npc", 259118, 1412, 33.41, 22.59, "Muln Earthfury", "Mulgore"}}, -- Child of Nature
+  [95314] = {start = {"npc", 2132, 1420, 59.43, 52.19, "Carolai Anise", "Tirisfal Glades"}}, -- That Shadowvale Green Elixir
+  [95770] = {start = {"npc", 2519, 1434, 32.27, 27.71, "Kin'weelay", "Stranglethorn Vale"}}, -- Locating the Lost City
+  [95773] = {start = {"npc", 2464, 1434, 32.17, 28.9, "Commander Aggro'gosh", "Stranglethorn Vale"}}, -- Enemies in the Water
+  [95810] = {finish = {"npc", 1077, 1437, 38.81, 52.39, "Prospector Whelgar", "Wetlands"}}, -- Lost Relic Carry
+  [96222] = {start = {"npc", 253066, 1443, 43.48, 78.97, "Umarak", "Desolace"}}, -- Khan Hratha
+  [96241] = {start = {"npc", 264074, 1412, 32.5, 20.66, "Mazu'kon", "Mulgore"}}, -- Talkin' bout Toxins, Mon
+  [97558] = {start = {"npc", 3549, 1420, 65.43, 60.12, "Shelene Rhobart", "Tirisfal Glades"}}, -- Hides for the Forsaken
+  [98070] = {start = {"npc", 4877, 1441, 46.21, 51.51, "Jandia", "Thousand Needles"}}, -- Stop the Screeching
+  [98601] = {start = {"npc", 1569, 1420, 30.84, 66.2, "Shadow Priest Sarvis", "Tirisfal Glades"}}, -- A Difficult Path
+  [99143] = {start = {"npc", 1651, 1429, 47.61, 62.32, "Lee Brown", "Elwynn Forest"}}, -- Bottles and Baubles
+  [99158] = {start = {"npc", 1226, 1426, 47.34, 52.19, "Maxan Anvol", "Dun Morogh"}}, -- Dawn in the Mountains
+ }
+ local function applyContact(quest, evidence, contactKey, pointKey, contact)
+  if not contact then return end
+  local kind, id, map, x, y, name, zone = unpack(contact)
+  if quest then quest[contactKey] = {{kind = kind, id = id}} end
+  evidence[pointKey] = {{
+   mapID = map, x = x, y = y, name = name, zone = zone,
+   npcID = kind == "npc" and id or nil,
+   objectID = kind == "object" and id or nil,
+   sourceName = name, source = revision,
+  }}
+ end
+ local quests = ns.ForeverQuestData and ns.ForeverQuestData.quests or {}
+ for questID, contact in pairs(contacts) do
+  local quest = quests[questID]
+  local evidence = ns.QuestLocationEvidence[questID] or {}
+  ns.QuestLocationEvidence[questID] = evidence
+  applyContact(quest, evidence, "starts", "startPoints", contact.start)
+  applyContact(quest, evidence, "ends", "endPoints", contact.finish)
+ end
+
+ -- The encounter is in the Barrens. Legacy copies of its coordinates in
+ -- adjacent maps describe the same encounter and are not alternate sites.
+ local terry = {mapID = 1413, x = 41.89, y = 11.4, name = "Terry Longdrink",
+  zone = "The Barrens", npcID = 261367, source = revision}
+ local quest = ns.QuestLocationEvidence[95508]
+ quest.objectives = quest.objectives or {}
+ quest.objectives[1] = {kind = "kill", target = 261367, name = terry.name,
+  points = {terry}, source = revision}
+end

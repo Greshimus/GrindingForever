@@ -353,7 +353,7 @@ local function candidates(rows, state)
  end
  for index, row in ipairs(rows) do
   local live = row.quest and state.quests[row.quest]
-  if row.kind == 'objective' and not row.materialBoard and live and live.inLog == true then
+  if row.kind == 'objective' and not row._questRisk and not row.materialBoard and live and live.inLog == true then
    for _, child in ipairs(row.objectives or {row}) do
     local supported=(row.quest~=97583 and row.quest~=97485) or child.procedure
     if supported and child.slot and not Steps.Progress(live.objectives and live.objectives[child.slot]) then

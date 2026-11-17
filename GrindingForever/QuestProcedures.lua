@@ -228,7 +228,7 @@ phaseStatus = function(context, slot, sequence, index)
         -- For a manual alternative, the player's affirmative confirmation can
         -- resolve a phase even if the game's alternative evidence is unavailable.
         local canAcknowledge = evaluate(phase.complete, context, slot, phase, true, 1) == true
-        if done == false or canAcknowledge then return 'current', canAcknowledge end
+        if done == false or canAcknowledge or phase.showWithoutProgress then return 'current', canAcknowledge end
         return 'fallback'
     end
 
@@ -412,6 +412,12 @@ function Procedures.BlocksTurnIn(quest, live, state)
     if not (record and record.beforeTurnIn) then return false end
     local _, status = Procedures.Current(quest, 0, live, state)
     return status ~= 'complete'
+end
+
+function Procedures.TurnInInstruction(quest)
+    local record = recordFor(quest)
+    local instruction = record and record.turnInInstruction
+    if instruction then return instruction.text, instruction.itemID end
 end
 
 function Procedures.TurnInSite(quest)
