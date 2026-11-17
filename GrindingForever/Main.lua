@@ -4943,7 +4943,7 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
    end
    point(divider,details,0,y+1,width,1);divider:Show();y=y+8
   end
-  if step.groupObjectives then line(group.questTitle,13,nil,true)end
+  if step.groupObjectives then line(group.questTitle,14,nil,false,nil,3)end
   for _,entry in ipairs(group.entries)do
    if entry.phaseCount and entry.phaseCount>1 then
     line(('Step %d of %d'):format(entry.phaseNumber,entry.phaseCount),13,nil,true)
@@ -4952,7 +4952,9 @@ local function layoutStepDetails(step,visible,nextIndex,body,content,width)
    local countWidth
    if entry.count then countWidth=countAt(entry.count) end
    line(action,16,countWidth and width-countWidth-5)
+   if entry.prerequisite then line('First · '..entry.prerequisite,13,nil,true)end
    if entry.source then line(entry.source,13,nil,true)end
+   if entry.materials then line('Materials · '..entry.materials,13,nil,true)end
    if entry.nextAction then line('Next: '..entry.nextAction,13,nil,true)end
    if entry.mapPoint then mapButton(entry.mapPoint) end
    if entry.confirm then
@@ -5091,6 +5093,39 @@ local function layoutEnhancementIcons(root,panel,firstRow,compact,hidden,visible
  end
  return count>0 and math.max(firstRow,top+size+5*px) or firstRow
 end
+local function styleStepCard(row, width, headerHeight, expanded)
+ if not row.workflowHeading then
+  local heading=CreateFrame('Frame',nil,row)
+  heading:EnableMouse(false)
+  local wood=row:CreateTexture(nil,'BACKGROUND',nil,1)
+  wood:SetAllPoints(heading)
+  wood:SetTexture('Interface\\AddOns\\GrindingForever\\Media\\BaseWood')
+  wood:SetTexCoord(.10,.56,.11,.37)
+  N.BronzeRectangle(heading,1)
+  local detail=CreateFrame('Frame',nil,row)
+  detail:EnableMouse(false)
+  detail:SetPoint('TOPLEFT',heading,'BOTTOMLEFT',0,-2)
+  detail:SetPoint('BOTTOMRIGHT',row,'BOTTOMRIGHT')
+  local cream=row:CreateTexture(nil,'BACKGROUND',nil,-1)
+  cream:SetAllPoints(detail)
+  cream:SetColorTexture(.98,.90,.73,.78)
+  N.BronzeRectangle(detail,1)
+  row.workflowHeading,row.workflowWood=heading,wood
+  row.workflowDetail,row.workflowCream=detail,cream
+  row.separator:Hide();row.stepWash:Hide();row.stepMarker:Hide()
+  function row:UpdateStepVisual()
+   local highlighted=self.selected or self.stepHovered
+   self.workflowWood:SetVertexColor(highlighted and .83 or .64,highlighted and .74 or .58,highlighted and .61 or .50)
+   self.label:SetTextColor(.99,highlighted and .90 or .87,highlighted and .66 or .73)
+   self.label:SetShadowColor(.06,.035,.02,.95)
+   self.label:SetShadowOffset(0,-N.PixelSize(self,1))
+  end
+ end
+ point(row.workflowHeading,row,0,0,width,headerHeight)
+ row.workflowDetail:SetShown(expanded)
+ row.workflowCream:SetShown(expanded)
+ row:SetEnamelTint()
+end
 local function layoutDungeonOffer(root,panel,y,width,hidden)
  local prep=ns.DungeonPrep
  local offer=not hidden and prep and prep.VisibleOffer()
@@ -5147,17 +5182,19 @@ function N.LayoutStepRows(visible,start)
    if active then headline,context,actionLine=objectiveHeadline(step)end
    row.label:SetText(headline or step.title or'');row.label:SetWidth(width-20);row.label:SetHeight(0);row.label:SetWordWrap(true);row.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',20,'');row.category:Hide()
    local h=math.max(38,row.label:GetStringHeight()+16)
-   row.selected=active and W.selection~='source';row:SetEnamelTint();row.stepID=step.id;point(row,panel,28,y,width,h);row.label:ClearAllPoints();row.label:SetPoint('TOPLEFT',row,'TOPLEFT',10,-8)
+   row.selected=active and W.selection~='source';row.stepID=step.id;point(row,panel,28,y,width,h);row.label:ClearAllPoints();row.label:SetPoint('TOPLEFT',row,'TOPLEFT',10,-8)
+   styleStepCard(row,width,h,active)
    if active then
+    local contextY=h+6
     if context then
      if not r.stepContext then
       r.stepContext=text(row,13)
       r.stepContext:SetTextColor(.35,.22,.10)
      end
      r.stepContext:SetParent(row);r.stepContext:SetText(context)
-     point(r.stepContext,row,10,h-2,width-(step.groupObjectives and 85 or 20))
+     point(r.stepContext,row,10,contextY,width-(step.groupObjectives and 85 or 20))
      r.stepContext:SetHeight(0);r.stepContext:Show()
-     h=h+math.max(16,r.stepContext:GetStringHeight()+3)
+     h=h+math.max(16,r.stepContext:GetStringHeight()+3)+6
      if actionLine and step.body and step.body:sub(1,#actionLine)==actionLine then
       step.body=step.body:sub(#actionLine+1):gsub('^%s+','')
      end
@@ -5174,7 +5211,7 @@ function N.LayoutStepRows(visible,start)
      status:Hide();bodyY=h+10
      if not r.groupDistance then r.groupDistance=text(row,13);r.groupDistance:SetTextColor(.35,.22,.10);r.groupDistance:SetJustifyH('RIGHT')end
      r.groupDistance:SetParent(row);r.groupDistance:SetText(string.format('%.0f yd',step.areaDistance))
-     point(r.groupDistance,row,width-79,h-math.max(16,r.stepContext:GetStringHeight()+3)-2,69,16);r.groupDistance:Show()
+     point(r.groupDistance,row,width-79,contextY,69,16);r.groupDistance:Show()
     end
     bodyScroll:SetParent(row)
     bodyContent:SetWidth(width-20)
@@ -5235,7 +5272,7 @@ function N.LayoutStepRows(visible,start)
     end
     row:SetHeight(h)
    end
-   row:Show();shown=shown+1;y=y+h+4
+   row:Show();shown=shown+1;y=y+h+6
   end
  end
  N.displayedRowCount=shown
@@ -8854,6 +8891,7 @@ local function better(a,b)
  if not b then return true end
  if a.rareMissing~=b.rareMissing then return a.rareMissing<b.rareMissing end
  if a.ready~=b.ready then return a.ready end
+ if a.buyable~=b.buyable then return a.buyable end
  if a.priced~=b.priced then return a.priced end
  if a.cost~=b.cost then return a.cost<b.cost end
  return tostring(a.recipe.id)<tostring(b.recipe.id)
@@ -8862,27 +8900,43 @@ end
 -- output/inputs must come from a learned recipe, not a presumed cross-client rule.
 function Q.Plan(state)
  state.rare=state.rare or {};state.vendorStock=state.vendorStock or {};state.prices=state.prices or {}
- local stock=copy(state.inventory); local plans, needs, materials={},{},{}
+ local stock, surplus=copy(state.inventory),{}
+ local plans, needs, materials={},{},{}
  local conversions={}
  for _,r in ipairs(state.recipes or {})do
   if r.known and r.conversion and r.product and r.output and r.output>0 then
    conversions[r.product]=conversions[r.product]or{}; table.insert(conversions[r.product],r)
   end
  end
- local function consume(id,amount,ledger,missing,path,work)
-  local take=math.min(ledger[id]or 0,amount); ledger[id]=(ledger[id]or 0)-take; amount=amount-take
+ local function take(ledger,id,amount)
+  local available=ledger[id] or 0
+  local taken=math.min(available,amount)
+  if taken>0 then ledger[id]=available-taken end
+  return taken
+ end
+ local function produce(ledger,id,amount)
+  if amount>0 then ledger[id]=(ledger[id]or 0)+amount end
+ end
+ local function consume(id,amount,candidate,path)
+  local inBags=take(candidate.ledger,id,amount)
+  produce(candidate.used,id,inBags)
+  amount=amount-inBags
+  amount=amount-take(candidate.freshOutput,id,amount)
+  local priorOutput=take(candidate.remainingOutput,id,amount)
+  if priorOutput>0 then candidate.dependent=true;amount=amount-priorOutput end
   if amount<=0 then return end
-  path=path or {}; if not path[id] and conversions[id] and #conversions[id]==1 then
+  if not path[id] and conversions[id] and #conversions[id]==1 then
    local r=conversions[id][1]; local inputs=keys(r.reagents)
    -- Only single-input material conversions are unambiguous; cycles fall back.
    if #inputs==1 and (r.reagents[inputs[1]]or 0)>0 then
     path[id]=true; local crafts=math.ceil(amount/r.output)
-    consume(inputs[1],crafts*r.reagents[inputs[1]],ledger,missing,path,work)
-    work[#work+1]={recipe=r,count=crafts}
+    consume(inputs[1],crafts*r.reagents[inputs[1]],candidate,path)
+    candidate.conversions[#candidate.conversions+1]={recipe=r,count=crafts}
+    produce(candidate.freshOutput,id,crafts*r.output-amount)
     path[id]=nil;return
    end
   end
-  missing[id]=(missing[id]or 0)+amount
+  produce(candidate.missing,id,amount)
  end
  for _,profession in ipairs(keys(state.skills))do
   local skill=state.skills[profession]; local best
@@ -8900,19 +8954,23 @@ function Q.Plan(state)
     end
     local valid=true;for _,quantity in pairs(r.reagents)do if type(quantity)~='number'or quantity<=0 then valid=false end end
     if valid and count and count>0 and count<=40 then
-     local ledger=copy(stock);local missing,work={},{}
-     for _,id in ipairs(keys(r.reagents))do consume(id,r.reagents[id]*count,ledger,missing,nil,work)end
-     local rareMissing,cost,priced=0,0,true;local ready=true
-     for id,amount in pairs(missing)do
+     local candidate={recipe=r,count=count,ledger=copy(stock),remainingOutput=copy(surplus),
+      freshOutput={},used={},missing={},conversions={}}
+     local path={}
+     for _,id in ipairs(keys(r.reagents))do consume(id,r.reagents[id]*count,candidate,path)end
+     local rareMissing,cost,priced=0,0,true
+     local buyable=not candidate.dependent
+     for id,amount in pairs(candidate.missing)do
       if state.rare[id]then rareMissing=rareMissing+amount end
-      if not(state.vendorAccess and state.vendorStock[id] and state.vendorStock[id]>=amount)then ready=false end
+      if not(state.vendorAccess and state.vendorStock[id] and state.vendorStock[id]>=amount)then buyable=false end
      end
      for id,amount in pairs(r.reagents)do if state.prices[id]then cost=cost+state.prices[id]*amount*count else priced=false;cost=cost+amount*count end end
-     local candidate={recipe=r,count=count,ledger=ledger,missing=missing,rareMissing=rareMissing,
-      cost=cost/count,priced=priced,ready=ready,conversions=work}
+     candidate.rareMissing,candidate.cost,candidate.priced=rareMissing,cost/count,priced
+     candidate.ready=not candidate.dependent and not next(candidate.missing)
+     candidate.buyable=buyable
      local allowed=true
      if state.localMaterials then
-      for id in pairs(missing)do
+      for id in pairs(candidate.missing)do
        if not state.localMaterials[id]then allowed=false;break end
       end
      end
@@ -8921,17 +8979,19 @@ function Q.Plan(state)
    end
   end
   if best then
-   for id,have in pairs(stock)do
-    local used=have-(best.ledger[id]or 0)
-    if used>0 then materials[id]=(materials[id]or 0)+used end
-   end
+   for id,used in pairs(best.used)do produce(materials,id,used)end
    stock=best.ledger; plans[#plans+1]=best
-   -- Merchant purchases are not assumed shared inventory. Each candidate must
-   -- actually be bought before a later profession may allocate those units.
-   if next(best.missing)then best.ready=false end
+   -- Publish planned output separately from bags. It can reduce later shopping
+   -- quantities after this work is done without making another craft ready now.
+   surplus=best.remainingOutput
+   for id,amount in pairs(best.freshOutput)do produce(surplus,id,amount)end
+   local recipe=best.recipe
+   if recipe.product and type(recipe.output)=='number' and recipe.output>0 then
+    produce(surplus,recipe.product,recipe.output*best.count-(recipe.reserve or 0))
+   end
    for id,amount in pairs(best.missing)do
     local need=needs[id]or{id=id,have=state.inventory[id]or 0,missing=0,professions={}}
-    materials[id]=(materials[id]or 0)+amount
+    produce(materials,id,amount)
     need.missing=need.missing+amount;need.target=need.have+need.missing;need.professions[profession]=true
     need.purchase=not state.localMaterials and (state.rare[id]or state.vendorStock[id]~=nil);needs[id]=need
    end
@@ -8966,13 +9026,20 @@ function Q.ShoppingList(plan,itemName,purchaseSource)
   section.tiles[#section.tiles+1]={name=recipe.name,itemID=recipe.product,spellID=recipe.id,
    quantity='×'..count,details=inputs}
  end
+ local gathers, prepares=false,false
+ for _,p in ipairs(plan.plans)do
+  if not p.ready and next(p.missing or {})then gathers=true end
+  if p.dependent then prepares=true end
+ end
+ local later='Craft After Gathering Nearby'
+ if prepares then later=gathers and 'Craft After Gathering and Preparing Materials' or 'Craft After Preparing Materials' end
  for _,ready in ipairs({true,false})do
   local heading
   for _,p in ipairs(plan.plans)do
    if (not not p.ready)==ready then
     if not heading then
      if #lines>0 then lines[#lines+1]='' end
-     local title=ready and 'Craft In Town' or 'Craft After Gathering Nearby'
+     local title=ready and 'Craft In Town' or later
      lines[#lines+1]=title
      heading={title=title,tiles={}}
      view[#view+1]=heading
@@ -9350,10 +9417,25 @@ function R.CraftRows(plan)
  local out={}
  for _,p in ipairs(plan.plans)do
   local r=p.recipe;local id='interleave:craft:'..r.id
-  if p.ready and R.Stop(r.profession,r)and not isDeferred(id)then
-   local work=p.conversions[1]or{recipe=r,count=p.count};local action=work.recipe
-   out[#out+1]={id=id,kind='profession',integratedProfession=true,profession=r.profession,category='Crafting',
-    title='Craft '..work.count..' '..action.name,body='',recipe={name=action.name,spellID=action.id},craftReady=true}
+  local work=p.conversions[1]or{recipe=r,count=p.count};local action=work.recipe
+  if p.ready and R.Stop(action.profession,action)and not isDeferred(id)then
+   local materials={}
+   for itemID,amount in pairs(action.reagents or {})do
+    local label=materialLabel(itemID)or('Item '..itemID)
+    materials[#materials+1]=(amount*work.count)..' × '..label
+   end
+   table.sort(materials)
+   local instructions={}
+   if p.conversions[1] then instructions[#instructions+1]='Prepare these materials before crafting '..r.name..'.' end
+   if action.product and type(action.output)=='number'and action.output>0 then
+    local label=materialLabel(action.product)or action.name
+    instructions[#instructions+1]='Makes '..(action.output*work.count)..' × '..label..'.'
+   end
+   local detail=table.concat(instructions,'\n')
+   out[#out+1]={id=id,kind='profession',integratedProfession=true,profession=action.profession,category='Crafting',
+    title='Craft '..work.count..' × '..action.name,body=detail,craftingBody=detail,
+    craftingSections={{title='Materials for this craft',lines=materials}},
+    recipe={name=action.name,spellID=action.id},craftReady=true}
   end
  end
  return out

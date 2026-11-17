@@ -608,9 +608,9 @@ function ns.ToggleDungeonBrowser()
             row.disclosure=N.ControlArrow(row,"right","RIGHT")
             row.disclosure:SetVertexColor(.49,.31,.12)
             row.stamp = row:CreateTexture(nil, "OVERLAY", nil, 5)
-            row.stamp:SetTexture(media .. "JournalQuestChainV3")
-            row.stamp:SetVertexColor(1, .90, .72)
-            row.stamp:SetBlendMode("ADD")
+            row.stamp:SetTexture(media .. "QuestBootTrail")
+            row.stamp:SetTexCoord(0, 88 / 128, 0, 68 / 128)
+            row.stamp:SetBlendMode("BLEND")
             row.underway=row:CreateTexture(nil,"OVERLAY",nil,5)
             row.underway:SetSize(26,26)
             row.underway:SetPoint("RIGHT",-28,0)
@@ -688,7 +688,7 @@ function ns.ToggleDungeonBrowser()
         local glyphWidth = math.max(12, 12 * pixel)
         local badgeWidth = math.max(24, 25 * pixel)
         local badgeInset = disclosure and (pad + glyphWidth + 4 * pixel) or pad
-        local stampWidth = 58 * pixel
+        local stampWidth = 29 * pixel * 88 / 68
         local stampInset = badgeInset + badgeWidth + 5 * pixel
         local right = chainMarker and (stampInset + stampWidth + 6 * pixel)
             or showUnderway and (badgeInset + badgeWidth + 6 * pixel)
@@ -703,7 +703,7 @@ function ns.ToggleDungeonBrowser()
         row.disclosure:SetSize(glyphWidth, glyphWidth)
         row.disclosure:SetShown(disclosure)
         if disclosure then row.disclosure:SetRotation(actionLabel=="Collapse" and -math.pi/2 or 0) end
-        row.stamp:SetSize(stampWidth,29 * pixel)
+        row.stamp:SetSize(stampWidth, 29 * pixel)
         row.stamp:SetShown(chainMarker)
         if showUnderway then
             row.underway:SetTexture(media.."JournalQuest"..underway)

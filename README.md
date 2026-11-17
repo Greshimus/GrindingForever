@@ -1,12 +1,12 @@
 # Grinding Forever for WoW Forever
 
-Forever-39 is available in the installable `GrindingForever` folder on `main`. [Download the current source build](https://github.com/Greshimus/GrindingForever/archive/refs/heads/main.zip). Previously packaged tester ZIPs are on the [Releases page](https://github.com/Greshimus/GrindingForever/releases).
+Forever-43 is available in the installable `GrindingForever` folder on `main`. [Download the current source build](https://github.com/Greshimus/GrindingForever/archive/refs/heads/main.zip). Previously packaged tester ZIPs are on the [Releases page](https://github.com/Greshimus/GrindingForever/releases).
 
-Extract the `GrindingForever` folder into the Forever client's `Interface/AddOns` directory. Keep the folder name exactly `GrindingForever`. Fully restart the client when updating to Forever-39 so it loads the new data modules. Open the addon with `/gf`.
+Extract the `GrindingForever` folder into the Forever client's `Interface/AddOns` directory. Keep the folder name exactly `GrindingForever` and fully restart the client after updating. Open the addon with `/gf`.
 
-Forever-39 updates Dungeon Journal maps, quest chains, and reward choices. Boss cards match the quest detail parchment and show catalog levels, documented mechanics where available, and exact health when the client exposes it for the targeted boss. Selected portraits stay anchored to their map positions. Sunken Temple's revised maps are previews; some stairs still need review.
+Steps now group nearby objectives by verified destination areas such as Burning Blade Coven. Expanded steps use wood headings and cream detail cards for counts, sources, and prerequisites. Crafting shows the first recipe to make and counts shared conversion output across the shopping list. Dungeon Journal quest chains use the new bronze boot trail.
 
-Steps adds the Moon-Kissed Blade materials card, retains existing detailed walkthroughs, and hides inactive seasonal quests. The compass remembers its placement, and recipe tooltips narrow vendor listings to nearby sellers. Open your profession book to refresh observed recipes. The Lua startup and planner checks use a mock client.
+The Dungeon Journal includes six Temple of Atal'Hakkar floors and documented boss abilities where available. Open your profession book to refresh observed recipes. The Lua startup and planner checks use a mock client.
 
 The package excludes the owner-only activity and performance trackers. Gathering map memory and observed recipe and vendor data are used locally by addon features.
 
