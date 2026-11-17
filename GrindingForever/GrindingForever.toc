@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Grinding Forever
 ## Notes: Quest steps, dungeon maps, and profession guidance for WoW: Forever.
-## Version: Forever-47
+## Version: Forever-48
 ## SavedVariablesPerCharacter: GrindingForeverLiveCharacterDB
 ## X-GF-Client: FOREVER
 QuestData.lua

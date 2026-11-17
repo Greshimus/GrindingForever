@@ -178,6 +178,117 @@ ns.QuestProcedureData[98601].turnInInstruction = {
     itemID=282423,
 }
 
+-- Overworld action and location evidence from the Forever v1.1.2 catalog,
+-- the quest log, and recorded player progress. Later stops stay independent
+-- where the quest permits more than one order.
+do
+    ns.QuestProcedureData[1040] = {slots={}, turnInInstruction={
+        text='From Ratchet, take the boat to Booty Bay, then speak with Caravaneer Ruzzgot.',
+    }}
+
+    local function advisorTour(quest, item, advisor, location, room, leaders)
+        addAction(quest, 0, {
+            id='obtain-directions', action='talk', itemID=item, destination=location,
+            title='Get directions from '..advisor,
+            body=room..' Right-click the instructions to read them and keep them in your bags.',
+            complete={kind='any', conditions={{kind='item', item=item}, {kind='objective', slot=1}}},
+        })
+        for slot, leader in ipairs(leaders) do
+            addAction(quest, slot+1, {
+                id='speak-to-leader', action='talk', title='Speak with '..leader.name,
+                destination=leader.destination, body=leader.body, groupable=true,
+            })
+        end
+    end
+    advisorTour(93739, 285357, 'Nazgrel', site(1454, 'Orgrimmar', 32.30, 35.75, 'Nazgrel', 3230),
+        'Speak to Nazgrel in Grommash Hold.', {
+        {name="Vol'jin", destination=site(1454, 'Orgrimmar', 34.34, 36.33, "Vol'jin", 10540),
+            body='Visit him in Orgrimmar before leaving the city if you are nearby.'},
+        {name='Cairne Bloodhoof', destination=site(1456, 'Thunder Bluff', 60.30, 51.68, 'Cairne Bloodhoof', 3057),
+            body='Visit Cairne on the High Rise in Thunder Bluff.'},
+        {name='Lady Sylvanas Windrunner',
+            destination=site(1458, 'Undercity', 58.05, 91.79, 'Lady Sylvanas Windrunner', 10181),
+            body='Follow the tunnels to the Royal Quarter of Undercity.'},
+    })
+    advisorTour(93963, 285356, 'Randal Emerson', site(1453, 'Stormwind City', 78.98, 45.00, 'Randal Emerson', 275491),
+        'Find Randal Emerson in the southern antechamber of Stormwind Keep.', {
+        {name='High Tinker Mekkatorque',
+            destination=site(1455, 'Ironforge', 68.75, 48.97, 'High Tinker Mekkatorque', 7937),
+            body='Find him in Tinker Town near the Deeprun Tram.'},
+        {name='King Magni Bronzebeard', destination=site(1455, 'Ironforge', 39.09, 56.20, 'King Magni Bronzebeard', 2784),
+            body='Visit the throne room in Ironforge.'},
+        {name='Tyrande Whisperwind', destination=site(1457, 'Darnassus', 39.10, 81.59, 'Tyrande Whisperwind', 7999),
+            body='Find Tyrande upstairs in the Temple of the Moon.'},
+    })
+
+    local kit, net = 213565, 213562
+    ns.QuestProcedureData[93176] = {slots={[0]={phases={
+        {id='get-entomology-kit', action='collect', itemID=kit, title='Get the Entomology Starter Kit',
+            destination=site(1435, 'Swamp of Sorrows', 25.16, 54.03, 'Amaryllis Webb', 217412),
+            body='Amaryllis gives you a kit when you accept the quest and sells a replacement if you lose it.',
+            complete={kind='any', conditions={{kind='item', item=kit}, {kind='item', item=net}}},
+            source='Forever quest log and player observations'},
+        {id='unpack-entomology-kit', action='use', itemID=kit, title='Open the Entomology Starter Kit',
+            body='Right-click the kit in your bags and take out the Bug Catching Net.',
+            complete={kind='item', item=net}, source='Forever item tooltip'},
+    }}}}
+    for slot, bug in ipairs({
+        {id=213566, name='an Arbor Tarantula', place='the logging camp near Lake Nazferiti',
+            destination=site(1434, 'Stranglethorn Vale', 45.18, 19.60, 'Arbor Tarantula', 217588)},
+        {id=213568, name='a Hay Weevil', place='the farm buildings at Northfold Manor',
+            destination=site(1417, 'Arathi Highlands', 32.49, 27.66, 'Hay Weevil', 217589)},
+        {id=213567, name='a Flesh Picker', place='the bones in the Kodo Graveyard',
+            destination=site(1443, 'Desolace', 53.36, 58.86, 'Flesh Picker', 217590)},
+    }) do
+        addAction(93176, slot, {
+            id='net-specimen', action='use', itemID=net, title='Catch '..bug.name,
+            destination=bug.destination, body='Look around '..bug.place..'. Target the insect and use the Bug Catching Net.',
+            complete={kind='item', item=bug.id, objectiveSlot=slot}, groupable=true,
+        })
+    end
+
+    addAction(97047, 1, {
+        id='loot-cage-key', action='collect', itemID=216616, title='Loot the Compound Cage Key',
+        body='Kurzen Elites and Subchiefs in the compound can drop the key.',
+        destination=site(1434, 'Stranglethorn Vale', 49.27, 7.51, 'Kurzen Elite', 939),
+        complete={kind='item', item=216616, objectiveSlot=1}, groupable=true,
+    })
+    addAction(97047, 2, {
+        id='open-uniform-crate', action='collect', itemID=216617, title="Collect the Kurzen Fighter's Uniform",
+        body='Open the Kurzen Supply Crate near Bookie Herod’s Strongbox.',
+        destination=site(1434, 'Stranglethorn Vale', 49.60, 7.70, 'Kurzen Supply Crate'),
+        complete={kind='item', item=216617, objectiveSlot=2}, groupable=true,
+    })
+
+    local offeringStone=site(1421, 'Silverpine Forest', 58.12, 69.77, 'Offering Stone')
+    ns.QuestProcedureData[95885] = {slots={[0]={phases={
+        {id='make-blood-offering', action='use', itemID=210713, title='Use the Tortured Soul at the Offering Stone',
+            body='Go to the end of the cave in Beren’s Peril and use the Tortured Soul from your bags beside the stone.',
+            destination=offeringStone, complete={kind='objective', slot=2}, showWithoutProgress=true,
+            source='Forever quest log and player observations'},
+        {id='slay-released-soul', action='kill', title='Slay the released Tortured Soul',
+            body='The elite appears beside the stone. Defeat it, then turn in at the Offering Stone.',
+            destination=site(1421, 'Silverpine Forest', 58.19, 69.83, 'Tortured Soul', 212753),
+            complete={kind='objective', slot=3}, source='Forever quest log and player observations'},
+    }}}}
+
+    for _,quest in ipairs({79366, 96135}) do
+        addAction(quest, 1, {
+            id='complete-steam-pools-ritual', action='use', itemID=268582,
+            title='Use the Corrupted Totems at the Steam Pools',
+            body='Go northwest of Freewind Post to the Steam Pools in Thousand Needles. Look for the small blue circle beneath a hanging bag along the south edge. Use the Corrupted Totems there, stay close through the waves, then defeat the elite Ravaging Tempest and loot the Eye of the Tempest.',
+            complete={kind='item', item=212792, objectiveSlot=1}, showWithoutProgress=true,
+        })
+    end
+
+    addAction(96241, 1, {
+        id='extract-toxin-samples', action='use', itemID=273015, title='Use the Toxin Extractor on Gnawed Corpses',
+        body='Head north from Mazu’kon toward Gloomrise. Target a Gnawed Corpse, move close, and use the extractor. Repeat on other bodies until you have five samples.',
+        destination=site(1412, 'Mulgore', 32.69, 16.99, 'Gnawed Corpse', 264096),
+        complete={kind='item', item=273001, count=5, objectiveSlot=1}, groupable=true,
+    })
+end
+
 ns.QuestProcedureGuidance = {
  [2]={["source"]="QuestieDB Forever",["text"]="Bring Sharptalon's Claw to Senani Thunderheart at Splintertree Post, Ashenvale."},
  [5]={["source"]="QuestieDB Forever",["text"]="Speak with Chef Grual."},

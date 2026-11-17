@@ -1753,7 +1753,7 @@ function GuideView.New()
   local first=visible[1]
   if not self.browsing and first then
    local saferQuest=(first.questStep or first.groupObjectives) and not first._questRisk and current and current._questRisk
-   if first.nearbyRecipeVendor or first.starterTurnIn or saferQuest then self.index=first.id;return end
+   if first.overworldTravel or first.nearbyRecipeVendor or first.starterTurnIn or saferQuest then self.index=first.id;return end
   end
   if not current or current.complete and not self.browsing then
    self.index=nil
@@ -1944,11 +1944,11 @@ function N.LayoutStepRows(visible,start)
   if N.mode=="normal"and step and not full then
    rowContent(row,liveObjective(step),panel:GetWidth()-56)
    if y+row:GetHeight()<=panel:GetHeight()-30 then
-    row.stepID=step.id;row:ClearAllPoints();row:SetPoint("TOPLEFT",panel,"TOPLEFT",28,-y)
+    row.stepID,row.step=step.id,step;row:ClearAllPoints();row:SetPoint("TOPLEFT",panel,"TOPLEFT",28,-y)
     row.selected=step.id==session.index;row:SetEnamelTint(row.selected and 1 or .72,row.selected and .94 or .78,row.selected and .68 or .82)
     row:Show();shown=shown+1;y=y+row:GetHeight()+4
-   else full=true;row:Hide();row.stepID=nil end
-  else row:Hide();row.stepID=nil end
+   else full=true;row:Hide();row.stepID,row.step=nil,nil end
+  else row:Hide();row.stepID,row.step=nil,nil end
  end
  N.displayedRowCount=shown;return shown
 end
@@ -2798,11 +2798,18 @@ function N.Resync()
  N.rowStart=1
  N.Refresh()
 end
+local function chooseStep(row,id)
+ session.index=row and row.id or id
+ session.browsing=true
+ local planner=ns.ForeverQuestPlanner
+ if planner and planner.SelectTravelStep then planner.SelectTravelStep(row) end
+ activate();N.Refresh()
+end
 function N.Step(value)
  local visible=session:Visible();local at=math.max(1,math.min(#visible,math.floor(value)))
- session.index=visible[at] and visible[at].id or nil;session.browsing=true;activate();N.Refresh()
+ chooseStep(visible[at])
 end
-function N.Move(delta) session:Move(delta);activate();N.Refresh() end
+function N.Move(delta) session:Move(delta);chooseStep(session:Current()) end
 function N.SetView(value)
  N.view=(value-1)%#viewNames+1;session:SetView(viewNames[N.view]);N.rowStart=1;activate();N.Refresh()
 end
@@ -2904,7 +2911,7 @@ local function ensure()
   local row
   row=btn(left,"",180,function()
    if ns.HandleItemChatClick(row.itemLink or row.itemID) then return end
-   if row.stepID then session.index=row.stepID;session.browsing=true;activate();N.Refresh() end
+   if row.stepID then chooseStep(row.step,row.stepID) end
   end);plainStepRow(row)
   row:SetHeight(39)
   row.label:ClearAllPoints();row.label:SetPoint("LEFT",row,"LEFT",10,0);row.label:SetJustifyH("LEFT")
@@ -2946,7 +2953,11 @@ local function ensure()
  root.compactNextHit=CreateFrame("Button",nil,middle);root.compactNextHit:SetAllPoints(root.compactNext);root.compactNextHit:EnableMouse(true)
  local nextWash=tex(root.compactNextHit,nil,"BACKGROUND");nextWash:SetAllPoints(root.compactNextHit);color(nextWash,.16,.10,.035,.12);nextWash:Hide()
  root.compactNextHit:SetScript("OnEnter",function()nextWash:Show()end);root.compactNextHit:SetScript("OnLeave",function()nextWash:Hide()end)
- root.compactNextHit:SetScript("OnClick",function()if root.compactNextID then session.index=root.compactNextID;activate();N.Refresh()end end)
+ root.compactNextHit:SetScript("OnClick",function()
+  if not root.compactNextID then return end
+  for _,step in ipairs(session:Visible())do if step.id==root.compactNextID then chooseStep(step);return end end
+  chooseStep(nil,root.compactNextID)
+ end)
  root.controls=CreateFrame("Frame",nil,middle)
  root.actionDivider=tex(middle,nil,"ARTWORK");N.BronzeRail(root.actionDivider,"TOP");root.actionDivider:SetAlpha(.58)
  root.done=N.WoodButton(middle,"Done",90,function()P.Done();N.Resync()end);root.done:SetPoint("BOTTOMLEFT",middle,"BOTTOMLEFT",16,60)
@@ -4456,6 +4467,52 @@ function Q.Anchor(s)
  if not zone(anchor)and zone(current)then anchor=current;if E.db then E.db.questAnchor=current end end
  return anchor or current
 end
+local function travelEnabled()
+ local prep,farm=ns.DungeonPrep,ns.FarmingPlanner
+ local model=ns.NormalUI and ns.NormalUI.model
+ return E.db and E.db.journey~='Completionist' and not (prep and (prep.active or prep.navigation))
+  and not (farm and farm.route) and not (model and model.goals.Questing==false)
+end
+
+local travelRegions={[1414]='Kalimdor',[1415]='Eastern Kingdoms'}
+local function regionFor(mapID)
+ if not mapID then return end
+ local original=mapID
+ local zones=ns.ForeverCatalog and ns.ForeverCatalog.zones or {}
+ for _=1,6 do
+  local region=travelRegions[mapID] or zones[mapID] and zones[mapID].continent
+  if region then travelRegions[original]=region;return region end
+  local info=E.Call(C_Map and C_Map.GetMapInfo,mapID)
+  if not info or not E.Public(info.parentMapID) or type(info.parentMapID)~='number'
+   or info.parentMapID==0 or info.parentMapID==mapID then return end
+  mapID=info.parentMapID
+ end
+end
+
+function Q.TravelLeg()
+ local leg=travelEnabled() and E.db.questTravelLeg
+ if type(leg)=='table' and type(leg.mapID)=='number' and type(leg.stepID)=='string' then return leg end
+end
+function Q.ClearTravelLeg()
+ if E.db then E.db.questTravelLeg=nil end
+end
+local function travelDestination(row)
+ local destination=row and row.destination
+ if row and row.questStep and not row._questRisk and destination and regionFor(destination.mapID) then
+  return destination.mapID
+ end
+end
+function Q.SelectTravelStep(row)
+ if not travelEnabled() or not row or not (row.questStep or row.groupObjectives) then return end
+ local mapID=travelDestination(row)
+ local current=E.CurrentPosition()
+ if mapID and current and current.mapID~=mapID and regionFor(current.mapID) then
+  E.db.questTravelLeg={mapID=mapID,stepID=row.id}
+ else
+  Q.ClearTravelLeg()
+ end
+end
+
 local ownsExcitableSlime
 local function journalHasExcitableSlime()
  if ownsExcitableSlime then return true end
@@ -4476,6 +4533,8 @@ end
 function Q.Build(s)
  local anchor=Q.Anchor(s)
  local current=s.position and s.position.mapID or anchor
+ local leg=Q.TravelLeg()
+ local legMap=leg and leg.mapID
  local candidates={}
  local itemOffers=carriedStarterOffers()
  local function addZone(mapID)
@@ -4485,6 +4544,7 @@ function Q.Build(s)
  end
  addZone(current)
  if anchor~=current then addZone(anchor)end
+ if legMap and legMap~=current and legMap~=anchor then addZone(legMap)end
  for id in pairs(s.quests or{})do candidates[id]=true end
  for id in pairs(itemOffers)do candidates[id]=true end
  for id,mode in pairs(season.gossip or {})do
@@ -4698,7 +4758,7 @@ function Q.Build(s)
     local loc=questContact(id,'accept',s)
     if Q.seasonalQuests[id] and liveSeasonal(id)=='offer' then
      add(id,'accept',nil,loc and loc.mapID==current and loc or nil,'Accept '..q.title)
-    elseif loc and(remote or loc.mapID==current or loc.mapID==anchor)then
+    elseif loc and(remote or loc.mapID==current or loc.mapID==anchor or loc.mapID==legMap)then
      add(id,'accept',nil,loc,'Accept '..q.title)
     end
    end
@@ -4706,8 +4766,12 @@ function Q.Build(s)
  end
  local ids={};for id in pairs(candidates)do ids[#ids+1]=id end;table.sort(ids)
  for _,id in ipairs(ids)do emit(id,false)end
- local localWork=false;for _,r in ipairs(out)do if r.destination and(r.destination.mapID==current or r.destination.mapID==anchor)then localWork=true;break end end
- if not localWork then
+ local localWork=false
+ for _,r in ipairs(out)do
+  local map=r.destination and r.destination.mapID
+  if map and (map==current or map==anchor or map==legMap) then localWork=true;break end
+ end
+ if not localWork and s.position then
   -- Exhaust local work before suggesting one reachable next-zone hub.
   local nextZone,best
   for id,q in pairs(D.quests)do if not candidates[id]and canSuggestPickup(id,q) and q.min_level<=s.level and(q.level or q.min_level)>=s.level-3 and Q.Eligible(id,s)then
@@ -4738,7 +4802,15 @@ function Q.Build(s)
     group.body=group.body..(group.body~=''and'\n'or'')..(row.quest==97583 and row.body or row.title)
    for _,id in ipairs(row.mobIDs or{})do local found=false;for _,old in ipairs(group.mobIDs)do if old==id then found=true end end;if not found then group.mobIDs[#group.mobIDs+1]=id end end
    local d=row.destination and E.Distance(s.position,row.destination)
-   if d and(not group.nearestDistance or d<group.nearestDistance)then group.destination=row.destination;group.nearestDistance=d end
+   local onLeg=leg and group.id==leg.stepID and row.destination and row.destination.mapID==legMap
+   if onLeg then
+    if not group.onTravelMap or d and (not group.nearestDistance or d<group.nearestDistance) then
+     group.destination,group.nearestDistance=row.destination,d
+    end
+    group.onTravelMap=true
+   elseif not group.onTravelMap and d and (not group.nearestDistance or d<group.nearestDistance) then
+    group.destination,group.nearestDistance=row.destination,d
+   end
    group.questDestination=group.destination
   elseif not linked[row.quest] then grouped[#grouped+1]=row end
  end
@@ -4834,9 +4906,10 @@ local function clusterObjectives(rows,s)
  if not player then return end
  local playerWorld,playerX,playerY=E.World(player.mapID,player.x,player.y)
  if not playerWorld then return end
+ local leg=Q.TravelLeg()
  for _,row in ipairs(rows)do
   local d=row._questDistance
-  if row.questStep and row.kind=='objective'and not row._questRisk and d and d<=650 then
+  if row.questStep and row.kind=='objective'and not (leg and leg.stepID==row.id) and not row._questRisk and d and d<=650 then
    for _,goal in ipairs(row.objectives or {row})do
      local p=(not goal.procedure or goal.procedure.groupable) and goal.destination
     if p then
@@ -4924,16 +4997,66 @@ local function rankQuestWork(rows,s)
  end
 end
 
+-- Keep the real selected step across zone updates. Once it finishes, any
+-- other eligible work at the destination can follow without starting a new trip.
+local function continueOverworldTravel(rows,s)
+ for _,row in ipairs(rows)do row.overworldTravel=nil end
+ if not travelEnabled() then return end
+ local current=s.position and s.position.mapID
+ local leg=Q.TravelLeg()
+ if leg then
+  local at
+  for i,row in ipairs(rows)do
+   if travelDestination(row)==leg.mapID then
+    at=at or i
+    if row.id==leg.stepID then at=i;break end
+   end
+  end
+  if at then
+   local row,first=rows[at],rows[1]
+   leg.stepID=row.id
+   row.overworldTravel=true
+   if at>1 and not (first.starterTurnIn or first.urgentBags or first.kind=='train' or first.professionChoice) then
+    table.remove(rows,at);table.insert(rows,1,row)
+   end
+   return
+  end
+  -- Loading and transport can briefly hide quest or map data.
+  if not current or s.questLogAvailable==false then return end
+  Q.ClearTravelLeg()
+ end
+ local model=ns.NormalUI and ns.NormalUI.model
+ if not current or continentMaps[current] or model and model.browsing then return end
+ local region=regionFor(current)
+ local target=travelDestination(rows[1])
+ if not region or not target or target==current then return end
+ if regionFor(target)~=region then
+  for i,row in ipairs(rows)do
+   local nearby=travelDestination(row)
+   if nearby==current or nearby and regionFor(nearby)==region and row._questDistance and row._questDistance<=650 then
+    table.remove(rows,i);table.insert(rows,1,row)
+    target=nearby
+    break
+   end
+  end
+ end
+ if target==current then return end
+ E.db.questTravelLeg={mapID=target,stepID=rows[1].id}
+ rows[1].overworldTravel=true
+end
+
 local order=E.Order
 E.Order=function(rows,s)
+ s=s or E.state or E.Snapshot()
  local out=order(rows,s,rankQuestWork)
+ continueOverworldTravel(out,s)
  local held=Q.held or E.db and E.db.questHeld;local heldRow,heldIndex
  for i,r in ipairs(out)do if r.id==held then heldRow,heldIndex=r,i;break end end
  local first=out[1];local service=first and(first.urgentBags or first.kind=='train'or first.professionChoice or first.kind=='farm')
  -- Keep the current objective only when both choices are comparable and
  -- close together. It must yield to a higher tier or a new local hub.
- if heldIndex and heldIndex>1 and first.questStep and first.kind=='objective'and heldRow.questStep and heldRow.kind=='objective'
-    and first._questRisk==heldRow._questRisk and first._questPriority==heldRow._questPriority
+ if heldIndex and heldIndex>1 and not first.overworldTravel and first.questStep and first.kind=='objective'
+    and heldRow.questStep and heldRow.kind=='objective' and first._questRisk==heldRow._questRisk and first._questPriority==heldRow._questPriority
     and first._questCluster==heldRow._questCluster
     and first._questDistance and heldRow._questDistance and heldRow._questDistance<=first._questDistance+40 then
   local between=E.Distance(first.destination,heldRow.destination)
@@ -4962,11 +5085,17 @@ ns.ProfessionGuide.Refresh=function(...) return E.WithSnapshot(function(...)
  return ns.ProfessionGuide.steps
 end,...)end
 function Q.Fresh()
+ if travelEnabled() then Q.ClearTravelLeg() end
  local p=E.CurrentPosition();if E.db then if p then E.db.questAnchor=p.mapID end;E.db.questHeld=nil end;Q.held=nil
  if ns.NormalUI then ns.NormalUI.Resync()else ns.ProfessionGuide.Refresh()end
 end
 local skip=ns.ProfessionGuide.Skip
-ns.ProfessionGuide.Skip=function(...)Q.held=nil;if E.db then E.db.questHeld=nil end;return skip(...)end
+ns.ProfessionGuide.Skip=function(...)
+ if travelEnabled() then Q.ClearTravelLeg() end
+ Q.held=nil
+ if E.db then E.db.questHeld=nil end
+ return skip(...)
+end
 Q.Source='Bundled Forever quest catalog, QuestieDB location evidence and live quest log'
 
 end)(ADDON,GF)
@@ -5604,7 +5733,7 @@ function N.LayoutStepRows(visible,start)
  y=layoutDungeonOffer(r,panel,y,width,hidden)
  for _,b in ipairs(r.workflowBodyIndicators or{})do b:Hide()end
  for i,row in ipairs(N.stepRows)do
-  local step=visible[start+i-1];row:Hide();row.stepID=nil;row.itemID=nil;row.itemLink=nil
+  local step=visible[start+i-1];row:Hide();row.stepID,row.step=nil,nil;row.itemID=nil;row.itemLink=nil
   if step and not hidden and y+40<room then
    step=N.WorkflowLive(step)
    row.itemID=step.itemID or step.procedure and step.procedure.itemID
@@ -5614,7 +5743,7 @@ function N.LayoutStepRows(visible,start)
    if active then headline,context,actionLine=objectiveHeadline(step)end
    row.label:SetText(headline or step.title or'');row.label:SetWidth(width-20);row.label:SetHeight(0);row.label:SetWordWrap(true);row.label:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',20,'');row.category:Hide()
    local h=math.max(38,row.label:GetStringHeight()+16)
-   row.selected=active and W.selection~='source';row.stepID=step.id;point(row,panel,28,y,width,h);row.label:ClearAllPoints();row.label:SetPoint('TOPLEFT',row,'TOPLEFT',10,-8)
+   row.selected=active and W.selection~='source';row.stepID,row.step=step.id,step;point(row,panel,28,y,width,h);row.label:ClearAllPoints();row.label:SetPoint('TOPLEFT',row,'TOPLEFT',10,-8)
    styleStepCard(row,width,h,active)
    if active then
     local contextY=h+6
@@ -9951,7 +10080,7 @@ function R.Apply(rows)
  if mode()=='Farming'and #additions==0 then local farm=R.FarmRow(plan,sources);if farm then additions[1]=farm end end
  -- Preserve urgent services, training and immediately available hub turn-ins.
  local at=1
- while out[at]and(out[at].urgentBags or out[at].starterTurnIn or out[at].localQuestPickup or out[at].nearbyRecipeVendor or out[at].adaptiveVendor or out[at].kind=='sell'or out[at].kind=='train'or out[at].trainingRequired or out[at].professionChoice or out[at].kind=='turnin'and(distance(position(),out[at].destination)or math.huge)<=150)do at=at+1 end
+ while out[at]and(out[at].urgentBags or out[at].starterTurnIn or out[at].overworldTravel or out[at].localQuestPickup or out[at].nearbyRecipeVendor or out[at].adaptiveVendor or out[at].kind=='sell'or out[at].kind=='train'or out[at].trainingRequired or out[at].professionChoice or out[at].kind=='turnin'and(distance(position(),out[at].destination)or math.huge)<=150)do at=at+1 end
  for i=#additions,1,-1 do table.insert(out,at,additions[i])end
  return out
 end
@@ -10103,11 +10232,13 @@ end)(ADDON,GF)
  end
  Q.Build=function(s)
   local anchor=Q.Anchor(s);local t=E.Time();local p=s.position
+  local leg=Q.TravelLeg()
+  local legMap,legStep=leg and leg.mapID,leg and leg.stepID
   local signature=tostring(s.level)..':'..tostring(s.class)..':'..tostring(s.race)..':'..tostring(s.faction)..':'..tostring(E.db and E.db.journey)..':'..tostring(E.db and E.db.pace)
   local shape=questShape(s)
   local moved=cached and E.Distance(p,cached.position)
-  if shape and cached and cached.shape==shape and cached.revision==revision and cached.anchor==anchor and cached.signature==signature and t-cached.time<10 and moved and moved<100 and p.mapID==cached.position.mapID then return cached.rows end
-  local rows=build(s);cached={rows=rows,shape=shape,revision=revision,anchor=anchor,signature=signature,time=t,position=p}
+  if shape and cached and cached.shape==shape and cached.revision==revision and cached.anchor==anchor and cached.legMap==legMap and cached.legStep==legStep and cached.signature==signature and t-cached.time<10 and moved and moved<100 and p.mapID==cached.position.mapID then return cached.rows end
+  local rows=build(s);cached={rows=rows,shape=shape,revision=revision,anchor=anchor,legMap=legMap,legStep=legStep,signature=signature,time=t,position=p}
   return rows
  end
  local fresh=Q.Fresh
