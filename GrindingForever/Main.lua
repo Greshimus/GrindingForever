@@ -4104,6 +4104,60 @@ function Q.Eligible(id,s)
  return all and(not hasAny or any)and not q.repeatable
 end
 local continentMaps={[1414]=true,[1415]=true,[1945]=true,[947]=true}
+local starterItems, itemQuestStarts = {}, {}
+for quest,q in pairs(D.quests)do
+ local direct,contacts,hasItem={},{},false
+ for _,start in ipairs(q.starts or {})do
+  if start.kind=='item' and type(start.id)=='number'then
+   hasItem=true
+   local quests=starterItems[start.id] or {}
+   starterItems[start.id]=quests
+   quests[#quests+1]=quest
+  else
+   direct[#direct+1]=start
+   contacts[start.kind..':'..start.id]=true
+  end
+ end
+ if hasItem then itemQuestStarts[quest]={direct=direct,contacts=contacts}end
+end
+local starterOffers
+local function carriedStarterOffers()
+ if starterOffers then return starterOffers end
+ local offers={}
+ local function add(itemID)
+  if not E.Public(itemID) or type(itemID)~='number'then return end
+  for _,quest in ipairs(starterItems[itemID] or {})do
+   if not offers[quest] or itemID<offers[quest]then offers[quest]=itemID end
+  end
+ end
+ local slots=C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
+ local item=C_Container and C_Container.GetContainerItemID or GetContainerItemID
+ if type(slots)=='function' and type(item)=='function'then
+  for bag=0,NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4 do
+   local count=E.Call(slots,bag)
+   if E.Public(count) and type(count)=='number'then
+    for slot=1,count do add(E.Call(item,bag,slot))end
+   end
+  end
+ else
+  local count=C_Item and C_Item.GetItemCount or GetItemCount
+  for itemID in pairs(starterItems)do
+   local have=E.Call(count,itemID,false)
+   if E.Public(have) and type(have)=='number' and have>0 then add(itemID)end
+  end
+ end
+ starterOffers=offers
+ return offers
+end
+function Q.RefreshStarterOffers()
+ local previous=starterOffers
+ starterOffers=nil
+ if not previous then return false end
+ local current=carriedStarterOffers()
+ for id,itemID in pairs(previous)do if current[id]~=itemID then return true end end
+ for id in pairs(current)do if not previous[id]then return true end end
+ return false
+end
 Q.zoneCandidates={}
 for id,q in pairs(locations)do
  for _,loc in ipairs(q.startPoints or {})do
@@ -4147,7 +4201,19 @@ function Q.NearestSource(sources,s,knownPoints)
 end
 local function questContact(id,kind,s)
  local q,evidence=D.quests[id] or {},locations[id] or {}
- if kind=='accept' then return Q.NearestSource(q.starts,s,evidence.startPoints) end
+ if kind=='accept' then
+  local itemStart=itemQuestStarts[id]
+  if not itemStart then return Q.NearestSource(q.starts,s,evidence.startPoints)end
+  if #itemStart.direct==0 then return end
+  local points={}
+  for _,loc in ipairs(evidence.startPoints or {})do
+   if loc.npcID and itemStart.contacts['npc:'..loc.npcID]
+     or loc.objectID and itemStart.contacts['object:'..loc.objectID] then
+    points[#points+1]=loc
+   end
+  end
+  return Q.NearestSource(itemStart.direct,s,points)
+ end
  local procedures=ns.QuestProcedures
  local site=procedures and procedures.TurnInSite(id)
  if site then return site end
@@ -4241,6 +4307,7 @@ function Q.Build(s)
  local anchor=Q.Anchor(s)
  local current=s.position and s.position.mapID or anchor
  local candidates={}
+ local itemOffers=carriedStarterOffers()
  local function addZone(mapID)
   for _,id in ipairs(D.zoneQuests[mapID]or{})do candidates[id]=true end
   -- Verified starters can establish a zone for quests missing from the bundled index.
@@ -4249,6 +4316,7 @@ function Q.Build(s)
  addZone(current)
  if anchor~=current then addZone(anchor)end
  for id in pairs(s.quests or{})do candidates[id]=true end
+ for id in pairs(itemOffers)do candidates[id]=true end
  for id,mode in pairs(season.gossip or {})do
   if mode=='offer' and Q.seasonalQuests[id] then candidates[id]=true end
  end
@@ -4437,12 +4505,20 @@ function Q.Build(s)
     end
      addObjectives(id,q,live)
    end
-  elseif not hasActiveAtGiver(q) and canSuggestPickup(id,q) then
-   local loc=questContact(id,'accept',s)
-   if Q.seasonalQuests[id] and liveSeasonal(id)=='offer' then
-    add(id,'accept',nil,loc and loc.mapID==current and loc or nil,'Accept '..q.title)
-   elseif loc and(remote or loc.mapID==current or loc.mapID==anchor)then
-    add(id,'accept',nil,loc,'Accept '..q.title)
+  elseif not hasActiveAtGiver(q) then
+   local itemID=itemOffers[id]
+   if itemID then
+    add(id,'accept',nil,nil,'Accept '..q.title)
+    local row=out[#out]
+    row.itemID,row.questStarterItem=itemID,itemID
+    row.body='Right-click '..E.ItemName(itemID)..' in your bags to start the quest.'
+   elseif canSuggestPickup(id,q) then
+    local loc=questContact(id,'accept',s)
+    if Q.seasonalQuests[id] and liveSeasonal(id)=='offer' then
+     add(id,'accept',nil,loc and loc.mapID==current and loc or nil,'Accept '..q.title)
+    elseif loc and(remote or loc.mapID==current or loc.mapID==anchor)then
+     add(id,'accept',nil,loc,'Accept '..q.title)
+    end
    end
   end
  end
@@ -4497,6 +4573,7 @@ E.Eligible=function(row,s,levelsDescribeNPC)
   local live=qs(row.quest,s)
   if not live.inLog and not Q.Eligible(row.quest,s)then return false end
   if row.kind=='accept'and live.inLog then return false end
+  if row.questStarterItem and carriedStarterOffers()[row.quest]~=row.questStarterItem then return false end
   if(row.kind=='objective'or row.kind=='turnin')and not(s.quests and s.quests[row.quest]and s.quests[row.quest].inLog==true)then return false end
   if row.kind=='turnin'and not Q.Ready(live,row.quest,s)then return false end
  end
@@ -4519,6 +4596,7 @@ end
 E.Priority=function(row,s)
  if row.urgentBags then return 10000 end
  if row.kind=='train'or row.professionChoice then return 1200 end
+ if row.questStarterItem then return 1080 end
  row.localQuestPickup=nil
  if not row.questStep then return priority(row,s)end
  if row.questDestination then row.destination=row.questDestination;row.zone=row.destination.zone end
@@ -5261,7 +5339,10 @@ function N.LayoutStepRows(visible,start)
  if r.groupDistance then r.groupDistance:Hide()end
  if r.opportunityStrip then r.opportunityStrip:Hide();r.opportunityDetail:Hide()end
  local y=compact and 104 or E.db and E.db.journey=='Completionist'and 105 or 145;local shown=0;local selected=N.model.index;local room=panel:GetHeight()-92;local width=panel:GetWidth()-72
- y=layoutEnhancementIcons(r,panel,y,compact,hidden,visible)
+ -- Keep reminder observations available while the Steps buff icons are paused.
+ y=layoutEnhancementIcons(r,panel,y,compact,true,visible)
+ local onboarding=ns.ProfessionOnboarding
+ if onboarding then y=onboarding.LayoutOpportunity(r,panel,y,width,hidden or W.recipeCompact)end
  y=layoutDungeonOffer(r,panel,y,width,hidden)
  for _,b in ipairs(r.workflowBodyIndicators or{})do b:Hide()end
  for i,row in ipairs(N.stepRows)do
@@ -9732,8 +9813,12 @@ end)(ADDON,GF)
  if not E or not Q then return end
  local revision=0;local cached;local build=Q.Build
  local events=CreateFrame('Frame')
- for _,event in ipairs({'QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','GOSSIP_SHOW','GOSSIP_CLOSED','QUEST_DETAIL','PLAYER_LEVEL_UP','SKILL_LINES_CHANGED','PLAYER_ENTERING_WORLD','ZONE_CHANGED_NEW_AREA','ZONE_CHANGED','UPDATE_FACTION'})do events:RegisterEvent(event)end
- events:SetScript('OnEvent',function()revision=revision+1;cached=nil end)
+ for _,event in ipairs({'QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','GOSSIP_SHOW','GOSSIP_CLOSED','QUEST_DETAIL','PLAYER_LEVEL_UP','SKILL_LINES_CHANGED','PLAYER_ENTERING_WORLD','ZONE_CHANGED_NEW_AREA','ZONE_CHANGED','UPDATE_FACTION','BAG_UPDATE_DELAYED'})do events:RegisterEvent(event)end
+ events:SetScript('OnEvent',function(_,event)
+  if event=='BAG_UPDATE_DELAYED' and not Q.RefreshStarterOffers() then return end
+  if event=='PLAYER_ENTERING_WORLD'then Q.RefreshStarterOffers()end
+  revision=revision+1;cached=nil
+ end)
  local function questShape(s)
   if not s.questLogAvailable then return end
   local ids={}

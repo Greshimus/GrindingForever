@@ -67,6 +67,9 @@ local function showRecipes()
     panel:SetMovable(true)
     panel:SetClampedToScreen(true)
 
+    local onboarding = ns.ProfessionOnboarding
+    local planButton = onboarding and N.WoodButton(panel, 'Profession plan', 126, onboarding.Open)
+
     local search = CreateFrame("EditBox", nil, panel)
     local searchFill=search:CreateTexture(nil,"BACKGROUND")
     searchFill:SetAllPoints();searchFill:SetColorTexture(.45,.27,.12,.24)
@@ -672,7 +675,12 @@ local function showRecipes()
         local zoneWidth = px(math.floor(width/px(1)*.51+.5))
         position(zoneButton,0,px(35),zoneWidth,px(29))
         position(professionButton,zoneWidth+gap,px(35),width-zoneWidth-gap,px(29))
-        position(search,0,px(71),width,px(26))
+        local planWidth=planButton and px(120) or 0
+        position(search,0,px(71),width-planWidth-(planButton and gap or 0),px(26))
+        if planButton then
+            position(planButton,width-planWidth,px(71),planWidth,px(26))
+            fitLabel(planButton,'Profession plan',px(14),px(12))
+        end
         position(location,0,px(102),width,px(19))
         search:SetFont(face,px(14),"")
         placeholder:SetFont(face,px(14),"")
