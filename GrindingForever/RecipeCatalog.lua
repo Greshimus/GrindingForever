@@ -166,6 +166,20 @@ function Catalog.PinWorldMap(loc)
     return pinned == true or (sourcePin and sourcePin:IsShown() and map:GetMapID() == loc.mapID) == true
 end
 
+function Catalog.PinSource(recipe, loc)
+    if not exact(loc) then return false, false end
+    local compass, workflow = ns.NavigationCompass, ns.WindowWorkflow
+    local tracked = compass and compass.Enabled() or false
+    if tracked then
+        local key = "recipe-browser"
+        compass.pins[key] = {key=key, name=loc.name or recipe.name, zone=loc.zone, location=loc,
+            icon=loc.source=="Trainer" and workflow.TrainerIcon(recipe) or compass.professionPinTexture,
+            professionPin=loc.source~="Trainer", customIcon=true}
+        compass.age = 1
+    end
+    return Catalog.PinWorldMap(loc), tracked
+end
+
 local function locate(kind, id)
     local entity = facts.entities[kind] and facts.entities[kind][id]
     if not entity then return {name = kind .. " #" .. id, source = kind, sourceID = id} end

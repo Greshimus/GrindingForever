@@ -315,6 +315,24 @@ do
     })
 end
 
+-- The Great Outdoors variants use the adventurer's camp, with the giver's
+-- QuestieDB Forever v1.1.2 position as the pin for both steps.
+for _, quest in ipairs({95998, 96101, 96604, 96605, 96606, 96607, 96608}) do
+    local locations = ns.QuestLocationEvidence[quest]
+    local site = locations and locations.endPoints and locations.endPoints[1]
+    if site then
+        ns.QuestProcedureData[quest] = {
+            campIntro = true,
+            turnInInstruction = {text='Hand this in to '..site.name..' to unlock the Camping 101 lessons.'},
+            slots = {[0]={phases={{
+                id='sit-at-campfire', title='Sit by the campfire', action='rest',
+                body='Use /sit next to the Basic Campfire by '..site.name..'. Stay seated until you get Boosted Rest, then speak to the adventurer again.',
+                destination=site, complete={kind='quest', state='ready'}, source='QuestieDB Forever v1.1.2',
+            }}}},
+        }
+    end
+end
+
 -- Outdoor procedures checked against QuestieDB Forever v1.1.2 and Forever quest text.
 do
     local water = ns.QuestProcedureData[63].slots[1].phases

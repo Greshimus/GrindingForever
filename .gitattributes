@@ -1,0 +1,12 @@
+# Publish stable text bytes and preserve game assets.
+*.lua text eol=lf
+*.toc text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.ps1 text eol=lf
+*.cmd text eol=lf
+*.tga binary
+*.blp binary
+*.ttf binary

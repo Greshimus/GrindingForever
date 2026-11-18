@@ -19,7 +19,7 @@ local books = {
 }
 local bookState, bookSequence, booksRead = {}, 0, false
 local quotes, liveQuote = {}, nil
-local nearTrainerYards, quoteLifetime = 90, 120
+local liveTrainerYards, nearbyTrainerYards, quoteLifetime = 90, 180, 120
 local nearbyTrainers, deferredTrainers = {}, {}
 local candidatesByMap = {}
 
@@ -136,7 +136,7 @@ local function exactTrainer(name, id, position, faction)
     for _, site in ipairs(sites) do
         if site.npcID == id and (site.faction == 'Both' or site.faction == faction) then
             local yards = E.Distance(position, site)
-            if yards and yards <= nearTrainerYards then return site end
+            if yards and yards <= liveTrainerYards then return site end
         end
     end
 end
@@ -184,6 +184,14 @@ local function fee(amount)
     return table.concat(values, ' ')
 end
 
+local function trainerOffer(quote, selected)
+    local name = quote.profession
+    return {kind='trainer', key=quote.key, profession=name, cost=quote.cost, trainer=quote.trainer,
+        destination=quote.destination, quote=quote, plan=not quote.catalog and allowed[name] and not selected[name],
+        title='Learn '..name, body=quote.trainer..' offers Apprentice '..name..' · '..fee(quote.cost)
+            ..(quote.catalog and ' base price.' or '.')}
+end
+
 function B.Opportunity(state, position)
     if not E.db or not state or not state.skills or E.Call(IsInInstance)
         or (ns.DungeonPrep and ns.DungeonPrep.active) or (ns.FarmingPlanner and ns.FarmingPlanner.route) then return end
@@ -217,7 +225,7 @@ function B.Opportunity(state, position)
     if position then
         for key, site in pairs(deferredTrainers) do
             local yards = E.Distance(position, site)
-            if not yards or yards > nearTrainerYards then deferredTrainers[key] = nil end
+            if not yards or yards > nearbyTrainerYards then deferredTrainers[key] = nil end
         end
     end
     local function canTrain(quote)
@@ -226,41 +234,58 @@ function B.Opportunity(state, position)
             and (not quote.level or number(state.level) and state.level >= quote.level)
             and (isSecondary[name] or available > 0 and (selected[name] or free > 0))
     end
-    local now, selectedQuote, selectedRange = E.Time()
+    local now, byProfession = E.Time(), {}
+    local function consider(quote, range)
+        if deferredTrainers[quote.cacheKey] or not canTrain(quote) then return end
+        local current = byProfession[quote.profession]
+        if not current or range < current.range or range == current.range and quote.key < current.quote.key then
+            byProfession[quote.profession] = {quote=quote, range=range}
+        end
+    end
     for key, quote in pairs(quotes) do
         local here = quote == liveQuote
         local yards = quote.destination and E.Distance(position, quote.destination)
-        local near = here or (yards and yards <= nearTrainerYards)
+        local near = here or (yards and yards <= liveTrainerYards)
         if not near then quote.later = nil end
         if now > quote.expires and not here then
             quotes[key] = nil
-        elseif near and not quote.later and not deferredTrainers[key] and canTrain(quote) then
-            local range = here and -1 or yards
-            if not selectedRange or range < selectedRange then selectedQuote, selectedRange = quote, range end
+        elseif near and not quote.later then
+            consider(quote, here and -1 or yards)
         end
     end
-    if not selectedQuote and position then
+    if position then
         for _, candidate in ipairs(trainerCandidates(position.mapID)) do
             local site, key = candidate.destination, candidate.cacheKey
-            if (site.faction == state.faction or site.faction == 'Both') and not quotes[key]
-                and not deferredTrainers[key] and canTrain(candidate) then
+            if site.faction == state.faction or site.faction == 'Both' then
                 local yards = E.Distance(position, site)
-                if yards and yards <= nearTrainerYards and (not selectedRange or yards < selectedRange
-                    or yards == selectedRange and candidate.key < selectedQuote.key) then
-                    selectedQuote, selectedRange = candidate, yards
+                if yards and yards <= nearbyTrainerYards then
+                    local quote = quotes[key]
+                    if not quote or not quote.later then consider(quote or candidate, yards) end
                 end
             end
         end
     end
-    if selectedQuote then
-        local quote = selectedQuote
-        return {kind='trainer', key=quote.key, profession=quote.profession, cost=quote.cost, trainer=quote.trainer,
-            destination=quote.destination, quote=quote,
-            plan=not quote.catalog and allowed[quote.profession] and not selected[quote.profession],
-            title='Learn '..quote.profession,
-            body=quote.trainer..' offers Apprentice '..quote.profession..' · '..fee(quote.cost)
-                ..(quote.catalog and ' base price.' or '.')}
+    local ranked = {}
+    for _, candidate in pairs(byProfession) do ranked[#ranked+1] = candidate end
+    if #ranked == 0 then return end
+    table.sort(ranked, function(a,b)
+        return a.range < b.range or a.range == b.range and a.quote.key < b.quote.key
+    end)
+    local offer = trainerOffer(ranked[1].quote, selected)
+    table.sort(ranked, function(a,b)
+        local first, second = a.quote.profession, b.quote.profession
+        if isSecondary[first] ~= isSecondary[second] then return isSecondary[first] == true end
+        return first < second
+    end)
+    offer.offers = {}
+    local signature = {}
+    for i, candidate in ipairs(ranked) do
+        local row = trainerOffer(candidate.quote, selected)
+        offer.offers[i] = row
+        signature[i] = row.key..':'..row.cost..':'..tostring(row.plan)..':'..tostring(row.quote.catalog)
     end
+    offer.signature = table.concat(signature, '|')
+    return offer
 end
 
 local function showPlan(state)
@@ -401,7 +426,7 @@ function B.FindTrainers()
     B.trainers:Show()
 end
 
-local function dismiss(offer)
+local function defer(offer)
     if offer.kind == 'book' then
         E.db.professionBooksLater=E.db.professionBooksLater or {}
         E.db.professionBooksLater[offer.itemID]=true
@@ -412,6 +437,14 @@ local function dismiss(offer)
         else
             quote.later=true
         end
+    end
+end
+
+local function dismiss(offer)
+    if offer.offers then
+        for _, row in ipairs(offer.offers) do defer(row) end
+    else
+        defer(offer)
     end
     N.Refresh(true)
 end
@@ -433,6 +466,35 @@ local function place(widget, parent, x, y, width, height)
     widget:ClearAllPoints()
     widget:SetPoint('TOPLEFT',parent,'TOPLEFT',x,-y)
     widget:SetSize(width,height)
+end
+
+local function newTrainerRow(list)
+    local row=CreateFrame('Button',nil,list)
+    row:SetScript('OnClick',function(self)
+        local offer=self.offer
+        if offer.destination then pin(offer.destination)
+        elseif offer.plan then planOpportunity(offer,false) end
+    end)
+    local highlight=row:CreateTexture(nil,'HIGHLIGHT')
+    highlight:SetAllPoints()
+    highlight:SetColorTexture(.49,.29,.14,.20)
+    row.label=N.MakeText(row,14,'',false)
+    row.trainer=N.MakeText(row,11,'',false)
+    row.price=N.MakeText(row,13,'',false)
+    for _, label in ipairs({row.label,row.trainer,row.price}) do
+        label:SetTextColor(.19,.105,.045)
+        label:SetWordWrap(false)
+    end
+    row.label:SetJustifyH('LEFT')
+    row.trainer:SetJustifyH('LEFT')
+    row.price:SetJustifyH('RIGHT')
+    row.label:SetPoint('TOPLEFT',row,'TOPLEFT',5,-3)
+    row.label:SetPoint('TOPRIGHT',row,'TOPRIGHT',-60,-3)
+    row.trainer:SetPoint('BOTTOMLEFT',row,'BOTTOMLEFT',5,2)
+    row.trainer:SetPoint('BOTTOMRIGHT',row,'BOTTOMRIGHT',-60,2)
+    row.price:SetPoint('RIGHT',row,'RIGHT',-22,0)
+    row.arrow=N.ButtonArrow(row,'right','RIGHT')
+    return row
 end
 
 local function newCard(panel)
@@ -465,7 +527,41 @@ local function newCard(panel)
     end)
     card.pair=N.WoodButton(detail,'Plan pair',84,function() planOpportunity(card.offer,true) end)
     card.later=N.WoodButton(detail,'Later',56,function() dismiss(card.offer) end)
+    local viewport=CreateFrame('ScrollFrame',nil,detail)
+    viewport:SetClipsChildren(true)
+    local list=CreateFrame('Frame',nil,viewport)
+    viewport:SetScrollChild(list)
+    card.viewport,card.list,card.rows=viewport,list,{}
+    card.scrollTraining=N.PanelScroll(detail,viewport,function()return viewport:GetVerticalScroll()end,
+        function(value)viewport:SetVerticalScroll(value)end,
+        function()return card.listLimit or 0 end,28)
     return card
+end
+
+local function layoutTrainerRows(card, width, offers, reset)
+    local rowHeight=28
+    local listHeight=#offers*rowHeight
+    local visibleHeight=math.min(#offers,5)*rowHeight
+    card.listLimit=listHeight-visibleHeight
+    local listWidth=width-(card.listLimit>0 and 35 or 18)
+    place(card.viewport,card.detail,9,5,listWidth,visibleHeight)
+    card.list:SetSize(listWidth,listHeight)
+    for i, offer in ipairs(offers) do
+        local row=card.rows[i]
+        if not row then row=newTrainerRow(card.list);card.rows[i]=row end
+        row.offer=offer
+        row.label:SetText(offer.profession)
+        row.trainer:SetText(offer.trainer)
+        row.price:SetText(fee(offer.cost))
+        row.arrow:SetShown(offer.destination~=nil)
+        row:SetEnabled(offer.destination~=nil or offer.plan==true)
+        place(row,card.list,0,(i-1)*rowHeight,listWidth,rowHeight)
+        row:Show()
+    end
+    for i=#offers+1,#card.rows do card.rows[i]:Hide() end
+    local position=card.viewport:GetVerticalScroll() or 0
+    card.viewport:SetVerticalScroll(reset and 0 or math.min(position,card.listLimit))
+    return visibleHeight+8
 end
 
 function B.LayoutOpportunity(root,panel,y,width,hidden)
@@ -479,9 +575,12 @@ function B.LayoutOpportunity(root,panel,y,width,hidden)
         return y
     end
     if not card then card=newCard(panel);root.professionOpportunity=card end
-    if not card.offer or card.offer.key~=offer.key then card.collapsed=false end
+    local reset=not card.offer or card.offer.kind~=offer.kind
+        or offer.kind=='book' and card.offer.key~=offer.key
+    if reset then card.collapsed=false end
     card.offer=offer
-    card.header.label:SetText(offer.title)
+    local multi=offer.offers and #offer.offers>1
+    card.header.label:SetText(multi and 'Nearby profession training' or offer.title)
     card.header.label:SetWidth(width-31)
     local headerHeight=math.max(29,card.header.label:GetStringHeight()+10)
     place(card.header,card,0,0,width,headerHeight)
@@ -490,15 +589,24 @@ function B.LayoutOpportunity(root,panel,y,width,hidden)
     local height=headerHeight
     if not card.collapsed then
         local label=card.body
-        label:ClearAllPoints()
-        label:SetPoint('TOPLEFT',card.detail,'TOPLEFT',9,-7)
-        label:SetWidth(width-18)
-        label:SetText(offer.body)
-        label:SetHeight(0)
-        local buttonsY=label:GetStringHeight()+13
-        local action=offer.plan and 'Plan it' or offer.review and 'Review plan' or offer.destination and 'Pin trainer'
+        label:SetShown(not multi)
+        card.viewport:SetShown(multi==true)
+        local buttonsY
+        if multi then
+            buttonsY=layoutTrainerRows(card,width,offer.offers,reset)
+        else
+            card.listLimit=0
+            label:ClearAllPoints()
+            label:SetPoint('TOPLEFT',card.detail,'TOPLEFT',9,-7)
+            label:SetWidth(width-18)
+            label:SetText(offer.body)
+            label:SetHeight(0)
+            buttonsY=label:GetStringHeight()+13
+        end
+        card.scrollTraining()
+        local action=not multi and (offer.plan and 'Plan it' or offer.review and 'Review plan' or offer.destination and 'Pin trainer')
         local actionWidth=offer.pair and 73 or 104
-        card.action:SetShown(action~=nil)
+        card.action:SetShown(not not action)
         card.pair:SetShown(offer.pair~=nil)
         if action then card.action.label:SetText(action);place(card.action,card.detail,9,buttonsY,actionWidth,25)end
         if offer.pair then place(card.pair,card.detail,action and actionWidth+15 or 9,buttonsY,80,25)end
@@ -536,7 +644,8 @@ function N.Tick(...)
         checkedAt=now+1
         local offer=B.Opportunity(P.character or E.state,E.CurrentPosition() or false)
         local previous=card and card.offer
-        if (offer and offer.key)~=(previous and previous.key) or offer and previous and offer.body~=previous.body then
+        if (offer and (offer.signature or offer.key))~=(previous and (previous.signature or previous.key))
+            or offer and previous and not offer.signature and offer.body~=previous.body then
             N.Refresh(true)
         end
     end

@@ -391,6 +391,11 @@ function Procedures.SuggestPickup(quest)
     return record ~= nil and record.suggestPickup == true
 end
 
+function Procedures.IsCampIntro(quest)
+    local record = recordFor(quest)
+    return record and record.campIntro == true
+end
+
 function Procedures.Slots(quest)
     local slots = {}
     local record = recordFor(quest)

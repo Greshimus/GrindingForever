@@ -977,7 +977,7 @@ function P.Skip()local r=P.selected;if r and E.db then if r.urgentBags then E.db
 function P.SetEnabled()return true end
 ns.Retail.Client={Number=num,Character=function()return E.Snapshot()end,PlayerPosition=E.Position,WorldPosition=E.World,QuestState=E.QuestState,Facing=function()return call(GetPlayerFacing)end,Text=function(v)if type(v)=='string'then return v end end}
 ns._listeners={};function ns.RegisterMessage(event,fn)ns._listeners[event]=ns._listeners[event]or{};table.insert(ns._listeners[event],fn)end
-function ns.SendMessage(event,...)for _,fn in ipairs(ns._listeners[event]or{})do local ok,err=pcall(fn,event,...);if not ok then E.issues[#E.issues+1]=tostring(err);ns.Print('A Forever callback failed; /gf diagnose shows the last error.')end end end
+function ns.SendMessage(event,...)for _,fn in ipairs(ns._listeners[event]or{})do local ok,err=pcall(fn,event,...);if not ok then E.issues[#E.issues+1]=tostring(err);ns.Print('A Forever callback failed; /gfg diagnose shows the last error.')end end end
 function ns.Print(s)if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage('|cffc49a58Grinding Forever:|r '..tostring(s))end end
 ns.StripColors=function(s)return type(s)=='string'and s:gsub('|c%x%x%x%x%x%x%x%x',''):gsub('|r','')or''end
 ns.PlayerPosition=function()local p=E.Position();return p.mapID,p.x and p.x*100,p.y and p.y*100 end
@@ -1295,7 +1295,8 @@ function E.ObserveLoot()
    E.materialSites=E.materialSites or{};local list=E.materialSites[itemID]or{};local near=false;for _,site in ipairs(list)do local d=E.Distance(site,p);if d and d<40 then near=true end end
    if not near then local site={mapID=p.mapID,x=p.x,y=p.y,npcID=npc,name=(E.NPCID(call(UnitGUID,'target'))==npc and call(UnitName,'target'))or('NPC '..npc),evidence='observed-player-at-loot'};list[#list+1]=site;if #list>24 then table.remove(list,1)end;E.materialSites[itemID]=list end
    E.Record('loot',{npcID=npc,itemID=itemID})
-   local current=ns.NormalUI and ns.NormalUI.model:Current()
+   local model=ns.NormalUI and ns.NormalUI.model
+   local current=model and model:Current()
    if current and current.kind=='objective'and current.targetKind=='item'and current.targetID==itemID then E.objectiveArea={key=current.id,position=p}end
   end
  end
@@ -1753,7 +1754,8 @@ function GuideView.New()
   local first=visible[1]
   if not self.browsing and first then
    local saferQuest=(first.questStep or first.groupObjectives) and not first._questRisk and current and current._questRisk
-   if first.overworldTravel or first.nearbyRecipeVendor or first.starterTurnIn or first.localQuestTurnIn or first.kind=='train' or saferQuest then
+   if first.overworldTravel or first.nearbyRecipeVendor or first.starterTurnIn or first.localQuestTurnIn
+    or first.localCampIntro or first.kind=='train' or saferQuest then
     self.index=first.id;return
    end
   end
@@ -2869,7 +2871,7 @@ local function ensure()
  root.foreverCrest=tex(junctionLayer,WINGLESS.."Infinity","OVERLAY");root.foreverCrest:SetTexCoord(0,1,0,0.84765625)
  root.endcaps={}
  local capsLayer=CreateFrame("Frame",nil,host);capsLayer:SetAllPoints(host);capsLayer:EnableMouse(false)
- capsLayer:SetFrameLevel(root:GetFrameLevel()+5)
+ capsLayer:SetFrameLevel(root:GetFrameLevel()+1)
  for i=1,2 do
   local cap=tex(capsLayer,nil,"OVERLAY")
   C.HeaderAnimal(cap,i)
@@ -3852,7 +3854,8 @@ local function initialize()
  ns.UI.Showcase.Login();ns.SendMessage('GF_LOADED');ns.SendMessage('GF_LOGIN');if ns.ForeverUI then ns.ForeverUI.Layout();ns.ForeverUI.SetPane(d.pane or'Recipes')end
  local compass=ns.NavigationCompass
  if compass and compass.RestoreLayout then compass.RestoreLayout() end
- ns.Print('Forever-39 loaded.')
+ local versionLabel=call(C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata,ADDON,'Version')
+ ns.Print((E.Public(versionLabel) and type(versionLabel)=='string' and versionLabel or 'Grinding Forever')..' loaded.')
  E.Record('login',{client=version,build=build})
 end
 local function save()
@@ -3960,10 +3963,18 @@ frame:SetScript('OnUpdate',function(_,dt)
  if not started or not dirty then return end;waited=waited+dt;if waited<.5 then return end;waited=0;dirty=false
  E.WithSnapshot(refresh)
 end)
-SLASH_GRINDINGFOREVERLIVE1='/gfp';SlashCmdList.GRINDINGFOREVERLIVE=function(message)
- message=(message or''):lower()
+SLASH_GRINDINGFOREVERLIVE1='/gfp'
+SLASH_GRINDINGFOREVERLIVE2='/gfg'
+SLASH_GRINDINGFOREVERLIVE3='/grindingforever'
+SlashCmdList.GRINDINGFOREVERLIVE=function(message)
+ message=(message or''):lower():gsub('^%s+',''):gsub('%s+$','')
  if message=='recover windows'then if ns.NormalUI and ns.NormalUI.RecoverPanels then ns.NormalUI.RecoverPanels();ns.Print('GF windows recovered.')end
- elseif message=='diagnose'then local count=0;for _ in pairs(E.recipes)do count=count+1 end;ns.Print('Forever build 2 | recipes '..count..' | route '..#E.route..' | journal '..tostring(E.journal~=nil));for key,value in pairs(E.issues)do ns.Print(tostring(key)..': '..tostring(value))end
+ elseif message=='diagnose'then
+  local count=0;for _ in pairs(E.recipes)do count=count+1 end
+  local version=call(C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata,ADDON,'Version')
+  local label=E.Public(version) and type(version)=='string' and version or 'Grinding Forever'
+  ns.Print(label..' | recipes '..count..' | route '..#E.route..' | journal '..tostring(E.journal~=nil))
+  for key,value in pairs(E.issues)do ns.Print(tostring(key)..': '..tostring(value))end
  else ns.UI.Showcase.Command(message)end
 end
 E.Initialize=initialize;E.Save=save
@@ -4188,7 +4199,14 @@ function Q.Eligible(id,s)
  if live.inLog==true then return true end
  if Q.seasonalQuests[id] and liveSeasonal(id)=='offer' then return true end
  local profession=Q.professionQuests[id]
- if profession then local skill=s.skills and s.skills[profession];if not skill or not E.Public(skill.rank)or type(skill.rank)~='number'or skill.rank<=0 or not offeredNow(id,s)then return false end end
+ if profession then
+  if not offeredNow(id,s)then return false end
+  -- Camping 101: Cooking sends the player to learn their first rank.
+  if profession~='Cooking'then
+   local skill=s.skills and s.skills[profession]
+   if not skill or not E.Public(skill.rank)or type(skill.rank)~='number'or skill.rank<=0 then return false end
+  end
+ end
  if (id==76156 or id==76160 or id==76240) and s.class~='ROGUE' and not offeredNow(id,s) then return false end
  if not mask(q.classes,classBits[s.class])then return false end
  if not mask(q.races,questRaceBit(s)) and not offeredNow(id,s)then return false end
@@ -4358,6 +4376,10 @@ function Q.Ready(live,id,s)
  if not live or live.inLog~=true then return false end
  local procedures=ns.QuestProcedures
  if procedures and procedures.BlocksTurnIn(id,live,s)then return false end
+ local ready=live.ready==true or live.ready==1 or live.complete==true or live.complete==1
+ -- The campfire tracker can include an optional sit objective. The server's
+ -- ready flag decides when the adventurer accepts the hand-in.
+ if procedures and procedures.IsCampIntro(id)then return ready end
  local required,finished=0,true
  for _,o in ipairs(live.objectives or{})do if not o.isOptional then
   required=required+1
@@ -4365,7 +4387,7 @@ function Q.Ready(live,id,s)
   if not done then finished=false end
  end end
  if required>0 then return finished end
- return live.ready==true or live.ready==1 or live.complete==true or live.complete==1
+ return ready
 end
 local function locationScore(loc,s)
  local distance=E.Distance(s.position,loc)
@@ -4858,7 +4880,7 @@ end
 E.Priority=function(row,s)
  if row.urgentBags then return 10000 end
  if row.kind=='train'or row.professionChoice then return 1200 end
- row.localQuestPickup,row.starterTurnIn,row.localQuestTurnIn=nil,nil,nil
+ row.localQuestPickup,row.starterTurnIn,row.localQuestTurnIn,row.localCampIntro=nil,nil,nil,nil
  if row.questStarterItem then return 1080 end
  if not row.questStep then return priority(row,s)end
  if row.questDestination then row.destination=row.questDestination;row.zone=row.destination.zone end
@@ -4871,6 +4893,11 @@ E.Priority=function(row,s)
  row._questPriority=loc and (row.kind~='accept' or nearbyPickup) and priorityQuest(q,s) or false
  row._questCluster=nil
  row.recommendationReason=nil
+ local procedures=ns.QuestProcedures
+ if row.kind~='accept' and localZone and d and d<=180 and procedures and procedures.IsCampIntro(row.quest)then
+  row.localCampIntro=true
+  return 1199-d/200
+ end
  if row.kind=='turnin' and localZone and d then
   -- Bring starter XP back before the next outing. Later, finish hand-ins
   -- within the same short walk as nearby pickups.
@@ -4973,7 +5000,7 @@ local function rankQuestWork(rows,s)
    local live=s.quests and s.quests[row.quest]
    local level=live and live.level or row.level
    local delta=E.Public(level) and type(level)=='number' and level>0 and level-s.level or nil
-   local ready=row.kind=='turnin' or row.questStarterItem
+   local ready=row.kind=='turnin' or row.questStarterItem or row.localCampIntro
    if not ready and delta then
     if delta>=5 then row._questRisk='red'
     elseif delta>=3 then row._questRisk='orange'
@@ -5031,7 +5058,7 @@ local function continueOverworldTravel(rows,s)
    local row,first=rows[at],rows[1]
    leg.stepID=row.id
    row.overworldTravel=true
-   if at>1 and not (first.starterTurnIn or first.urgentBags or first.kind=='train' or first.professionChoice) then
+   if at>1 and not (first.starterTurnIn or first.urgentBags or first.localCampIntro or first.kind=='train' or first.professionChoice) then
     table.remove(rows,at);table.insert(rows,1,row)
    end
    return
@@ -5070,7 +5097,7 @@ E.Order=function(rows,s)
  local first=out[1];local service=first and(first.urgentBags or first.kind=='train'or first.professionChoice or first.kind=='farm')
  -- Keep the current objective only when both choices are comparable and
  -- close together. It must yield to a higher tier or a new local hub.
- if heldIndex and heldIndex>1 and not first.overworldTravel and first.questStep and first.kind=='objective'
+ if heldIndex and heldIndex>1 and not first.overworldTravel and not first.localCampIntro and first.questStep and first.kind=='objective'
     and heldRow.questStep and heldRow.kind=='objective' and first._questRisk==heldRow._questRisk and first._questPriority==heldRow._questPriority
     and first._questCluster==heldRow._questCluster
     and first._questDistance and heldRow._questDistance and heldRow._questDistance<=first._questDistance+40 then
@@ -5189,6 +5216,13 @@ function W.Ensure()
  local r=N.root;if not r or W.ready then return end
  r.inlineFarm=N.PlainButton(r,'Farm Route',100,function()local ok,why=W.StartStepFarm();if not ok then ns.Print(why)end end);r.inlineFarm:Hide()
  r.inlineSearch=N.PlainButton(r,'Next Spot',100,function()ns.NPCSearch.Next()end);r.inlineSearch:Hide()
+ r.inlinePin=N.PlainButton(r,'Pin Source',104,function()
+  local step=r.inlinePin.step;local catalog=ns.RecipeCatalog
+  if step and catalog then
+   local pinned,tracked=catalog.PinSource(step.recipe or step,step.destination)
+   if not pinned and not tracked then ns.Print('The recipe source waypoint is unavailable.')end
+  end
+ end);r.inlinePin:Hide()
  r.workflowGrip=N.PlainButton(r,'',22,function()W.collapsed=not W.collapsed;N.WorkflowRelayout();N.Refresh(true);N.RefreshRecipes()end);r.workflowGrip:SetSize(22,58)
  r.workflowGrip:SetFrameLevel(r:GetFrameLevel()+30)
  r.workflowGrip.label:SetText('');r.workflowGrip.glyph=r.workflowGrip:CreateTexture(nil,'OVERLAY');r.workflowGrip.glyph:SetTexture(r.back.glyph:GetTexture());r.workflowGrip.glyph:SetSize(16,16);r.workflowGrip.glyph:SetPoint('CENTER')
@@ -5882,6 +5916,7 @@ function N.LayoutStepRows(visible,start)
  local body,bodyScroll,stepLabel,bodyContent,status=N.WorkflowBody()
  r.routeCardDetails=nil
  bodyScroll:Hide();r.done:Hide();r.skip:Hide();status:Hide();if r.inlineFarm then r.inlineFarm:Hide()end;if r.inlineSearch then r.inlineSearch:Hide()end
+ if r.inlinePin then r.inlinePin:Hide();r.inlinePin.step=nil end
  if r.stepContext then r.stepContext:Hide()end
  if r.groupDistance then r.groupDistance:Hide()end
  if r.opportunityStrip then r.opportunityStrip:Hide();r.opportunityDetail:Hide()end
@@ -5926,9 +5961,11 @@ function N.LayoutStepRows(visible,start)
     end
     local opportunity,opportunityBody,opportunityID
     if not route then opportunity,opportunityBody,opportunityID=nearbyOpportunity(step,visible) end
+    local catalog=ns.RecipeCatalog
+    local pinSource=(step.kind=='recipe' or step.kind=='farmRecipe')and catalog and catalog.HasWaypoint(step.destination)
     local bodyY=(route or step.materialBoard) and h+8 or h+34
     local bodyLimit=route and room or step.materialBoard and 320 or 250
-    local available=math.max(1,math.min(bodyLimit,room-y-bodyY-(route and 66 or 40)-(opportunity and 32 or 0)))
+    local available=math.max(1,math.min(bodyLimit,room-y-bodyY-(route and 66 or 40)-(opportunity and 32 or 0)-(pinSource and 36 or 0)))
     status:SetParent(row);point(status,row,10,h+4,width-20,26);status:Show()
     if step.materialBoard then status:Hide() end
     if step.groupObjectives then
@@ -5972,6 +6009,9 @@ function N.LayoutStepRows(visible,start)
     if farm and r.inlineFarm then r.inlineFarm:SetParent(row);point(r.inlineFarm,row,bx+86,by,120,30);r.inlineFarm:Show()end
     if search and r.inlineSearch then r.inlineSearch:SetParent(row);point(r.inlineSearch,row,bx+86,by,100,30);r.inlineSearch:Show()end
     h=by+38
+    if pinSource and r.inlinePin then
+     r.inlinePin.step=step;r.inlinePin:SetParent(row);point(r.inlinePin,row,math.max(10,(width-104)/2),h,104,30);r.inlinePin:Show();h=h+36
+    end
     if opportunity and y+h+28<=room then
      if not r.opportunityStrip then
       local strip=N.PlainButton(row,'',width-20)

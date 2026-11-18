@@ -489,8 +489,8 @@ function Steps.Details(step)
  return groups
 end
 
--- A local loop must have a verified return to its pickup hub and reachable
--- field work on the same map. Class chains use source prerequisites instead.
+-- Ready hand-ins share a hub. Pickup and field actions must share verified
+-- return and field locations. Class chains use source prerequisites instead.
 local hubRadius, fieldRadius, sharedFieldRadius = 180, 1100, 700
 local locations = ns.QuestLocationEvidence or {}
 local narache = {[3376]=true,[757]=true,[780]=true}
@@ -537,7 +537,7 @@ local function localField(row, anchor, field)
 end
 
 local function questRow(row)
- return row.questStep and row.quest and not row.complete and not row._questRisk
+ return row.questStep and row.quest and not row.complete and not row._questRisk and not row.localCampIntro
   and (row.kind == 'accept' or row.kind == 'objective' or row.kind == 'turnin')
 end
 
@@ -598,17 +598,20 @@ local function localRoute(rows, state, seed)
   or fact and closest(fact.endPoints, seed.destination, fieldRadius)
  if not anchor or not fits(anchor, state.position, fieldRadius) then return end
  local fieldSite = localField(seed, anchor)
- if not fieldSite then return end
+ if not fieldSite and (seed.kind ~= 'turnin' or seed.starterTurnIn) then return end
  local members, count = {}, 0
  local namedLoop = narache[seed.quest]
  for _, row in ipairs(rows) do
   local candidate = row.quest and D.quests[row.quest]
   if count < 4 and questRow(row) and not members[row.quest] and not row.overworldTravel
    and not (candidate and candidate.classes and candidate.classes > 0)
-   and (not namedLoop or narache[row.quest]) and localField(row, anchor, fieldSite)
-   and (row.kind == 'objective' and (not row.destination or fits(row.destination, anchor, fieldRadius))
-    or row.kind ~= 'objective' and fits(row.destination, anchor, hubRadius)) then
-   members[row.quest], count = true, count + 1
+   and (not namedLoop or narache[row.quest]) then
+   local atHub = row.kind ~= 'objective' and fits(row.destination, anchor, hubRadius)
+   local nearbyField = row.kind == 'objective' and (not row.destination or fits(row.destination, anchor, fieldRadius))
+   if row.kind == 'turnin' and atHub and not row.starterTurnIn
+    or fieldSite and (atHub or nearbyField) and localField(row, anchor, fieldSite) then
+    members[row.quest], count = true, count + 1
+   end
   end
  end
  if count < 2 then return end
@@ -627,7 +630,19 @@ local function beginRoute(rows, state)
    if row.kind ~= 'accept' and not activeClass then activeClass = classRoute(row) end
   end
  end
- if seed then return classRoute(seed) or localRoute(rows, state, seed) or activeClass end
+ if not seed then return end
+ local preferred = classRoute(seed) or localRoute(rows, state, seed) or activeClass
+ if preferred or seed.kind ~= 'objective' then return preferred end
+
+ -- A standalone objective still keeps its rank. Look for a second route
+ -- among nearby hub actions and insert it where those actions already were.
+ for _, row in ipairs(rows) do
+  if row ~= seed and questRow(row) and row.kind == 'turnin' and not row.overworldTravel
+   and fits(row.destination, state.position, hubRadius) then
+   local grouped = localRoute(rows, state, row)
+   if grouped then return grouped end
+  end
+ end
 end
 
 local function actionRow(parent, child)

@@ -79,7 +79,7 @@ local function showRecipes()
     search:SetTextInsets(6,6,0,0)
     search:SetAutoFocus(false)
     search:SetText("")
-    local placeholder=N.MakeText(search,13,"Search recipes",true)
+    local placeholder=N.MakeText(search,13,"Search recipes or sources",true)
     placeholder:SetPoint("LEFT",search,"LEFT",6,0)
     placeholder:SetAlpha(.62)
     local zoneButton = N.WoodButton(panel, "Current Zone", 190)
@@ -522,7 +522,12 @@ local function showRecipes()
     end
 
     refresh = function(keepPage, revealProduct)
+        local typed=search:GetText() or ""
+        local query=typed:match("^%s*(.-)%s*$"):lower()
+        local searching=query~=""
         local zone,mapID=selectedZone()
+        -- An explicit search spans the catalog; browse filters resume when it is cleared.
+        if searching then zone,mapID=nil,nil end
         local scopeKey=(zone or "All Zones")..":"..tostring(mapID or "")
         if not recipes or revision ~= catalog.revision or mergedScope~=scopeKey then
             recipes = catalog.Browse()
@@ -537,11 +542,9 @@ local function showRecipes()
             end)
         end
         local state=E.state or E.Snapshot()
-        local typed=search:GetText() or ""
-        local query=typed:match("^%s*(.-)%s*$"):lower()
         placeholder:SetShown(typed=="")
         fitFilters()
-        location:SetText("Browsing "..(zone or chosenContinent or "All Zones"))
+        location:SetText(searching and "Searching all zones, professions and sources" or "Browsing "..(zone or chosenContinent or "All Zones"))
         for i, button in ipairs(scopeButtons) do
             button:SetSelected(scope==scopes[i])
         end
@@ -552,10 +555,11 @@ local function showRecipes()
         rows={}
         for _,recipe in ipairs(recipes) do
             if E.Eligible(recipe,state) then
-                if query=="" or matchesName(recipe.name, query)
+                local recipeMatch=searching and (matchesName(recipe.name, query)
                     or matchesName(recipeItemLabel(recipe.productID, recipe.productLink), query)
                     or (recipe.learnableItemID ~= recipe.productID
-                        and matchesName(recipeItemLabel(recipe.learnableItemID), query)) then
+                        and matchesName(recipeItemLabel(recipe.learnableItemID), query)))
+                if searching or not profession or recipe.profession==profession then
                     local matched={}
                     for _, loc in ipairs(recipe.locations) do
                         local inZone = not zone or loc.zone==zone or loc.dungeon==zone or mapID and loc.mapID==mapID
@@ -565,17 +569,19 @@ local function showRecipes()
                             inZone=false
                         end
                         local inContinent = not chosenContinent or locationGroup(loc)==chosenContinent
-                        if inZone and inContinent and sourceScope(loc)==scope and (source=="All" or sourceTab(loc)==source)
+                        local matches=searching and (recipeMatch or matchesName(loc.name,query))
+                            or not searching and inZone and inContinent and sourceScope(loc)==scope and (source=="All" or sourceTab(loc)==source)
+                        if matches
                             and E.Eligible(loc,state) then matched[#matched+1]=loc end
                     end
-                    if #matched>0 and (not profession or recipe.profession==profession) then
+                    if #matched>0 and (searching or not profession or recipe.profession==profession) then
                         local row = {recipe=recipe,sources=matched,known=E.Known(recipe)==true}
                         rows[#rows+1]=row
                         if expanded==recipe.key then
                             if recipe.productID then
                                 rows[#rows+1]={recipe=recipe,productID=recipe.productID}
                             end
-                            local detail=scope=="Local" and (source=="All" or source=="Drops") and describeWorldDrop(recipe)
+                            local detail=not searching and scope=="Local" and (source=="All" or source=="Drops") and describeWorldDrop(recipe)
                             if detail then rows[#rows+1]={recipe=recipe,summary=detail} end
                             local limit=detail and not zone and 12 or #matched
                             for i=1,math.min(limit,#matched) do rows[#rows+1]={recipe=recipe,location=matched[i]} end
@@ -685,16 +691,10 @@ local function showRecipes()
                 feedback:SetText((loc.name or recipe.name).." has no recorded waypoint.")
                 return
             end
-            local compass=ns.NavigationCompass
-            local key="recipe-browser"
-            compass.pins[key]={key=key,name=loc.name or recipe.name,zone=loc.zone,location=loc,
-                icon=loc.source=="Trainer" and W.TrainerIcon(recipe) or compass.professionPinTexture,
-                professionPin=loc.source~="Trainer",customIcon=true}
-            compass.age=1
             selected=tostring(recipe.key).."/"..catalog.SourceKey(loc)
-            local pinned=catalog.PinWorldMap(loc)
+            local pinned,tracked=catalog.PinSource(recipe,loc)
             feedback:SetText((loc.name or loc.zone or recipe.name).." · "..(pinned and "World Map" or "World Map pin unavailable")
-                ..(compass.Enabled() and " / Compass" or " / Compass Off"))
+                ..(tracked and " / Compass" or " / Compass Off"))
             draw()
         end)
     end

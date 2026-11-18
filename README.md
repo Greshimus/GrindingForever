@@ -1,29 +1,22 @@
 # Grinding Forever for WoW Forever
 
-Forever-51 is available in the installable `GrindingForever` folder on `main`. [Download the current source build](https://github.com/Greshimus/GrindingForever/archive/refs/heads/main.zip). Previously packaged tester ZIPs are on the [Releases page](https://github.com/Greshimus/GrindingForever/releases).
+Forever-52 is available in the installable `GrindingForever` folder on `main`. [Download the current source build](https://github.com/Greshimus/GrindingForever/archive/refs/heads/main.zip). Previously packaged tester ZIPs are on the [Releases page](https://github.com/Greshimus/GrindingForever/releases).
 
-Extract the `GrindingForever` folder into the Forever client's `Interface/AddOns` directory. Keep the folder name exactly `GrindingForever` and fully restart the client after updating. Open the addon with `/gf`.
+Extract the `GrindingForever` folder into the Forever client's `Interface/AddOns` directory. Keep the folder name exactly `GrindingForever`. This package targets WoW: Forever 1.60, Interface 16001, and Lua 5.1. Restart the client after updating. Open the addon with `/gfg`, `/grindingforever`, or the existing `/gfp` command.
 
-Steps now group nearby objectives by verified destination areas such as Burning Blade Coven. Expanded steps use wood headings and cream detail cards for counts, sources, and prerequisites. Crafting shows the first recipe to make and counts shared conversion output across the shopping list. Dungeon Journal quest chains use the new bronze boot trail.
+Forever-52 includes these updates:
 
-Forever-51 shows the Steps profession card before you open a trainer window when nearby Apprentice training is affordable. The roster covers 234 trainers for all 12 professions across 33 maps. Live trainer prices take priority.
+- Nearby ready quest hand-ins can stay together in a route card, including when a separate objective ranks above them.
+- The profession card lists multiple individually affordable nearby training options. The Great Outdoors prioritizes sitting at the adventurer's camp and follows the server's ready flag before recommending its hand-in.
+- Recipe and seller-name searches span browsing filters. Clearing the search restores those filters. Recipe recommendation cards in Steps include a Pin Source action.
+- Steps header ornaments sit behind the lower rail. Dungeon quest-chain boot prints use a brighter gold rendering without changing their artwork, shape, or placement.
 
-Forever-50 groups local and class quests into route cards, advances the compass as actions complete, and opens hand-ins when ready. It also updates overworld quest directions and pins and clarifies the raised crossing above Oggleflint’s lower path in Ragefire Chasm.
+Existing grouped quest guidance, Dungeon Prep, dungeon maps, crafted-item dropdowns, native tooltips, and Shift-click links from item names and icons are retained. Dungeon live-position integration and automatic fishing-pool identification remain separate investigations.
 
-Forever-49 adds an approximate Steam Pools waypoint and clearer ritual instructions for both versions of Heed My Call.
+The public addon excludes the owner-only activity and performance trackers, their Settings controls, and activity-buffer reminders. Gathering map memory and observed recipe and vendor data remain local addon features. The separate local development copy supports optional activity capture and reminders after 1,500, 1,800, and 2,000 new observations; those features are not included in this public package.
 
-Forever-48 keeps the active overworld quest leg through zone and continent changes and continues with eligible work at the destination. It also adds sourced quest steps for the capital tours, item-use objectives, and the Ratchet to Booty Bay passage.
+The optional manual importer source and tests in `tools/activity-importer` are maintainer tooling for private development captures, not a dependency of the public addon. The public addon does not generate those tracker captures. Its build script assembles a click-to-run launcher for the local catalog folder. It imports saved observations once, reports the result, and keeps two verified workflow-owned database backups after successful changing imports. It runs only when launched; it does not install a watcher or startup task, clear WoW saves, or import combat logs without explicit input. Neither databases nor character saves are included in this repository.
 
-Forever-47 prioritizes nearby starter turn-ins and level-appropriate questing. It also refreshes Forever quest prerequisites and destination pins and guides Traditions of the Bluff from the Middle Rise vendors through preparing and using the incense.
-
-Forever-46 lets you search Recipe Sources by crafted item name and expand a recipe to reveal its output. Hover over the crafted item's name or icon for the native tooltip, or Shift-click either with chat open to share the item link.
-
-Forever-45 adds a collapsible profession card to Steps when you can afford confirmed training nearby or pick up a gathering book. Open Profession plan in Recipe Sources to review your picks. For item-started quests such as Ukor's Lost Pack, Steps prompts you to use the item from your bags.
-
-Forever-44 keeps the required Sapta step visible for Call of Earth, checks Pa'zula's Enchanting quest against the character's skill and live offer, and adds Shift-click chat links to item names.
-
-The Dungeon Journal includes six Temple of Atal'Hakkar floors and documented boss abilities where available. Open your profession book to refresh observed recipes. The Lua startup and planner checks use a mock client.
-
-The package excludes the owner-only activity and performance trackers. Gathering map memory and observed recipe and vendor data are used locally by addon features.
+Automated checks load the complete addon under a mocked Lua 5.1 client and exercise the importer against temporary databases. They do not replace in-game checks of rendering, navigation, trainer offers, or quest credit.
 
 The source checkout contains the installable `GrindingForever` folder. Source and map credits are included in that folder. See `GrindingForever/PACKAGE-MANIFEST.json` for the packaged file hashes.
