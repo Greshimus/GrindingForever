@@ -279,6 +279,7 @@ function E.WithSnapshot(fn,...)
  if E.snapshotScope then return fn(...)end
  local snapshot,questState,known,world=E.Snapshot,E.QuestState,E.Known,E.World
  local state=snapshot();local fallback={};local recipeKnowledge={};local positions={}
+ local vendorWorldBase=E.vendorWorldBase;E.vendorWorldBase=world
  E.World=function(map,x,y)
   if not num(map,1,1e8)or not num(x,0,100)or not num(y,0,100)then return end
   local maps=positions[map];if not maps then maps={};positions[map]=maps end
@@ -311,7 +312,7 @@ function E.WithSnapshot(fn,...)
  end
  local function pack(...)return{n=select('#',...),...}end
  local result=pack(pcall(fn,...))
- E.Snapshot=snapshot;E.QuestState=questState;E.Known=known;E.World=world;E.snapshotScope=nil
+ E.Snapshot=snapshot;E.QuestState=questState;E.Known=known;E.World=world;E.snapshotScope=nil;E.vendorWorldBase=vendorWorldBase
  if not result[1]then error(result[2],0)end
  return unpack(result,2,result.n)
 end
@@ -614,6 +615,135 @@ function E.CoinText(copper)
  if coins>0 or #parts==0 then parts[#parts+1]=coins..' copper'end
  return table.concat(parts,' ')
 end
+-- Static vendor facts are revision-qualified; live recommendation gates remain
+-- in RecipeOpportunity. Cache successful coordinates only, never missing data.
+local VendorMemo={stats={lookupBuilds=0,lookupHits=0,sourceStampChecks=0,relevantBuilds=0,
+ relevantHits=0,headerChecks=0,originConversions=0,vendorConversions=0,vendorWorldHits=0}}
+E.VendorPollStats=VendorMemo.stats
+VendorMemo.distanceProvider=E.Distance
+function E.ResetVendorPollStats()
+ for key in pairs(VendorMemo.stats)do VendorMemo.stats[key]=0 end
+ return VendorMemo.stats
+end
+function VendorMemo.Owner()
+ local c,f=ns.RecipeCatalog,ns.ForeverCatalog
+ local revision,sourceRevision=c and c.revision or 0,c and c.sourceRevision or 0
+ local old=VendorMemo.cache
+ if not old or old.catalog~=c or old.facts~=f or old.byItem~=(f and f.byItem)
+  or old.provider~=(c and c.PurchaseRecipes)or old.revision~=revision or old.sourceRevision~=sourceRevision then
+  old={catalog=c,facts=f,byItem=f and f.byItem,provider=c and c.PurchaseRecipes,
+   revision=revision,sourceRevision=sourceRevision,lookups={},worldLocations={}}
+  VendorMemo.cache=old
+ end
+ return old
+end
+VendorMemo.fields={'npcID','mapID','x','y','source','kind','evidence','verifiedCoinCost','price','hasExtendedCost','requirement'}
+function VendorMemo.Stamp(rows)
+ local stamp={rows=rows,count=#rows}
+ for i,row in ipairs(rows)do local values={row=row};stamp[i]=values
+  for j,field in ipairs(VendorMemo.fields)do values[j]=row[field]end
+ end
+ return stamp
+end
+function VendorMemo.Matches(stamp,rows)
+ if not stamp or stamp.rows~=rows or stamp.count~=#rows then return false end
+ for i,row in ipairs(rows)do
+  VendorMemo.stats.sourceStampChecks=VendorMemo.stats.sourceStampChecks+1
+  local values=stamp[i];if not values or values.row~=row then return false end
+  for j,field in ipairs(VendorMemo.fields)do if values[j]~=row[field]then return false end end
+ end
+ return true
+end
+function VendorMemo.Lookup(r,itemID)
+ local owner=VendorMemo.Owner();local sources=r.vendors or r.locations or VendorMemo.empty
+ local fallback=not r.vendors and owner.byItem and owner.byItem[itemID]or VendorMemo.empty
+ local prior=owner.lookups[r]
+ if prior and prior.itemID==itemID and prior.directVendors==r.vendors
+  and VendorMemo.Matches(prior.sourceStamp,sources)and VendorMemo.Matches(prior.fallbackStamp,fallback)then
+  VendorMemo.stats.lookupHits=VendorMemo.stats.lookupHits+1;return prior.candidates,prior.requirements,prior.prices
+ end
+ local candidates,requirements,prices={},{},{}
+ local function consider(v,imported)
+  local npcID=v.npcID
+  if not npcID or(v.source~='Vendor'and v.kind~='Vendor')then return end
+  requirements[npcID]=v.requirement or requirements[npcID]
+  if v.evidence=='classic-reference-unconfirmed'or not v.mapID or not v.x or not v.y then return end
+  local observed=v.evidence=='observed-player-at-vendor'
+  local weight=observed and 3 or v.verifiedCoinCost and 2 or 1
+  local price=(not imported or v.verifiedCoinCost)and v.price or nil
+  if price and not v.hasExtendedCost and(not prices[npcID]or weight>prices[npcID].weight)then prices[npcID]={value=price,weight=weight}end
+  local key=npcID..':'..v.mapID;local old=candidates[key]
+  if not old or weight>old.weight then candidates[key]={location=v,weight=weight}end
+ end
+ for _,v in ipairs(sources)do consider(v,v.kind=='Vendor'and v.evidence~='observed-player-at-vendor')end
+ for _,v in ipairs(fallback)do consider(v,true)end
+ owner.lookups[r]={itemID=itemID,directVendors=r.vendors,sourceStamp=VendorMemo.Stamp(sources),
+  fallbackStamp=VendorMemo.Stamp(fallback),candidates=candidates,requirements=requirements,prices=prices}
+ VendorMemo.stats.lookupBuilds=VendorMemo.stats.lookupBuilds+1
+ return candidates,requirements,prices
+end
+VendorMemo.empty={}
+function E.RelevantPurchaseRecipes(state)
+ local owner=VendorMemo.Owner();local c=owner.catalog
+ local provider=c and c.PurchaseRecipes;local all=provider and provider()or VendorMemo.empty
+ if owner.purchaseRows~=all then
+  owner.purchaseRows=all;owner.lookups={};owner.worldLocations={};owner.worldGeneration=(owner.worldGeneration or 0)+1;owner.relevant=nil
+ end
+ local signature={};for name,skill in pairs(state.skills or{})do signature[#signature+1]=name..':'..tostring(skill.rank)end
+ table.sort(signature);signature=table.concat(signature,';')
+ local prior=owner.relevant;local valid=prior and prior.provider==provider and prior.all==all and prior.count==#all and prior.skills==signature
+ if valid then for i,r in ipairs(all)do
+  VendorMemo.stats.headerChecks=VendorMemo.stats.headerChecks+1;local h=prior.headers[i]
+  if h.recipe~=r or h.profession~=r.profession or h.requiredSkill~=r.requiredSkill then valid=false;break end
+ end end
+ if valid then VendorMemo.stats.relevantHits=VendorMemo.stats.relevantHits+1;return prior.rows end
+ local rows,headers={},{}
+ for i,r in ipairs(all)do
+  headers[i]={recipe=r,profession=r.profession,requiredSkill=r.requiredSkill}
+  local skill=r.profession and state.skills and state.skills[r.profession]
+  if skill and type(r.requiredSkill)=='number'and r.requiredSkill<=skill.rank+25 then rows[#rows+1]=r end
+ end
+ owner.relevant={provider=provider,all=all,count=#all,skills=signature,rows=rows,headers=headers}
+ VendorMemo.stats.relevantBuilds=VendorMemo.stats.relevantBuilds+1
+ return rows
+end
+function E.RecipeVendorDistance(position,location,distances)
+ if not position or not location then return end
+ -- Preserve an explicitly replaced distance provider, including its dynamic
+ -- conditions. The native optimization applies only to the original helper.
+ if E.Distance~=VendorMemo.distanceProvider then return E.Distance(position,location)end
+ local owner=VendorMemo.Owner();local provider=E.vendorWorldBase or E.World
+ local native=C_Map and C_Map.GetWorldPosFromMapPos
+ if owner.worldProvider~=provider or owner.worldNative~=native or owner.worldVector~=CreateVector2D
+  or owner.worldMap~=position.mapID or owner.worldZones~=(owner.facts and owner.facts.zones)then
+  owner.worldProvider,owner.worldNative,owner.worldVector,owner.worldMap,owner.worldZones=
+   provider,native,CreateVector2D,position.mapID,owner.facts and owner.facts.zones
+  owner.worldLocations={};owner.worldGeneration=(owner.worldGeneration or 0)+1
+ end
+ local context=distances or{};local origin=context[VendorMemo]
+ if not origin or origin.generation~=owner.worldGeneration or origin.owner~=owner
+  or origin.mapID~=position.mapID or origin.x~=position.x or origin.y~=position.y then
+  local instance,x,y=E.World(position.mapID,position.x,position.y)
+  VendorMemo.stats.originConversions=VendorMemo.stats.originConversions+1
+  if instance and x and y then
+   origin={instance=instance,worldX=x,worldY=y,mapID=position.mapID,x=position.x,y=position.y,
+    generation=owner.worldGeneration,owner=owner};context[VendorMemo]=origin
+  else origin=nil end
+ end
+ local target=owner.worldLocations[location]
+ if not target or target.mapID~=location.mapID or target.x~=location.x or target.y~=location.y then
+  local instance,x,y=E.World(location.mapID,location.x,location.y)
+  VendorMemo.stats.vendorConversions=VendorMemo.stats.vendorConversions+1
+  if instance and x and y then
+   target={instance=instance,worldX=x,worldY=y,mapID=location.mapID,x=location.x,y=location.y}
+   owner.worldLocations[location]=target
+  else target=nil;owner.worldLocations[location]=nil end
+ else VendorMemo.stats.vendorWorldHits=VendorMemo.stats.vendorWorldHits+1 end
+ if origin and target and origin.instance==target.instance then
+  return math.sqrt((target.worldX-origin.worldX)^2+(target.worldY-origin.worldY)^2)
+ end
+end
+
 function E.RecipeOpportunity(r,state,vendorDistances)
  state=state or E.state or E.Snapshot()
  local catalog=ns.RecipeCatalog
@@ -623,30 +753,8 @@ function E.RecipeOpportunity(r,state,vendorDistances)
  if type(r.requiredSkill)~='number'or r.requiredSkill>skill.rank+25 then return end
  local itemID=r.learnableItemID or r.itemId or r.itemID
  if not itemID then return end
- local sources=r.vendors or r.locations or {}
- local candidates,requirements,prices={},{},{}
- local function consider(v,imported)
-  local npcID=v.npcID
-  if not npcID or (v.source~='Vendor' and v.kind~='Vendor') then return end
-  requirements[npcID]=v.requirement or requirements[npcID]
-  if v.evidence=='classic-reference-unconfirmed' or not v.mapID or not v.x or not v.y then return end
-  local observed=v.evidence=='observed-player-at-vendor'
-  local weight=observed and 3 or v.verifiedCoinCost and 2 or 1
-  local price=(not imported or v.verifiedCoinCost) and v.price or nil
-  if price and not v.hasExtendedCost and (not prices[npcID] or weight>prices[npcID].weight) then
-   prices[npcID]={value=price,weight=weight}
-  end
-  local key=npcID..':'..v.mapID
-  local prior=candidates[key]
-  if not prior or weight>prior.weight then
-   candidates[key]={location=v,weight=weight}
-  end
- end
- for _,v in ipairs(sources)do consider(v,v.kind=='Vendor' and v.evidence~='observed-player-at-vendor') end
- if not r.vendors then
-  local catalog=ns.ForeverCatalog
-  for _,v in ipairs(catalog and catalog.byItem and catalog.byItem[itemID] or {})do consider(v,true) end
- end
+ local candidates,requirements,prices=VendorMemo.Lookup(r,itemID)
+ local distanceContext=vendorDistances or{}
  if not next(candidates) or not E.Eligible(r,state) then return end
  local key=r.spellID or itemID
  local deferred=E.db and E.db.recipeDeferred and E.db.recipeDeferred[key]
@@ -664,7 +772,7 @@ function E.RecipeOpportunity(r,state,vendorDistances)
      and not (price and num(state.money,0,1e12) and price>state.money) then
    local yards=vendorDistances and vendorDistances[v]
    if yards==nil then
-    yards=E.Distance(state.position,v) or false
+    yards=E.RecipeVendorDistance(state.position,v,distanceContext)or false
     if vendorDistances then vendorDistances[v]=yards end
    end
    if yards and yards<=E.RecipeVendorRadius and (not distance or yards<distance or yards==distance and npcID<best.npcID) then
@@ -921,18 +1029,17 @@ function E.DropLines(npcID)
  table.sort(out);return out
 end
 local P={steps={},skills={},book={},active=true,character={level=1}};ns.ProfessionGuide=P
-local function refreshSkippedRecipeVendors(position)
+local function refreshSkippedRecipeVendors(position,distances)
  for _,entry in pairs(E.db and E.db.recipeDeferred or {})do
   if not entry.left then
-   local yards=E.Distance(position,entry.position)
+   local yards=E.RecipeVendorDistance(position,entry.position,distances)
    if yards and yards>900 then entry.left=true end
   end
  end
 end
-local function recipeOpportunities(state)
- local rows,signature,distances={},{},{}
- local catalog=ns.RecipeCatalog
- for _,r in ipairs(catalog and catalog.PurchaseRecipes() or {})do
+local function recipeOpportunities(state,sharedDistances)
+ local rows,signature,distances={},{},sharedDistances or{}
+ for _,r in ipairs(E.RelevantPurchaseRecipes(state))do
   local row=E.RecipeOpportunity(r,state,distances)
   local deferred=row and E.db and E.db.deferred[row.id]
   if row and (not deferred or E.Time()>deferred) then
@@ -949,10 +1056,11 @@ function E.CheckRecipeVendorPosition()
  local previous=P.recipeVendorPosition
  if not position or previous and previous.mapID==position.mapID and previous.x==position.x and previous.y==position.y then return false end
  P.recipeVendorPosition=position
- refreshSkippedRecipeVendors(position)
+ local distances={}
+ refreshSkippedRecipeVendors(position,distances)
  local moved={};for key,value in pairs(state)do moved[key]=value end
  moved.position=position
- local _,signature=recipeOpportunities(moved)
+ local _,signature=recipeOpportunities(moved,distances)
  return signature~=P.recipeVendorSignature
 end
 function P.ReadSkills()local s=E.Snapshot();P.skills=s.skills;P.character=s;return P.skills end
@@ -3301,6 +3409,9 @@ events:SetScript("OnEvent",function(_,event,unit)
 end)
 ns.RegisterMessage("GF_LOADED",updateMini)
 
+function N.RefreshGuidePlan()
+ return ns.Forever.WithSnapshot(function()P.Refresh();session:Reconcile();N.Refresh(true)end)
+end
 local professionEvents=CreateFrame("Frame")
 local professionDirty=true;local professionElapsed=0
 for _,event in ipairs({"TRADE_SKILL_DATA_SOURCE_CHANGED","NEW_RECIPE_LEARNED"})do pcall(professionEvents.RegisterEvent,professionEvents,event)end
@@ -3318,7 +3429,7 @@ professionEvents:SetScript("OnUpdate",function(_,delta)
  if professionElapsed<.5 then return end
  elapsed=elapsed+professionElapsed;professionElapsed=0
  if professionDirty or P.dirty or elapsed>=30 then
-  professionDirty=false;P.dirty=false;elapsed=0;P.Refresh();session:Reconcile();N.Refresh(true)
+  professionDirty=false;P.dirty=false;elapsed=0;N.RefreshGuidePlan()
  end
 end)
 
@@ -5356,6 +5467,24 @@ function W.ScrollState()
  local f=r.recipeScroll;local maximum=math.max(0,r.recipeContent:GetHeight()-f:GetHeight());local offset=f:GetVerticalScroll()
  for i,b in ipairs(r.workflowRecipeIndicators)do b:SetShown(maximum>2 and N.mode~='compact');b:SetAlpha((i==1 and offset<1 or i==2 and offset>=maximum-1)and .35 or 1)end
 end
+N.GuideGeometryStats={hits=0,misses=0}
+local function workflowGeometry(r,compact,collapsed)
+ local width,rawHeight=r:GetWidth(),r:GetHeight()
+ local header,pixel8=N.HeaderSize(r),N.PixelSize(r,8)
+ local old=r.guideGeometryMath
+ if old and old.width==width and old.rawHeight==rawHeight and old.header==header and old.pixel8==pixel8 and old.compact==compact and old.collapsed==collapsed then
+  N.GuideGeometryStats.hits=N.GuideGeometryStats.hits+1;return old
+ end
+ local top=header+pixel8;local height=rawHeight-top-10
+ local stepW=compact and width-16 or collapsed and 4 or(width-16)*(.255/.835)
+ local mapW=collapsed and(width-16)/2 or(width-16)*(.34/.835)
+ local recipeW=collapsed and mapW or width-16-stepW-mapW
+ local x={9,8+stepW,8+stepW+mapW,width-9}
+ if collapsed then x={9,9,8+mapW,width-9}end
+ local value={width=width,rawHeight=rawHeight,header=header,pixel8=pixel8,compact=compact,collapsed=collapsed,
+  top=top,height=height,stepW=stepW,mapW=mapW,recipeW=recipeW,x=x}
+ r.guideGeometryMath=value;N.GuideGeometryStats.misses=N.GuideGeometryStats.misses+1;return value
+end
 function W.Layout()
  local r=N.root;if not r or not r.panels then return end;W.Ensure()
  local compact=N.mode=='compact';if compact and not N.fieldGuideMinimumHeight and r:GetHeight()<(W.recipeCompact and 820 or 560)then r:SetHeight(W.recipeCompact and 820 or 560)end;local collapsed=W.collapsed and not compact;local p=r.panels
@@ -5370,27 +5499,24 @@ function W.Layout()
   r.stepsParchment=paper
  end
  if r.stepsParchment then r.stepsParchment:SetShown(steps)end
- local width=r:GetWidth();local top=N.HeaderSize(r)+N.PixelSize(r,8);local height=r:GetHeight()-top-10
- local stepW=compact and width-16 or collapsed and 4 or (width-16)*(.255/.835)
- local mapW=collapsed and (width-16)/2 or (width-16)*(.34/.835)
- local recipeW=collapsed and mapW or width-16-stepW-mapW
+ local geometry=workflowGeometry(r,compact,collapsed)
+ local width,top,height,stepW,mapW,recipeW=geometry.width,geometry.top,geometry.height,geometry.stepW,geometry.mapW,geometry.recipeW
  point(p[1],r,8,top,stepW,height);p[1]:SetShown(not collapsed)
  point(p[2],r,8+(collapsed and 0 or stepW),top,mapW,height);p[2]:SetShown(not compact)
  point(p[3],r,8+(collapsed and mapW or stepW+mapW),top,recipeW,height);p[3]:SetShown(not compact)
  if compact then for _,d in ipairs(r.dividers)do d:Hide()end else
   for i,d in ipairs(r.dividers)do d:ClearAllPoints();d:SetPoint('TOP',p[i],'TOPRIGHT',0,0);d:SetHeight(height-4);d:SetShown(not collapsed or i==2)end
  end
- local x={9,8+stepW,8+stepW+mapW,width-9}
- if collapsed then x={9,9,8+mapW,width-9}end
+ local x=geometry.x
  for _,c in ipairs(r.connectors)do
   local col=c.junctionColumn or 1;local row=c.junctionRow or 1
   c:ClearAllPoints()
-  c:SetPoint('CENTER',r,'TOPLEFT',x[col],row==1 and -N.HeaderSize(r) or -r:GetHeight()+9)
+  c:SetPoint('CENTER',r,'TOPLEFT',x[col],row==1 and -geometry.header or -geometry.rawHeight+9)
   c:SetShown(compact and (col==1 or col==4) or (not compact and (not collapsed or col~=2)))
  end
  for _,s in ipairs(r.shoulders)do
   if compact then s:Hide()else
-   local col=s.junctionColumn or 1;local row=s.junctionRow or 1;local sx=x[col];local sy=row==1 and -N.HeaderSize(r) or -r:GetHeight()+9
+   local col=s.junctionColumn or 1;local row=s.junctionRow or 1;local sx=x[col];local sy=row==1 and -geometry.header or -geometry.rawHeight+9
    s:ClearAllPoints();local dir=s.direction
    if dir=='RIGHT'then s:SetPoint('LEFT',r,'TOPLEFT',sx,sy)elseif dir=='LEFT'then s:SetPoint('RIGHT',r,'TOPLEFT',sx,sy)elseif dir=='DOWN'then s:SetPoint('TOP',r,'TOPLEFT',sx,sy)else s:SetPoint('BOTTOM',r,'TOPLEFT',sx,sy)end
    s:SetShown(not collapsed or col~=2)
@@ -8333,7 +8459,7 @@ function R.Fill()
  end end
  for i=n+1,#R.buttons do R.buttons[i]:Hide()end;R.body:SetHeight(math.max(1,y))
 end
-local layout=ns.WindowWorkflow.Layout;ns.WindowWorkflow.Layout=function(...)local v=layout(...);if N.farmButton then N.farmButton:SetScript('OnClick',R.Open)end;return v end;N.WorkflowLayout=ns.WindowWorkflow.Layout
+local layout=ns.WindowWorkflow.Layout;ns.WindowWorkflow.Layout=function(...)local v=layout(...);if N.farmButton then N.farmButton:SetScript('OnClick',R.ButtonToggle or R.Toggle or R.Open)end;return v end;N.WorkflowLayout=ns.WindowWorkflow.Layout
 local tick=N.Tick
 N.Tick=function(...)
  local result=tick(...);local r=F.route
@@ -8353,7 +8479,7 @@ function R.Open(...)
  return value
 end
 local layout=ns.WindowWorkflow.Layout
-ns.WindowWorkflow.Layout=function(...)local v=layout(...);if N.farmButton then N.farmButton:SetScript('OnClick',R.Open)end;return v end
+ns.WindowWorkflow.Layout=function(...)local v=layout(...);if N.farmButton then N.farmButton:SetScript('OnClick',R.ButtonToggle or R.Toggle or R.Open)end;return v end
 N.WorkflowLayout=ns.WindowWorkflow.Layout
 end)(ADDON,GF)
 -- GF_FARM_SELECTOR96_END
@@ -9096,7 +9222,7 @@ N.RefreshRecipes=function(...)
  end;return result
 end
 local layout=W.Layout
-W.Layout=function(...)local result=layout(...);K.Ensure();K.Settings();K.SyncFooter();if N.farmButton then N.farmButton:SetScript('OnClick',R.Open)end;return result end
+W.Layout=function(...)local result=layout(...);K.Ensure();K.Settings();K.SyncFooter();if N.farmButton then N.farmButton:SetScript('OnClick',R.ButtonToggle or R.Toggle or R.Open)end;return result end
 N.WorkflowLayout=W.Layout
 local tick=N.Tick
 N.Tick=function(...)local result=tick(...);if K.Mode()=='Compass'and N.arrowFrame then N.arrowFrame:Hide()end;K.SyncFooter();return result end
@@ -9314,6 +9440,7 @@ function R.Open()
    selected={},choices={},compatible={},resourceEntries={},routeEntries={},resourceSpans={},
    resourceHeaders={},resourceTiles={},resourceBodies={},zoneHeaders={},routeDetails={},tray={},
    routeDescriptions={},counters={models=0,drawResources=0,drawRoutes=0,maps=0}}
+  function B.RunRoutePreparationBatch(callback)return callback()end
   ns.FarmingBrowser=B;R.UI=B;K.gridMenu=f;K.resourceMenu=f;R.menu=f
   local resources,reagents,syncResources=farmList(f,function()if B.DrawResources then B.CloseYields();B.DrawResources()end end)
   local matches,results,syncMatches=farmList(popup,function()if B.DrawRoutes then B.DrawRoutes()end end)
@@ -9699,7 +9826,7 @@ function R.Open()
    end)
   end
   local function scheduleRoute(job,callback)
-   local function run()job.timer=nil;if not job.cancelled then callback()end end
+   local function run()job.timer=nil;if not job.cancelled then B.RunRoutePreparationBatch(callback)end end
    if C_Timer and type(C_Timer.NewTimer)=='function'then job.timer=C_Timer.NewTimer(0,run)
    elseif C_Timer and type(C_Timer.After)=='function'then C_Timer.After(0,run)
    else
@@ -13258,3 +13385,34 @@ R.BuildSourceIndex=function(...)
 end
 end)(ADDON,GF)
 -- GF_FR_SOURCE_PREPARATION_20261120_END
+
+-- GF_GUIDE_REFRESH_SCOPE_20261120_BEGIN
+;(function(_,ns)
+local E,N,R=ns.Forever,ns.NormalUI,ns.MaterialRoutes
+if not(E and N)then return end
+local resync=N.Resync
+N.Resync=function(...)return E.WithSnapshot(resync,...)end
+if R then
+ function R.CloseBrowser()
+  local B=ns.FarmingBrowser;if not B then return false end
+  local shown=B.frame:IsShown()or B.routePopup and B.routePopup:IsShown()
+  B.suppressRouteReturn=true
+  if B.routePopup then B.routePopup:Hide()end
+  B.suppressRouteReturn=nil;B.frame:Hide()
+  if B.CancelSourcePreparation then B.CancelSourcePreparation()end
+  if B.CancelRoutePreparation then B.CancelRoutePreparation()end
+  if B.CloseYields then B.CloseYields()end
+  if B.menuHost then B.menuHost:Hide()end
+  return shown==true
+ end
+ function R.Toggle()
+  local B=ns.FarmingBrowser
+  if B and(B.frame:IsShown()or B.routePopup and B.routePopup:IsShown())then R.CloseBrowser();return false end
+  R.Open();return true
+ end
+ function R.ButtonToggle(...)return R.Toggle(...)end
+end
+end)(ADDON,GF)
+-- GF_GUIDE_REFRESH_SCOPE_20261120_END
+
+

@@ -31,6 +31,8 @@ A further zone-circuit redesign remains under review. This release preserves the
 - Prepare Quests starts or resumes the selected dungeon's prerequisite journey, including before-run, dungeon and follow-up work. Character eligibility, prerequisites, saved pause/resume and completed-chain accounting guide the handoff into quest Steps.
 - Quest-source corrections and supported facts remain available across Steps and Journal preparation. Missing information is distinguished from a known negative requirement.
 - Recorded vendor prices in Steps use normal coin denominations, such as 45 silver for a recorded 4,500-copper price. Stored costs and affordability checks are unchanged.
+- Nearby vendor checks and guide refreshes reuse unchanged catalogue lookups, coordinates and window geometry. Current quest, skill, stock, affordability and learned-recipe checks remain active.
+- Clicking Farming again closes the material chooser or route-options window while retaining selected materials and the active route.
 - Approved Ragefire Chasm and Temple artwork, map controls, floor selection and source credits are included. Indoor player projection remains limited to usable client APIs and verified projection metadata.
 
 Existing profession guidance, trainer controls, quest routing and ordinary named gathering-node memory are retained. Activity capture, performance diagnostics and the manual activity importer are maintained privately and are excluded from this public build.
