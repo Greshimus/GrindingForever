@@ -604,6 +604,16 @@ local function recipeVendorAllowed(v,state,requirement,live)
  end
  return false
 end
+-- Recorded prices use ordinary denominations on clients without coin-format APIs.
+function E.CoinText(copper)
+ if not num(copper,0,1e12)or copper%1~=0 then return end
+ local gold=math.floor(copper/10000);local silver=math.floor(copper/100)%100;local coins=copper%100
+ local parts={}
+ if gold>0 then parts[#parts+1]=gold..' gold'end
+ if silver>0 then parts[#parts+1]=silver..' silver'end
+ if coins>0 or #parts==0 then parts[#parts+1]=coins..' copper'end
+ return table.concat(parts,' ')
+end
 function E.RecipeOpportunity(r,state,vendorDistances)
  state=state or E.state or E.Snapshot()
  local catalog=ns.RecipeCatalog
@@ -666,7 +676,7 @@ function E.RecipeOpportunity(r,state,vendorDistances)
  local owned=call(C_Item and C_Item.GetItemCount or GetItemCount,itemID,true)
  if num(owned,0,1e9)~=0 or E.Known(r)~=false then return end
  local vendor=best.name or 'the vendor'
- local coin=bestPrice and bestPrice>0 and (call(GetCoinTextureString,bestPrice) or tostring(bestPrice)..' copper')
+ local coin=bestPrice and bestPrice>0 and E.CoinText(bestPrice)
  local cost=coin and bestCostText and (coin..' + '..bestCostText) or coin or bestCostText
  local price=cost and (' Recorded price: '..cost..'.') or ' Check price at the vendor.'
  local near=distance<=150
@@ -9219,7 +9229,7 @@ local function fillResource(tile,m,height,unit,selected,choices,compatible,famil
  local font,_,flags=tile.label:GetFont()
  tile.label:SetFont(font,((tile.isByproduct or #m.name>=18)and 12 or 14)*unit,flags)
  tile.label:ClearAllPoints();tile.label:SetPoint("TOPLEFT",3*unit,-43*unit);tile.label:SetPoint("TOPRIGHT",-3*unit,-43*unit)
- tile.label:SetText(m.name);tile.label:SetHeight(math.max(1,height-47*unit))
+ tile.label:SetText(m.displayName or m.name);tile.label:SetHeight(math.max(1,height-47*unit))
  tile.wash:SetShown(checked);tile.tick:SetShown(checked);tile:SetAlpha(faded and .44 or 1)
 end
 
@@ -9279,7 +9289,11 @@ function R.Open()
   f:EnableMouse(true);N.ApplyWindowLayer(f,"farming")
   local popup=CreateFrame("Frame","GrindingForeverRouteOptions",UIParent);popup:Hide();popup:SetSize(480,720);popup:SetPoint("CENTER",UIParent,"CENTER")
   popup:EnableMouse(true);N.ApplyWindowLayer(popup,"farming");popup:SetFrameLevel(f:GetFrameLevel()+20)
-  local B={frame=f,routePopup=popup,groupOpen={},models={},recommendations={},
+  local owner=ns.Forever and ns.Forever.db
+  local saved=owner and owner.farmingCatalogueUI
+  if type(saved)~='table'then saved={contexts={}};if owner then owner.farmingCatalogueUI=saved end end
+  if type(saved.contexts)~='table'then saved.contexts={}end
+  local B={frame=f,routePopup=popup,groupOpen=saved.contexts,models={},recommendations={},
    selected={},choices={},compatible={},resourceEntries={},routeEntries={},resourceSpans={},
    resourceHeaders={},resourceTiles={},resourceBodies={},zoneHeaders={},routeDetails={},tray={},
    routeDescriptions={},counters={models=0,drawResources=0,drawRoutes=0,maps=0}}
@@ -9322,37 +9336,64 @@ function R.Open()
   local function model()
    local key=context();local cached=B.models[key]
    if cached then B.model=cached;return cached end
-   local zone
-   local category=B.category
-   cached={key=key,groups={},yields={},zone=zone,category=category}
+   local zone,category=nil,B.category
+   cached={key=key,groups={},yields={},zone=zone,category=category,itemIDs={}}
    local names={}
    for _,m in ipairs(R.materials)do
     if R.IsFarmOffering(m)and not R.IsFarmChild(m)then
-     local include
-     if not category then include=true
-     else
-      include=m.categories[category]
-      if not include then
-       local values=R.Byproducts(m,nil,category);cached.yields[m.id]=values;include=#values>0
-      end
-     end
+     local include=not category or m.categories[category]
+     if not include then local values=R.Byproducts(m,nil,category);cached.yields[m.id]=values;include=#values>0 end
      if include then names[#names+1]=m end
     end
    end
    for _,key in ipairs(R.FarmFamilyOrder)do
-    local family=R.FarmFamilies[key]
-    local familyItems=R.FarmFamilyItems(family,zone,category)
-    if #familyItems>0 then
-     names[#names+1]=family;cached.yields[family.familyKey]=familyItems
-    end
+    local family=R.FarmFamilies[key];local values=R.FarmFamilyItems(family,zone,category)
+    if #values>0 then names[#names+1]=family;cached.yields[family.familyKey]=values end
    end
    table.sort(names,R.CompareMaterials)
-   local group
+   local byName,all={},{}
    for _,m in ipairs(names)do
-    local name=R.MaterialGroup(m)
-    if not group or group.name~=name then group={name=name,materials={}};cached.groups[#cached.groups+1]=group end
+    local name=R.MaterialGroup(m);local group=byName[name]
+    if not group then group={name=name,materials={},sections={},itemIDs={},itemSet={}};byName[name]=group;cached.groups[#cached.groups+1]=group end
     group.materials[#group.materials+1]=m
+    if not m.isFarmFamily then group.itemSet[m.id]=true end
+    local token=m.familyKey or m.id;local values=cached.yields[token]
+    if not values then values=R.Byproducts(m,zone,category);cached.yields[token]=values end
+    for _,child in ipairs(values)do group.itemSet[child.id]=true end
    end
+   for _,group in ipairs(cached.groups)do
+    local definition=R.CatalogueGroup and R.CatalogueGroup(group.name)
+    local sections={}
+    for _,m in ipairs(group.materials)do local name=R.CatalogueSection and R.CatalogueSection(m)or group.name
+     sections[name]=sections[name]or{};sections[name][#sections[name]+1]=m
+    end
+    local used={}
+    for _,section in ipairs(definition and definition.sections or{})do
+     local values=sections[section.name]
+     if values and #values>0 then
+      local label=section.label or section.name
+      label=label:gsub(' —.*$','')
+      if section.progressionUnknown then label=group.name=='Fish'and'Other fish'or'Scales and chitin' end
+      local record={name=section.name,label=label,materials=values,itemIDs={},progressionUnknown=section.progressionUnknown}
+      local ids={}
+      for _,m in ipairs(values)do
+       if not m.isFarmFamily then ids[m.id]=true end
+       for _,child in ipairs(cached.yields[m.familyKey or m.id]or{})do ids[child.id]=true end
+      end
+      for _,id in ipairs(section.itemIDs or{})do if ids[id]then record.itemIDs[#record.itemIDs+1]=id end end
+      record.materialCount=#record.itemIDs
+      record.familyOnly=#values==1 and values[1].isFarmFamily==true
+      group.sections[#group.sections+1]=record;used[section.name]=true
+     end
+    end
+    for name,values in pairs(sections)do if not used[name]then group.sections[#group.sections+1]={name=name,label=name,materials=values,itemIDs={},materialCount=#values}end end
+    if #group.sections==0 then group.sections[1]={name=group.name,label=group.name,materials=group.materials,itemIDs={},materialCount=#group.materials}end
+    for _,id in ipairs(definition and definition.itemIDs or{})do if group.itemSet[id]then group.itemIDs[#group.itemIDs+1]=id;all[id]=true end end
+    if not definition then for id in pairs(group.itemSet)do group.itemIDs[#group.itemIDs+1]=id;all[id]=true end;table.sort(group.itemIDs)end
+    group.materialCount=#group.itemIDs
+   end
+   for id in pairs(all)do cached.itemIDs[#cached.itemIDs+1]=id end;table.sort(cached.itemIDs)
+   cached.materialCount=#cached.itemIDs
    B.models[key]=cached;B.model=cached;B.counters.models=B.counters.models+1
    return cached
   end
@@ -9368,7 +9409,7 @@ function R.Open()
    if #list==0 then B.CloseYields();return false end
    menuHost:Hide()
    local unit=N.PixelSize(f,1);local cols=math.min(3,#list)
-   local tileWidth,tileHeight=90*unit,74*unit
+   local tileWidth,tileHeight=90*unit,80*unit
    local width=math.max(172*unit,tileWidth*cols+12*unit)
    local gutter=(width-cols*tileWidth)/2
    local rootScale=f:GetEffectiveScale()/UIParent:GetEffectiveScale()
@@ -9376,7 +9417,7 @@ function R.Open()
    yieldPanel.anchor=anchor;yieldPanel.scroll=resources:GetVerticalScroll();yieldPanel.grace=.14;yieldPanel:ClearAllPoints()
    local opensLeft=right+width*rootScale>UIParent:GetWidth()
    yieldPanel:SetPoint(opensLeft and "TOPRIGHT"or "TOPLEFT",anchor,opensLeft and "TOPLEFT"or "TOPRIGHT",0,0)
-   yieldPanel:SetSize(width,(32+math.ceil(#list/cols)*74)*unit)
+   yieldPanel:SetSize(width,(32+math.ceil(#list/cols)*80)*unit)
    farmPlace(yieldTitle,yieldPanel,10*unit,8*unit,width-20*unit,20*unit);yieldTitle:SetText(R.ByproductTitle(anchor.material))
    for i,m in ipairs(list)do
     local tile=yieldTiles[i]
@@ -9406,39 +9447,39 @@ function R.Open()
     local a,b=math.max(span.y,top),math.min(span.y+span.height,bottom)
     if b>a then
      bodyCount=bodyCount+1;local body=B.resourceBodies[bodyCount]
-     if not body then body=farmCream(resources,"resourceBody");body:SetFrameLevel(resources:GetFrameLevel());B.resourceBodies[bodyCount]=body end
+     if not body then body=farmCream(resources,'resourceBody');body:SetFrameLevel(resources:GetFrameLevel());B.resourceBodies[bodyCount]=body end
      farmPlace(body,resources,span.x,a-top,span.width,b-a);body:Show()
     end
    end
    for _,entry in ipairs(B.resourceEntries)do if inView(entry,top,bottom)then
-    if entry.kind=="group"then
+    if entry.kind=='group'or entry.kind=='more'or entry.kind=='section'then
      headerCount=headerCount+1;local header=B.resourceHeaders[headerCount]
      if not header then
-      header=farmHeader(reagents,"","resourceGroup",function(self)
+      header=farmHeader(reagents,'','resourceGroup',function(self)
        B.CloseYields();local states=B.groupOpen[context()]or{};B.groupOpen[context()]=states
-       states[self.group.name]=not self.group.open;R.Fill()
+       states[self.stateKey]=not self.record.open;R.Fill()
       end);B.resourceHeaders[headerCount]=header
+      header:SetScript('OnEnter',function(self)if self.record and self.record.progressionUnknown then tooltip(self,self.record.label or self.record.name,'Progression order is not recorded.')end end)
+      header:SetScript('OnLeave',hideTip)
      end
-     header.group=entry.group;header.record=entry.group
-      local selectedCount=0
-      for _,m in ipairs(entry.group.materials)do
-       if m.isFarmFamily then
-        for _,child in ipairs(yieldsFor(m))do if K.selected[child.id]then selectedCount=selectedCount+1;break end end
-       elseif K.selected[m.id]then selectedCount=selectedCount+1 end
-      end
-     header.label:SetText(entry.group.name.." · "..(selectedCount>0 and(selectedCount.."/")or "")..#entry.group.materials)
-     setFarmFont(header.label,14,13,B.unit,B.fontExpansion)
-     header.arrow:SetRotation(entry.group.open and -math.pi/2 or 0)
+     local record=entry.group
+     header.group=record;header.record=record;header.stateKey=entry.stateKey
+     header.gfFarmRole=entry.kind=='more'and'moreMaterials'or entry.kind=='section'and'materialSection'or'resourceGroup'
+     local selected=0;for _,id in ipairs(record.itemIDs or{})do if K.selected[id]then selected=selected+1 end end
+     local count=record.materialCount or #record.materials
+     header.label:SetText((record.label or record.name)..' · '..(selected>0 and(selected..'/')or'')..count)
+     setFarmFont(header.label,entry.kind=='section'and 13 or 14,12,B.unit,B.fontExpansion)
+     header.arrow:SetRotation(record.open and-math.pi/2 or 0)
      farmPlace(header,reagents,entry.x,entry.y,entry.width,entry.height-B.unit*4);header:Show()
     else
      tileCount=tileCount+1;local tile=B.resourceTiles[tileCount]
      if not tile then
       tile=buildResource(reagents);tile.openYields=drawYields
-      tile.yieldArrow=text(tile,16,"›");tile.yieldArrow:SetPoint("TOPRIGHT",tile,"TOPRIGHT",-3,-8);B.resourceTiles[tileCount]=tile
+      tile.yieldArrow=text(tile,16,'›');tile.yieldArrow:SetPoint('TOPRIGHT',tile,'TOPRIGHT',-3,-8);B.resourceTiles[tileCount]=tile
      end
-      tile.byproducts=yieldsFor(entry.material)
-      fillResource(tile,entry.material,entry.height,B.unit,B.selected,B.choices,B.compatible,tile.byproducts)
-      tile.yieldArrow:SetShown(#tile.byproducts>0)
+     tile.byproducts=yieldsFor(entry.material)
+     fillResource(tile,entry.material,entry.height,B.unit,B.selected,B.choices,B.compatible,tile.byproducts)
+     tile.yieldArrow:SetShown(#tile.byproducts>0)
      farmPlace(tile,reagents,entry.x,entry.y,entry.width,entry.height);tile:Show()
     end
    end end
@@ -9686,21 +9727,49 @@ function R.Open()
    farmPlace(resources,f,inset,contentTop+29*unit,width,math.max(64*unit,footerTop-contentTop-37*unit));resources:Show()
    reagents:SetWidth(width)
    local current=model();local states=B.groupOpen[current.key]or{};B.groupOpen[current.key]=states
+   resourceTitle.label:SetText('Choose Reagents - '..current.materialCount)
    local entries,spans={},{};local y=0
-   local columns=math.max(2,math.floor((width-16*unit)/(78*unit)))
-   local tileWidth=(width-16*unit-(columns-1)*5*unit)/columns
-   for _,group in ipairs(current.groups)do
-    local opened=states[group.name]
-    if opened==nil then opened=B.category~=nil end
-    group.open=opened
-    entries[#entries+1]={kind="group",group=group,x=0,y=y,width=width,height=31*unit};y=y+31*unit
-    if opened then
-     local rows=math.ceil(#group.materials/columns);local bodyHeight=rows*80*unit+8*unit
-     spans[#spans+1]={x=0,y=y-4*unit,width=width,height=bodyHeight+4*unit}
-     for i,m in ipairs(group.materials)do entries[#entries+1]={kind="tile",material=m,x=8*unit+((i-1)%columns)*(tileWidth+5*unit),y=y+4*unit+math.floor((i-1)/columns)*80*unit,width=tileWidth,height=80*unit}end
-     y=y+bodyHeight+5*unit
-    end
+   local primary={['Ore Veins']=true,Herbs=true,Leather=true,Fish=true}
+   local function opened(key,default)local value=states[key];if value==nil then return default end;return value end
+   local function tiles(materials,x,w)
+    if #materials==0 then return end
+    local columns=math.max(2,math.floor((w-16*unit)/(78*unit)))
+    local tileWidth=(w-16*unit-(columns-1)*5*unit)/columns
+    for i,m in ipairs(materials)do entries[#entries+1]={kind='tile',material=m,x=x+8*unit+((i-1)%columns)*(tileWidth+5*unit),y=y+4*unit+math.floor((i-1)/columns)*92*unit,width=tileWidth,height=92*unit}end
+    y=y+math.ceil(#materials/columns)*92*unit+8*unit
    end
+   local function groupCard(group,x,w)
+    group.open=opened(group.name,B.category~=nil)
+    entries[#entries+1]={kind='group',group=group,stateKey=group.name,x=x,y=y,width=w,height=31*unit};y=y+31*unit
+    if not group.open then return end
+    local start=y-4*unit;local pending={}
+    local function flush()if #pending>0 then tiles(pending,x,w);pending={}end end
+    local nested=#group.sections>1
+    for _,section in ipairs(group.sections)do
+     if not nested or section.familyOnly then for _,m in ipairs(section.materials)do pending[#pending+1]=m end
+     else
+      flush();local key='section:'..group.name..':'..section.name
+      section.open=opened(key,B.category~=nil)
+      entries[#entries+1]={kind='section',group=section,stateKey=key,x=x+8*unit,y=y,width=w-16*unit,height=29*unit};y=y+29*unit
+      if section.open then tiles(section.materials,x+8*unit,w-16*unit)end
+     end
+    end
+    flush();spans[#spans+1]={x=x,y=start,width=w,height=y-start+2*unit};y=y+7*unit
+   end
+   local more={name='More materials',materials={},itemIDs={},materialCount=0}
+   for _,group in ipairs(current.groups)do
+    if primary[group.name]then groupCard(group,0,width)
+    else more.materials[#more.materials+1]=group;more.materialCount=more.materialCount+group.materialCount;for _,id in ipairs(group.itemIDs)do more.itemIDs[#more.itemIDs+1]=id end end
+   end
+   if #more.materials>0 then
+    more.open=opened('__more',B.category~=nil);B.moreOpen=more.open;B.moreGroup=more
+    entries[#entries+1]={kind='more',group=more,stateKey='__more',x=0,y=y,width=width,height=31*unit};y=y+31*unit
+    if more.open then
+     local start=y-4*unit
+     for _,group in ipairs(more.materials)do groupCard(group,8*unit,width-16*unit)end
+     table.insert(spans,1,{x=0,y=start,width=width,height=y-start+2*unit});y=y+5*unit
+    end
+   else B.moreOpen=false;B.moreGroup=nil end
    B.resourceEntries,B.resourceSpans=entries,spans;reagents:SetHeight(math.max(1,y))
    farmPlace(message,f,inset,footerTop,width,messageHeight)
    local actionTop=footerTop+messageHeight+7*unit
@@ -12655,3 +12724,166 @@ end)
 attach()
 end)(ADDON,GF)
 -- GF_RESOURCE_MAP_VIEWS_20261120_END
+
+-- GF_GATHERING_FIRST_CATALOGUE_20261120_BEGIN
+;(function(...)
+local _,ns=ADDON,GF
+local R=ns.MaterialRoutes
+local O=ns.ForeverCatalog and ns.ForeverCatalog.farmingCatalogue
+if not R or not O then return end
+local allowed,groupRank,groupInfo,children,familySet,parentYields={},{},{},{},{},{}
+for _,id in ipairs(O.itemIDs or{})do allowed[id]=true end
+for i,name in ipairs(O.primaryGroups or{})do groupRank[name]=i end
+for i,name in ipairs(O.additionalGroups or{})do groupRank[name]=#(O.primaryGroups or{})+i end
+for _,group in ipairs(O.groups or{})do groupInfo[group.name]=group end
+local function itemInfo(id)return O.items and O.items[id]end
+local function order(m)
+ if m.isFarmFamily then
+  local first
+  for _,id in ipairs(m.itemIDs or{})do local info=itemInfo(id);if info and type(info.displayOrder)=='number'then first=math.min(first or info.displayOrder,info.displayOrder)end end
+  return first or 1e9
+ end
+ local info=itemInfo(m.id);return info and info.displayOrder or 1e9
+end
+local crafting=R.IsCraftingReagent
+R.IsCraftingReagent=function(id)local info=itemInfo(id);return info and type(info.recipeUseCount)=='number'and info.recipeUseCount>0 or crafting(id)end
+local offering=R.IsFarmOffering
+R.IsFarmOffering=function(value)local id=type(value)=='table'and value.id or value;return allowed[id]==true and offering(value)end
+local materialGroup=R.MaterialGroup
+R.MaterialGroup=function(m)local info=m and itemInfo(m.id);return m and m.isFarmFamily and m.group or info and info.group or materialGroup(m)end
+R.CatalogueOrganization=O
+R.CatalogueGroup=function(name)return groupInfo[name]end
+R.CatalogueItemInfo=itemInfo
+R.CatalogueSection=function(m)
+ if m.isFarmFamily then local info=itemInfo(m.itemIDs and m.itemIDs[1]);return info and info.section end
+ local info=itemInfo(m.id);return info and info.section
+end
+R.CompareMaterials=function(a,b)
+ local ga,gb=groupRank[R.MaterialGroup(a)]or 99,groupRank[R.MaterialGroup(b)]or 99
+ if ga~=gb then return ga<gb end
+ local oa,ob=order(a),order(b);if oa~=ob then return oa<ob end
+ if a.name~=b.name then return a.name<b.name end
+ return(a.id or 0)<(b.id or 0)
+end
+for key,definition in pairs(O.families or{})do
+ local family=R.FarmFamilies[key]or{}
+ local ids=definition.itemIDs or{}
+ local first=itemInfo(ids[1]);family.name=definition.name or family.name or key
+ family.displayName=key=='heartsGlobes'and'Hearts & Globes'or nil
+ family.itemIDs=ids;family.familyKey=definition.familyKey or family.familyKey or key
+ family.group=definition.group or first and first.group or family.group
+ family.iconItemID=definition.representative or definition.iconItemID or family.iconItemID or ids[1]
+ family.isFarmFamily=true;family.skill=1;family.categories={};family.sourceKinds={}
+ R.FarmFamilies[key]=family;familySet[family]=true
+ local present=false;for _,old in ipairs(R.FarmFamilyOrder)do if old==key then present=true;break end end
+ if not present then R.FarmFamilyOrder[#R.FarmFamilyOrder+1]=key end
+ for _,id in ipairs(ids)do children[id]=true end
+end
+table.sort(R.FarmFamilyOrder,function(a,b)return R.CompareMaterials(R.FarmFamilies[a],R.FarmFamilies[b])end)
+local familyItems=R.FarmFamilyItems
+R.FarmFamilyItems=function(family,zone,category)
+ if not familySet[family]then return familyItems(family,zone,category)end
+ local list={}
+ for _,id in ipairs(family.itemIDs)do local m=R.byID[id]
+  if m and R.IsFarmOffering(m)and(not zone or zone.items[id])and(not category or m.categories and m.categories[category])then list[#list+1]=m end
+ end
+ return list
+end
+for node,yields in pairs(O.nodeYields or{})do for id,rule in pairs(yields)do
+ if rule.kind=='mine'then
+  local parents=type(rule.parentItemID)=='table'and rule.parentItemID or{rule.parentItemID}
+  for _,parent in ipairs(parents)do
+   if parent then parentYields[parent]=parentYields[parent]or{};local entry=parentYields[parent][id]or{nodes={}};parentYields[parent][id]=entry;entry.nodes[node]=true;children[id]=true end
+  end
+ end
+end end
+local isChild=R.IsFarmChild
+R.IsFarmChild=function(m)return m and(children[m.id]or isChild(m))end
+local byproducts=R.Byproducts
+R.Byproducts=function(m,zone,category)
+ local list=byproducts(m,zone,category);if m.isFarmFamily then return list end
+ local seen={};for _,item in ipairs(list)do seen[item.id]=true end
+ for id in pairs(parentYields[m.id]or{})do local item=R.byID[id]
+  if item and not seen[id]and R.IsFarmOffering(item)and(not zone or zone.veinYields and zone.veinYields[m.id]and zone.veinYields[m.id][id])
+   and(not category or m.categories and m.categories[category]or item.categories and item.categories[category])then list[#list+1]=item;seen[id]=true end
+ end
+ table.sort(list,R.CompareMaterials);return list
+end
+local veinYields=R.CoverageVeinYields
+R.CoverageVeinYields=function(item,node)
+ local list=veinYields(item,node);local seen={};for _,id in ipairs(list)do seen[id]=true end
+ for id,entry in pairs(parentYields[item]or{})do if entry.nodes[node]and not seen[id]and R.IsFarmOffering(id)then list[#list+1]=id;seen[id]=true end end
+ table.sort(list);return list
+end
+local load=R.LoadCatalog
+R.LoadCatalog=function(...)
+ local result=load(...)
+ for _,id in ipairs(O.itemIDs or{})do local info=itemInfo(id);local m=R.byID[id]
+  if info and m then
+   m.name=info.name or m.name;m.kind=info.kind or m.kind
+   m.skillKnown=info.skillKnown==true;m.skill=m.skillKnown and info.skill or 0
+   m.catalogueDisplayOrder=info.displayOrder;m.catalogueProgression=info.progression
+   -- Acquisition filters use qualified methods, not an old incidental receipt
+   -- or the profession which happens to consume this ingredient.
+   local categories,kinds={},{}
+   for _,method in ipairs(info.methods or{})do
+    if method=='mine'or method:match('^mine%-')then categories.Mining=true;kinds.mine=true
+    elseif method=='herb'or method:match('^herb%-')or method:match('^herbalism%-')then categories.Herbalism=true;kinds.herb=true
+    elseif method=='skin'or method:match('^skin')then categories.Skinning=true;kinds.skin=true
+    elseif method=='fish'or method:match('^fish')then categories.Fishing=true;kinds.fish=true
+    elseif method=='drop'then kinds.drop=true end
+   end
+   if info.group=='Cloth Drops'then categories.Tailoring=true end
+   if info.group=='Meat'then categories.Cooking=true end
+   if info.group=='Curatives'or info.group=='Specialty Reagents'or not next(categories)then categories.Specialty=true end
+   m.categories,m.sourceKinds=categories,kinds
+  end
+ end
+ return result
+end
+local levelNote=R.FarmLevelNote
+R.FarmLevelNote=function(m,values)
+ local note=levelNote(m,values);local info=itemInfo(m.id)
+ if info and(m.kind=='Mining'or m.kind=='Herbalism'or m.kind=='Skinning')and info.skillKnown~=true then
+  local text='Gathering skill requirement is not recorded.';note=note~=''and(note..'\n'..text)or text
+ end
+ return note
+end
+-- New herb byproducts reuse the exact typed parent sites. The relationship
+-- does not turn an unknown rank or a zone-only source into a route.
+local buildIndex=R.BuildSourceIndex;local augmented
+R.BuildSourceIndex=function(...)
+ local index=buildIndex(...);if index==augmented then return index end
+ local locations=ns.ForeverCatalog.resourceLocations
+ for _,zone in pairs(index)do
+  local rows,seen={},{}
+  for item,list in pairs(zone.items)do for _,s in ipairs(list)do
+   if s.kind=='herb'and type(s.nodeID)=='number'then
+    local object=locations and locations.objects and locations.objects[s.nodeID]
+    local node=object and object.nodeTypeID or s.nodeID
+    for id,rule in pairs(O.nodeYields and O.nodeYields[node]or{})do
+     if rule.kind=='herb'and R.IsFarmOffering(id)and(rule.parentItemID==nil or rule.parentItemID==item)then
+      rows[#rows+1]={item=id,parent=item,source=s,rule=rule,node=node}
+     end
+    end
+   end
+  end end
+  for item,list in pairs(zone.items)do for _,s in ipairs(list)do
+   if type(s.x)=='number'and type(s.y)=='number'then seen[item..':'..tostring(s.nodeID)..':'..string.format('%.17g:%.17g',s.x,s.y)..':'..tostring(s.coordinateRole)]=true end
+  end end
+  for _,row in ipairs(rows)do local s=row.source
+   if type(s.x)=='number'and type(s.y)=='number'then
+    local key=row.item..':'..row.node..':'..string.format('%.17g:%.17g',s.x,s.y)..':'..tostring(s.coordinateRole)
+    if not seen[key]then
+     local copy={};for k,v in pairs(s)do copy[k]=v end
+     copy.nodeID=row.node;copy.provenance='Recorded herb byproduct';copy.secondaryYield=true;copy.yieldEvidence=row.rule.relationshipEvidence or row.rule.evidence;copy.density=nil
+     if row.rule.skillKnown==false then copy.skillKnown=false;copy.routeEligible=false end
+     zone.items[row.item]=zone.items[row.item]or{};zone.items[row.item][#zone.items[row.item]+1]=copy;seen[key]=true
+    end
+   end
+  end
+ end
+ augmented=index;return index
+end
+end)(ADDON,GF)
+-- GF_GATHERING_FIRST_CATALOGUE_20261120_END

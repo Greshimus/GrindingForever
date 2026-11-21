@@ -63,8 +63,8 @@
       "SHA256": "959F668C6D49B39F040FF4DDFBB49E47D175E7849CE8554D555328D44E751FD5"
     },
     "ForeverCatalog.lua": {
-      "Bytes": 9150267,
-      "SHA256": "145A538BF5177F4548DC2E65912280982F1475ECE94540CC875DE6FE4D69126F"
+      "Bytes": 12720438,
+      "SHA256": "A9B678EFA062072C0A767A370874334F10DBF2E96E9C9DF36382B700D75C50B6"
     },
     "ForeverQuest-NOTICE.txt": {
       "Bytes": 42234,
@@ -83,8 +83,8 @@
       "SHA256": "3655586F85AFCB78B569367003221EA364D04575CC483F7E32BC970BBB6088E0"
     },
     "Main.lua": {
-      "Bytes": 1064022,
-      "SHA256": "E46B20D5F0752E2A4FDD13BC8DB0D0FAC9B81B2E255989770301C4342ECCD3D1"
+      "Bytes": 1078048,
+      "SHA256": "7F93ECD7555FAC69A63327FD931BFF24FF0EB759855E1FB6C986ADE532A78E4D"
     },
     "Media/BannerEnamelButton.tga": {
       "Bytes": 8388626,
@@ -1124,6 +1124,8 @@
     "ManualActivityImporterIncluded": false,
     "PrivateActivityTransportMetadataIncluded": false,
     "GameplayAndArtworkPreserved": true,
-    "SourceAttributionPreserved": true
+    "SourceAttributionPreserved": true,
+    "FarmingOrganization": "Gathering first",
+    "FarmableRecipeMaterials": 270
   }
 }

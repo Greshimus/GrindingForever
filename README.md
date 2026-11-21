@@ -14,20 +14,22 @@ Grinding Forever combines quest guidance, a Dungeon Journal, Recipe Sources and 
 
 ## Farming Routes
 
-- A single material chooser uses collapsible wooden headers and cream cards. The current catalogue has 181 selectable materials, including individually selectable yields inside ore and other material flyouts.
+- Gathering first opens with Ore Veins, Herbs, Leather and Fish in collapsible wooden headers and cream cards. More materials contains Cloth Drops, Meat, Curatives and Specialty Reagents. The reviewed catalogue has 270 recipe materials, including individually selectable ore, stone, gem and other related yields in 11 flyouts.
+- Materials follow documented acquisition or encountered-level progression within their groups. Unknown progression follows known entries. Recorded sources and known gathering requirements support route choices; unknown requirements are not invented.
 - Fish and pools share one flow. Recorded pool associations can support fishing guidance; a nearby pool does not prove the source of a catch.
 - Find routes opens a separate popup with up to four distinct, supported recommendations. Each can expand to inspect its route and selected-resource locations. Starting a route rechecks the current selection, skills and known tool requirements.
 - Hybrid routes retain suitable saved circuits and add short contributing side trips. Existing generated routes remain available where a saved route cannot support the selection.
 - The resource index contains 51,999 qualified typed location records across 47 maps. Co-located alternatives remain available, including shared Copper/Tin/Silver sites. Possible spawn records and player approach observations retain separate meanings.
 - World-map and expanded FR markers use cached spatial display groups and pooled drawing batches. Hovering a group reveals its recorded resource alternatives. Recorded locations do not establish current spawn presence, measured yield per hour, terrain safety or respawn timing.
 
-The broader material-organization proposal and a further zone-circuit redesign remain under review; they are not part of this release.
+A further zone-circuit redesign remains under review. This release preserves the existing hybrid route geometry and ranking.
 
 ## Dungeon Journal and quest guidance
 
 - The Journal supports wide and narrow layouts, dungeon wings, collapsible quest chains, rewards, native item tooltips and Shift-click links.
 - Prepare Quests starts or resumes the selected dungeon's prerequisite journey, including before-run, dungeon and follow-up work. Character eligibility, prerequisites, saved pause/resume and completed-chain accounting guide the handoff into quest Steps.
 - Quest-source corrections and supported facts remain available across Steps and Journal preparation. Missing information is distinguished from a known negative requirement.
+- Recorded vendor prices in Steps use normal coin denominations, such as 45 silver for a recorded 4,500-copper price. Stored costs and affordability checks are unchanged.
 - Approved Ragefire Chasm and Temple artwork, map controls, floor selection and source credits are included. Indoor player projection remains limited to usable client APIs and verified projection metadata.
 
 Existing profession guidance, trainer controls, quest routing and ordinary named gathering-node memory are retained. Activity capture, performance diagnostics and the manual activity importer are maintained privately and are excluded from this public build.
