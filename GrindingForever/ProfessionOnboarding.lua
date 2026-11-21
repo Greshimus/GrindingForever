@@ -375,8 +375,29 @@ function B.Open()
 end
 
 local function pin(location)
-    local map = ns.MapControls99
-    if location and map then map.ShowStepPoint(location) end
+    if type(location) ~= 'table' or not number(location.mapID) or location.mapID <= 0
+        or location.mapID%1 ~= 0 or not number(location.x) or location.x > 100
+        or not number(location.y) or location.y > 100 then
+        ns.Print('Trainer location is unavailable.')
+        return false, false
+    end
+    local catalog, compass = ns.RecipeCatalog, ns.NavigationCompass
+    local mapPinned = catalog and E.Call(catalog.PinWorldMap, location) == true or false
+    local compassPinned = compass and type(compass.pins) == 'table' and E.Call(compass.Enabled) == true or false
+    if compassPinned then
+        local key = 'profession-trainer'
+        compass.pins[key] = {key=key, name=location.name or 'Profession trainer', zone=location.zone,
+            location=location, icon=compass.professionPinTexture, professionPin=true, pin=true}
+        compass.age = 1
+    end
+    if not mapPinned and not compassPinned then
+        ns.Print('Unable to pin this trainer on the map or compass.')
+    elseif not mapPinned then
+        ns.Print('Trainer pinned on the compass; the map pin is unavailable.')
+    elseif not compassPinned then
+        ns.Print('Trainer pinned on the map; the compass pin is unavailable.')
+    end
+    return mapPinned, compassPinned
 end
 
 function B.FindTrainers()
@@ -490,10 +511,10 @@ local function newTrainerRow(list)
     row.price:SetJustifyH('RIGHT')
     row.label:SetPoint('TOPLEFT',row,'TOPLEFT',5,-3)
     row.label:SetPoint('TOPRIGHT',row,'TOPRIGHT',-60,-3)
-    row.trainer:SetPoint('BOTTOMLEFT',row,'BOTTOMLEFT',5,2)
-    row.trainer:SetPoint('BOTTOMRIGHT',row,'BOTTOMRIGHT',-60,2)
+    row.trainer:SetPoint('TOPLEFT',row.label,'BOTTOMLEFT',0,-2)
+    row.trainer:SetPoint('TOPRIGHT',row.label,'BOTTOMRIGHT',0,-2)
     row.price:SetPoint('RIGHT',row,'RIGHT',-22,0)
-    row.arrow=N.ButtonArrow(row,'right','RIGHT')
+    row.arrow=N.ControlArrow(row,'right','RIGHT')
     return row
 end
 
@@ -532,20 +553,18 @@ local function newCard(panel)
     local list=CreateFrame('Frame',nil,viewport)
     viewport:SetScrollChild(list)
     card.viewport,card.list,card.rows=viewport,list,{}
-    card.scrollTraining=N.PanelScroll(detail,viewport,function()return viewport:GetVerticalScroll()end,
-        function(value)viewport:SetVerticalScroll(value)end,
-        function()return card.listLimit or 0 end,28)
+    card.scrollTraining=N.PanelScroll(detail,viewport,
+        function()return (viewport:GetVerticalScroll() or 0)/(card.trainerRowHeight or 28)end,
+        function(value)viewport:SetVerticalScroll(value*(card.trainerRowHeight or 28))end,
+        function()return (card.listLimit or 0)/(card.trainerRowHeight or 28)end,1)
     return card
 end
 
 local function layoutTrainerRows(card, width, offers, reset)
     local rowHeight=28
-    local listHeight=#offers*rowHeight
-    local visibleHeight=math.min(#offers,5)*rowHeight
-    card.listLimit=listHeight-visibleHeight
-    local listWidth=width-(card.listLimit>0 and 35 or 18)
-    place(card.viewport,card.detail,9,5,listWidth,visibleHeight)
-    card.list:SetSize(listWidth,listHeight)
+    local oldHeight=card.trainerRowHeight or rowHeight
+    local position=(card.viewport:GetVerticalScroll() or 0)/oldHeight
+    local listWidth=width-(#offers>5 and 35 or 18)
     for i, offer in ipairs(offers) do
         local row=card.rows[i]
         if not row then row=newTrainerRow(card.list);card.rows[i]=row end
@@ -555,12 +574,20 @@ local function layoutTrainerRows(card, width, offers, reset)
         row.price:SetText(fee(offer.cost))
         row.arrow:SetShown(offer.destination~=nil)
         row:SetEnabled(offer.destination~=nil or offer.plan==true)
-        place(row,card.list,0,(i-1)*rowHeight,listWidth,rowHeight)
+        place(row,card.list,0,0,listWidth,rowHeight)
+        rowHeight=math.max(rowHeight,math.ceil(row.label:GetStringHeight()+row.trainer:GetStringHeight()+8),
+            math.ceil(row.price:GetStringHeight()+6))
         row:Show()
     end
+    card.trainerRowHeight=rowHeight
+    local listHeight=#offers*rowHeight
+    local visibleHeight=math.min(#offers,5)*rowHeight
+    card.listLimit=listHeight-visibleHeight
+    place(card.viewport,card.detail,9,5,listWidth,visibleHeight)
+    card.list:SetSize(listWidth,listHeight)
+    for i=1,#offers do place(card.rows[i],card.list,0,(i-1)*rowHeight,listWidth,rowHeight)end
     for i=#offers+1,#card.rows do card.rows[i]:Hide() end
-    local position=card.viewport:GetVerticalScroll() or 0
-    card.viewport:SetVerticalScroll(reset and 0 or math.min(position,card.listLimit))
+    card.viewport:SetVerticalScroll(reset and 0 or math.min(position*rowHeight,card.listLimit))
     return visibleHeight+8
 end
 

@@ -16,7 +16,7 @@ The active Ragefire Chasm illustration is original Grinding Forever artwork regi
 Sunken Temple uses Santiago Reyes’s Pit of Refuse, Hall of Serpents, Entrance Hall, and Hall of the Cursed. The original artwork and embedded credits are retained.
 https://www.sreyesmaps.com/mapas/templo-de-atal-hakkar
 
-Pit of Sacrifice is original Grinding Forever artwork. Visible chamber outlines reference the shadow layer on Santiago Reyes’s Hall of the Cursed. The concealed areas and main stair use the WoW Forever client layout.
+The retained legacy DungeonMapForeverTemplePitOfSacrifice.tga is original Grinding Forever artwork. Its visible chamber outlines reference the shadow layer on Santiago Reyes’s Hall of the Cursed; concealed areas and the main stair use the WoW Forever client layout.
 
 Prismatic Talus uses Santiago Reyes’s artwork.
 
@@ -35,3 +35,7 @@ Hall of Thanes: Santiago Reyes’s Atlas de Azeroth: Forever artwork, already bu
 Molten Core: Blizzard client map artwork, reused from the installed Grinding Forever bundle.
 
 Blackwing Lair: Blizzard client map artwork, reused from the installed Grinding Forever bundle.
+
+DungeonMapRagefireLandscape.tga — Grinding Forever landscape composition from the owner-approved 1536x1024 artwork. The composition follows the reviewed Forever floor layout and crossing, with warm parchment, lava coloration, pencil scenery and the approved barrier/entrance treatment. The complete image is preserved without resampling; inherited display anchors are normalized to the full canvas. Blizzard creature and corner references come from the already-bundled DungeonMapBlizzardRagefire.tga; the title banner is retained. This generated/edited composition is not a pixel-identical copy of native artwork or the previous floor. Prior assets and credits are retained.
+
+DungeonMapForeverTemplePitOfSacrificeLandscape.tga — Grinding Forever presentation based on the bundled Blizzard DungeonMap220.blp main-floor reference. Approved changes include the Classic northern approach and open curved stair end, neutral room material and removal of baked boss skull glyphs. Left/right margin drawings derive from Santiago Reyes’s credited Pit of Refuse and Entrance Hall artwork, used with the permission acknowledged above. Original Santiago sheets, embedded credits and the legacy GF portrait are retained. Boss markers remain approximate encounter-area guides; the new display layout does not establish exact server spawn coordinates or live player projection.

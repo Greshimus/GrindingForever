@@ -6223,3 +6223,6643 @@ ns.RecipeSourceFacts.mobMaterials = {
     [221169] = {1081, 3174},
     [271898] = {1081, 3174},
 }
+
+
+-- GF_SFK_RECIPE_INDEX_20261119_BEGIN
+-- Verified missing SFK recipe identities; old rows/indices remain untouched.
+-- Crafting links are explicit recipe Teaches/create links; materials use captured client70938.
+do
+ local facts=ns.RecipeSourceFacts
+ local professions={"Alchemy","Blacksmithing","Cooking","Enchanting","Engineering","Leatherworking","Mining","Tailoring","First Aid"}
+ for index,name in ipairs(professions) do if not facts.professions[index] then facts.professions[index]=name end end
+ local entities={[3864]={"Fel Steed","Shadowfang Keep"},[3865]={"Shadow Charger","Shadowfang Keep"},[3914]={"Rethilgore","Shadowfang Keep"},[3872]={"Deathsworn Captain","Shadowfang Keep"},[3886]={"Razorclaw the Butcher","Shadowfang Keep"},[3887]={"Baron Silverlaine","Shadowfang Keep"},[3927]={"Wolf Master Nandos","Shadowfang Keep"},[4274]={"Fenrus the Devourer","Shadowfang Keep"},[4275]={"Archmage Arugal","Shadowfang Keep"},[4278]={"Commander Springvale","Shadowfang Keep"},[4279]={"Odo the Blindwatcher","Shadowfang Keep"}}
+ for npc,entry in pairs(entities) do if not facts.entities.Drop[npc] then facts.entities.Drop[npc]=entry end end
+ local additions={{2,1252239,"Protector's Chain Shirt",80,251342,250490,{{"Drop",3864},{"Drop",3865},{"Drop",3914}}},{2,1252240,"Acolyte's Chain Shirt",80,251343,250491,{{"Drop",3864},{"Drop",3865},{"Drop",3914}}},{2,1252241,"Crusader's Chain Shirt",80,251344,250492,{{"Drop",3864},{"Drop",3865},{"Drop",3914}}},{2,1252242,"Veteran's Chain Leggings",95,251345,250493,{{"Drop",3865},{"Drop",3872},{"Drop",3886},{"Drop",3887},{"Drop",3927},{"Drop",4274},{"Drop",4275},{"Drop",4278},{"Drop",4279}}},{2,1252243,"Guard's Chain Leggings",95,251346,250494,{{"Drop",3865},{"Drop",3886},{"Drop",3887},{"Drop",3927},{"Drop",4274},{"Drop",4275},{"Drop",4278},{"Drop",4279}}},{2,1252244,"Protector's Chain Leggings",95,251347,250495,{{"Drop",3865},{"Drop",3872},{"Drop",3886},{"Drop",3887},{"Drop",3927},{"Drop",4274},{"Drop",4275},{"Drop",4278},{"Drop",4279}}},{2,1252245,"Acolyte's Chain Leggings",95,251348,250496,{{"Drop",3865},{"Drop",3872},{"Drop",3886},{"Drop",3887},{"Drop",3927},{"Drop",4274},{"Drop",4275},{"Drop",4278},{"Drop",4279}}},{2,1252246,"Crusader's Chain Leggings",95,251349,250497,{{"Drop",3865},{"Drop",3886},{"Drop",3887},{"Drop",3927},{"Drop",4274},{"Drop",4275},{"Drop",4278},{"Drop",4279}}},{6,1255113,"Defender's Leather Pants",100,252794,252445,{{"Drop",3865},{"Drop",3872},{"Drop",3886},{"Drop",3887},{"Drop",3927},{"Drop",4274},{"Drop",4275},{"Drop",4278},{"Drop",4279}}},{6,1255112,"Totemic Leather Pants",100,252795,252446,{{"Drop",3865},{"Drop",3872},{"Drop",3886},{"Drop",3887},{"Drop",3927},{"Drop",4274},{"Drop",4275},{"Drop",4278},{"Drop",4279}}},{9,1262996,"Toxin Study",140,273105,279940,{{"Drop",4278}}}}
+ local indexed={}
+ for _,row in ipairs(facts.recipes) do if row[5] then indexed[row[5]]=true end end
+ for _,row in ipairs(additions) do
+  if not indexed[row[5]] then
+   local index=#facts.recipes+1
+   facts.recipes[index]=row;indexed[row[5]]=true
+   for _,item in ipairs({row[5],row[6]}) do
+    facts.byItem[item]=facts.byItem[item] or {}
+    facts.byItem[item][#facts.byItem[item]+1]=index
+   end
+  end
+ end
+ facts.supplementalRecipeEvidence=facts.supplementalRecipeEvidence or {}
+ local evidence={[251342]={itemURL="https://www.wowhead.com/forever/item=251342/plans-protectors-chain-shirt",spellURL="https://www.wowhead.com/forever/spell=1252239/protectors-chain-shirt",productURL="https://www.wowhead.com/forever/item=250490/protectors-chain-shirt",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36508",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3864,3865,3914},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[251343]={itemURL="https://www.wowhead.com/forever/item=251343/plans-acolytes-chain-shirt",spellURL="https://www.wowhead.com/forever/spell=1252240/acolytes-chain-shirt",productURL="https://www.wowhead.com/forever/item=250491/acolytes-chain-shirt",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36509",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3864,3865,3914},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[251344]={itemURL="https://www.wowhead.com/forever/item=251344/plans-crusaders-chain-shirt",spellURL="https://www.wowhead.com/forever/spell=1252241/crusaders-chain-shirt",productURL="https://www.wowhead.com/forever/item=250492/crusaders-chain-shirt",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36510",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3864,3865,3914},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[251345]={itemURL="https://www.wowhead.com/forever/item=251345/plans-veterans-chain-leggings",spellURL="https://www.wowhead.com/forever/spell=1252242/veterans-chain-leggings",productURL="https://www.wowhead.com/forever/item=250493/veterans-chain-leggings",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36511",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3865,3872,3886,3887,3927,4274,4275,4278,4279},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[251346]={itemURL="https://www.wowhead.com/forever/item=251346/plans-guards-chain-leggings",spellURL="https://www.wowhead.com/forever/spell=1252243/guards-chain-leggings",productURL="https://www.wowhead.com/forever/item=250494/guards-chain-leggings",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36512",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3865,3886,3887,3927,4274,4275,4278,4279},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[251347]={itemURL="https://www.wowhead.com/forever/item=251347/plans-protectors-chain-leggings",spellURL="https://www.wowhead.com/forever/spell=1252244/protectors-chain-leggings",productURL="https://www.wowhead.com/forever/item=250495/protectors-chain-leggings",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36513",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3865,3872,3886,3887,3927,4274,4275,4278,4279},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[251348]={itemURL="https://www.wowhead.com/forever/item=251348/plans-acolytes-chain-leggings",spellURL="https://www.wowhead.com/forever/spell=1252245/acolytes-chain-leggings",productURL="https://www.wowhead.com/forever/item=250496/acolytes-chain-leggings",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36514",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3865,3872,3886,3887,3927,4274,4275,4278,4279},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[251349]={itemURL="https://www.wowhead.com/forever/item=251349/plans-crusaders-chain-leggings",spellURL="https://www.wowhead.com/forever/spell=1252246/crusaders-chain-leggings",productURL="https://www.wowhead.com/forever/item=250497/crusaders-chain-leggings",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36515",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3865,3886,3887,3927,4274,4275,4278,4279},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[252794]={itemURL="https://www.wowhead.com/forever/item=252794/pattern-defenders-leather-pants",spellURL="https://www.wowhead.com/forever/spell=1255113/defenders-leather-pants",productURL="https://www.wowhead.com/forever/item=252445/defenders-leather-pants",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36752",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3865,3872,3886,3887,3927,4274,4275,4278,4279},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[252795]={itemURL="https://www.wowhead.com/forever/item=252795/pattern-totemic-leather-pants",spellURL="https://www.wowhead.com/forever/spell=1255112/totemic-leather-pants",productURL="https://www.wowhead.com/forever/item=252446/totemic-leather-pants",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="36753",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={3865,3872,3886,3887,3927,4274,4275,4278,4279},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"},[273105]={itemURL="https://www.wowhead.com/forever/item=273105/blueprint-toxin-study",spellURL="https://www.wowhead.com/forever/spell=1262996/toxin-study",productURL="https://www.wowhead.com/forever/item=279940/toxin-study",reagentEvidence={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",record_key="38713",source_url="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},sourceNPCIDs={4278},relationshipSource="Existing QuestieDB Forever item source fields, corroborated by compiled ForeverCatalog"}}
+ for item,entry in pairs(evidence) do facts.supplementalRecipeEvidence[item]=entry end
+end
+-- GF_SFK_RECIPE_INDEX_20261119_END
+
+
+-- Approved bounded RS publication: exact teaching links plus separately sourced products (2026-11-19).
+-- Keep these in the acquisition prefix so the existing ingredient exporter can regenerate their materials.
+do
+ local facts=ns.RecipeSourceFacts
+ facts.publicationEvidence=facts.publicationEvidence or {}
+ facts.recipes[#facts.recipes+1]={3,1250144,"Bat Hachee",275,250175,250067,{{"Drop",8602}}}
+ facts.entities.Drop[8602]=facts.entities.Drop[8602] or {"Monstrous Plaguebat","Eastern Plaguelands",1423,66.58,26.63}
+ facts.publicationEvidence[250175]={teaching={{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_ItemXItemEffect",record_key="145219",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/ItemXItemEffect.1.60.1.70959.csv"},{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_ItemEffect",record_key="214231",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/ItemEffect.1.60.1.70959.csv"},{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_SkillLineAbility",record_key="54492",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/SkillLineAbility.1.60.1.70959.csv"}},product={source="GuildAssistant Database1.9.1, separately captured Wago/client data",build="1.60.1.70938",fetched="2026-11-17",license="MIT",sourceURL="https://www.curseforge.com/wow/addons/guildassistant-database/files/9664337",archiveSHA256="4523ab151e3035c0f57112462009f9b7ea406efd701b9432a79bbbfa816d5fc3",path="GuildAssistantDatabase/Data.lua",line=7071,recordSpellID=1250144,formatVerification="Core.lua recipe parser: field5 is created item,min,max; field9 is recipe item",relationNotFromNew70959Batch=true,materialsAgreeWithStored70938=true},materials={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",recordKey="36393",sourceURL="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},productID=250067,outputQuantity={minimum=1,maximum=1},sourceNPCIDs={8602}}
+ facts.recipes[#facts.recipes+1]={3,1250147,"Bear Bruscitti",275,250178,250070,{{"Drop",7446}}}
+ facts.entities.Drop[7446]=facts.entities.Drop[7446] or {"Rabid Shardtooth","Winterspring",1452,57.63,70.83}
+ facts.publicationEvidence[250178]={teaching={{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_ItemXItemEffect",record_key="145225",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/ItemXItemEffect.1.60.1.70959.csv"},{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_ItemEffect",record_key="214237",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/ItemEffect.1.60.1.70959.csv"},{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_SkillLineAbility",record_key="54495",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/SkillLineAbility.1.60.1.70959.csv"}},product={source="GuildAssistant Database1.9.1, separately captured Wago/client data",build="1.60.1.70938",fetched="2026-11-17",license="MIT",sourceURL="https://www.curseforge.com/wow/addons/guildassistant-database/files/9664337",archiveSHA256="4523ab151e3035c0f57112462009f9b7ea406efd701b9432a79bbbfa816d5fc3",path="GuildAssistantDatabase/Data.lua",line=7072,recordSpellID=1250147,formatVerification="Core.lua recipe parser: field5 is created item,min,max; field9 is recipe item",relationNotFromNew70959Batch=true,materialsAgreeWithStored70938=true},materials={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",recordKey="36396",sourceURL="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},productID=250070,outputQuantity={minimum=1,maximum=1},sourceNPCIDs={7446}}
+ facts.recipes[#facts.recipes+1]={1,1250776,"Potion of Predatory Senses",195,250363,250327,{{"Drop",4684}}}
+ facts.entities.Drop[4684]=facts.entities.Drop[4684] or {"Nether Sorceress","Desolace",1443,50.64,82.57}
+ facts.publicationEvidence[250363]={teaching={{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_ItemXItemEffect",record_key="145322",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/ItemXItemEffect.1.60.1.70959.csv"},{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_ItemEffect",record_key="214340",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/ItemEffect.1.60.1.70959.csv"},{source="AllTheThings Forever client tables",revision="1.60.1.70959:7802557491fffdaaf893a389dc31b2f82b0b7fb1",kind="db2_snapshot_SkillLineAbility",record_key="54534",source_url="https://github.com/ATTWoWAddon/AllTheThings/blob/7802557491fffdaaf893a389dc31b2f82b0b7fb1/.contrib/.db/forever/.config/.wago/SkillLineAbility.1.60.1.70959.csv"}},product={source="GuildAssistant Database1.9.1, separately captured Wago/client data",build="1.60.1.70938",fetched="2026-11-17",license="MIT",sourceURL="https://www.curseforge.com/wow/addons/guildassistant-database/files/9664337",archiveSHA256="4523ab151e3035c0f57112462009f9b7ea406efd701b9432a79bbbfa816d5fc3",path="GuildAssistantDatabase/Data.lua",line=94,recordSpellID=1250776,formatVerification="Core.lua recipe parser: field5 is created item,min,max; field9 is recipe item",relationNotFromNew70959Batch=true,materialsAgreeWithStored70938=true},materials={source="Wago client DB2",revision="1.60.1.70938",kind="db2_snapshot_SpellReagents",recordKey="36410",sourceURL="https://wago.tools/db2/SpellReagents/csv?build=1.60.1.70938"},productID=250327,outputQuantity={minimum=1,maximum=1},sourceNPCIDs={4684}}
+end
+
+-- GF_REVIEWED_VENDOR_COSTS_20261119_BEGIN
+-- Source-qualified offer facts; raw joins run offline, never while RS opens.
+do
+ local costs={};ns.RecipeSourceFacts.vendorOfferCosts=costs
+ local evidence={}
+ local components={}
+ components[1]={{["amount"]=500,["kind"]="coin"}}
+ evidence[1]={["componentEvidence"]=nil,["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="21099",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["line"]=122,["observedFaction"]="Alliance",["source"]="GitM firsthand vendor page",["sourceDate"]="2026-11-12",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[21099]={}
+ costs[21099][248198]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=false,["hasExtendedCost"]=false,["merchantFavor"]=false,["price"]=500,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=true,costComponents=components[1],offerCostEvidence=evidence[1]}
+ costs[21099][256731]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["hasExtendedCost"]=false,["merchantFavor"]=false,["price"]=500,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=true,costComponents=components[1],offerCostEvidence=evidence[1]}
+ components[2]={{["amount"]=5000,["kind"]="coin"}}
+ evidence[2]={["componentEvidence"]=nil,["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="21219",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["line"]=123,["observedFaction"]="Alliance",["source"]="GitM firsthand vendor page",["sourceDate"]="2026-11-12",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[21219]={}
+ costs[21219][248198]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=false,["hasExtendedCost"]=false,["merchantFavor"]=false,["price"]=5000,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=true,costComponents=components[2],offerCostEvidence=evidence[2]}
+ costs[21219][256731]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["hasExtendedCost"]=false,["merchantFavor"]=false,["price"]=5000,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=true,costComponents=components[2],offerCostEvidence=evidence[2]}
+ components[3]={{["amount"]=45,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[3]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249476",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={36},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249476]={}
+ costs[249476][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[3]}
+ costs[249476][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[3]}
+ evidence[4]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249477",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={34},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249477]={}
+ costs[249477][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[4]}
+ costs[249477][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[4]}
+ evidence[5]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249478",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={35},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249478]={}
+ costs[249478][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[5]}
+ costs[249478][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[5]}
+ evidence[6]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249479",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={27},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249479]={}
+ costs[249479][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[6]}
+ costs[249479][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[6]}
+ evidence[7]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249480",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={33},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249480]={}
+ costs[249480][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[7]}
+ costs[249480][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[7]}
+ evidence[8]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249481",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={32},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249481]={}
+ costs[249481][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[8]}
+ costs[249481][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[8]}
+ evidence[9]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249482",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={31},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249482]={}
+ costs[249482][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[9]}
+ costs[249482][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[9]}
+ evidence[10]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249483",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={28},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249483]={}
+ costs[249483][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[10]}
+ costs[249483][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[10]}
+ evidence[11]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249484",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={30},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249484]={}
+ costs[249484][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[11]}
+ costs[249484][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[11]}
+ evidence[12]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249485",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={29},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249485]={}
+ costs[249485][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[12]}
+ costs[249485][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[12]}
+ components[4]={{["amount"]=120,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[13]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249493",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={41},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249493]={}
+ costs[249493][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[13]}
+ costs[249493][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[13]}
+ evidence[14]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249494",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={40},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249494]={}
+ costs[249494][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[14]}
+ costs[249494][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[14]}
+ evidence[15]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249495",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={44},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249495]={}
+ costs[249495][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[15]}
+ costs[249495][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[15]}
+ evidence[16]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249496",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={39},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249496]={}
+ costs[249496][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[16]}
+ costs[249496][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[16]}
+ evidence[17]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249502",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={38},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249502]={}
+ costs[249502][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[17]}
+ costs[249502][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[17]}
+ evidence[18]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249503",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={37},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249503]={}
+ costs[249503][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[18]}
+ costs[249503][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[18]}
+ evidence[19]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249504",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={43},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249504]={}
+ costs[249504][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[19]}
+ costs[249504][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[19]}
+ evidence[20]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249505",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={42},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249505]={}
+ costs[249505][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[20]}
+ costs[249505][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[20]}
+ evidence[21]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249506",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={47},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249506]={}
+ costs[249506][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[21]}
+ costs[249506][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[21]}
+ evidence[22]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249507",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={46},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249507]={}
+ costs[249507][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[22]}
+ costs[249507][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[22]}
+ evidence[23]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249508",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={49},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249508]={}
+ costs[249508][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[23]}
+ costs[249508][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[23]}
+ evidence[24]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249509",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={48},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249509]={}
+ costs[249509][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[24]}
+ costs[249509][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[24]}
+ evidence[25]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249510",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={45},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249510]={}
+ costs[249510][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[25]}
+ costs[249510][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[25]}
+ components[5]={{["amount"]=240,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[26]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249525",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["currencyAmount"]=240,["evidenceType"]="Reference-site currency-for table, readable item name and amount; not a native player vendor observation",["file"]="C:\\Users\\cgres\\AppData\\Local\\Temp\\codex-clipboard-85706217-bcc3-4666-9dc7-b2a73079413d.png",["itemID"]=249525,["sha256"]="a8dc41f9e99aff1b6def79f2573e0bdfa1336ccbed4fa1e59b50f56ced6f1ae7",["source"]="Owner-supplied reference screenshot",["suppliedDate"]="2026-11-19"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:a8dc41f9e99aff1b6def79f2573e0bdfa1336ccbed4fa1e59b50f56ced6f1ae7"}
+ costs[249525]={}
+ costs[249525][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:a8dc41f9e99aff1b6def79f2573e0bdfa1336ccbed4fa1e59b50f56ced6f1ae7",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[26]}
+ costs[249525][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:a8dc41f9e99aff1b6def79f2573e0bdfa1336ccbed4fa1e59b50f56ced6f1ae7",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[26]}
+ evidence[27]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249526",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["currencyAmount"]=240,["evidenceType"]="Reference-site currency-for table, readable item name and amount; not a native player vendor observation",["file"]="C:\\Users\\cgres\\AppData\\Local\\Temp\\codex-clipboard-85706217-bcc3-4666-9dc7-b2a73079413d.png",["itemID"]=249526,["sha256"]="a8dc41f9e99aff1b6def79f2573e0bdfa1336ccbed4fa1e59b50f56ced6f1ae7",["source"]="Owner-supplied reference screenshot",["suppliedDate"]="2026-11-19"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:a8dc41f9e99aff1b6def79f2573e0bdfa1336ccbed4fa1e59b50f56ced6f1ae7"}
+ costs[249526]={}
+ costs[249526][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:a8dc41f9e99aff1b6def79f2573e0bdfa1336ccbed4fa1e59b50f56ced6f1ae7",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[27]}
+ costs[249526][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:a8dc41f9e99aff1b6def79f2573e0bdfa1336ccbed4fa1e59b50f56ced6f1ae7",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[27]}
+ evidence[28]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249529",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={53},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249529]={}
+ costs[249529][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[28]}
+ costs[249529][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[28]}
+ evidence[29]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249530",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={66},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249530]={}
+ costs[249530][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[29]}
+ costs[249530][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[29]}
+ evidence[30]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249532",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={52},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249532]={}
+ costs[249532][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[30]}
+ costs[249532][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[30]}
+ evidence[31]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249534",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={56},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249534]={}
+ costs[249534][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[31]}
+ costs[249534][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[31]}
+ evidence[32]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249535",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={54},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249535]={}
+ costs[249535][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[32]}
+ costs[249535][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[32]}
+ evidence[33]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249536",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={55},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249536]={}
+ costs[249536][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[33]}
+ costs[249536][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[33]}
+ components[6]={{["amount"]=180,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[34]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249537",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={50},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249537]={}
+ costs[249537][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[34]}
+ costs[249537][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[34]}
+ evidence[35]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249538",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={57},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249538]={}
+ costs[249538][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[35]}
+ costs[249538][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[35]}
+ evidence[36]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249539",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={58},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249539]={}
+ costs[249539][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[36]}
+ costs[249539][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[36]}
+ components[7]={{["amount"]=30,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[37]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249885",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={107},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249885]={}
+ costs[249885][248198]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[37]}
+ costs[249885][256731]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[37]}
+ evidence[38]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249886",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={109},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249886]={}
+ costs[249886][248198]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[38]}
+ costs[249886][256731]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[38]}
+ evidence[39]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249887",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={108},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249887]={}
+ costs[249887][248198]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[39]}
+ costs[249887][256731]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[39]}
+ components[8]={{["amount"]=60,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[40]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249888",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={111},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249888]={}
+ costs[249888][248198]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[40]}
+ costs[249888][256731]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[40]}
+ evidence[41]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249889",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={110},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249889]={}
+ costs[249889][248198]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[41]}
+ costs[249889][256731]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[41]}
+ components[9]={{["amount"]=90,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[42]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="249890",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={112},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[249890]={}
+ costs[249890][248198]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[42]}
+ costs[249890][256731]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[42]}
+ evidence[43]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250364",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={88},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250364]={}
+ costs[250364][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[43]}
+ costs[250364][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[43]}
+ evidence[44]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250365",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={86},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250365]={}
+ costs[250365][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[44]}
+ costs[250365][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[44]}
+ evidence[45]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250367",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={78},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250367]={}
+ costs[250367][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[45]}
+ costs[250367][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[45]}
+ evidence[46]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250369",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={84},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250369]={}
+ costs[250369][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[46]}
+ costs[250369][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[46]}
+ evidence[47]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250371",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={85},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250371]={}
+ costs[250371][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[47]}
+ costs[250371][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[47]}
+ evidence[48]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250372",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={96},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250372]={}
+ costs[250372][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[48]}
+ costs[250372][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[48]}
+ evidence[49]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250373",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={93},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250373]={}
+ costs[250373][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[49]}
+ costs[250373][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[49]}
+ evidence[50]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250374",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={89},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250374]={}
+ costs[250374][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[50]}
+ costs[250374][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[50]}
+ evidence[51]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250376",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={79},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250376]={}
+ costs[250376][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[51]}
+ costs[250376][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[51]}
+ evidence[52]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250377",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={82},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250377]={}
+ costs[250377][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[52]}
+ costs[250377][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[52]}
+ evidence[53]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250378",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={76},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250378]={}
+ costs[250378][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[53]}
+ costs[250378][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[53]}
+ evidence[54]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250379",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={97},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250379]={}
+ costs[250379][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[54]}
+ costs[250379][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[54]}
+ evidence[55]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250381",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={73},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250381]={}
+ costs[250381][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[55]}
+ costs[250381][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[55]}
+ evidence[56]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250383",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={81},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250383]={}
+ costs[250383][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[56]}
+ costs[250383][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[56]}
+ evidence[57]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250384",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={90},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250384]={}
+ costs[250384][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[57]}
+ costs[250384][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[57]}
+ evidence[58]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250386",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={91},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250386]={}
+ costs[250386][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[58]}
+ costs[250386][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[58]}
+ evidence[59]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250387",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={100},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250387]={}
+ costs[250387][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[59]}
+ costs[250387][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[59]}
+ evidence[60]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250388",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={77},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250388]={}
+ costs[250388][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[60]}
+ costs[250388][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[60]}
+ evidence[61]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250978",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={74},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250978]={}
+ costs[250978][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[61]}
+ costs[250978][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[61]}
+ evidence[62]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250981",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={98},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250981]={}
+ costs[250981][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[62]}
+ costs[250981][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[62]}
+ evidence[63]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250984",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={80},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250984]={}
+ costs[250984][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[63]}
+ costs[250984][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[63]}
+ evidence[64]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250987",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={99},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250987]={}
+ costs[250987][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[64]}
+ costs[250987][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[64]}
+ evidence[65]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250990",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={75},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250990]={}
+ costs[250990][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[65]}
+ costs[250990][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[65]}
+ evidence[66]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250993",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={94},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250993]={}
+ costs[250993][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[66]}
+ costs[250993][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[66]}
+ evidence[67]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250994",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={92},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250994]={}
+ costs[250994][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[67]}
+ costs[250994][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[67]}
+ evidence[68]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250995",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={87},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250995]={}
+ costs[250995][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[68]}
+ costs[250995][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[68]}
+ evidence[69]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="item",["record_key"]="250996",["revision"]="e19dfdf8528334ea63da0ecc4e291c134c0fc266",["source"]="QuestieDB Forever",["source_url"]="https://github.com/Questie/QuestieDB/releases/tag/v1.0.14"},["priceEvidence"]={{["availabilityNote"]="Historical reference cost; not present in newerNov12vendor list. Current availability unconfirmed; preserve prior positive item/source facts.",["observedFaction"]="Alliance",["source"]="METAMMO firsthand beta vendor screenshots",["sourceDate"]="2026-10-15",["sourceURL"]="https://metammo.com/wow-forever/merchants-favor"},{["currencyAmount"]=120,["itemID"]=250996,["source"]="WFT Beta Log",["sourceDate"]="2026-09-20",["sourceURL"]="https://wowforevertalents.com/professions/merchants-favor/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://metammo.com/wow-forever/merchants-favor"}
+ costs[250996]={}
+ costs[250996][248196]={["costAvailabilityNote"]="Historical reference; current availability unconfirmed",["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="historical-reference",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://metammo.com/wow-forever/merchants-favor",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[69]}
+ costs[250996][256729]={["costAvailabilityNote"]="Historical reference; current availability unconfirmed",["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="historical-reference",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://metammo.com/wow-forever/merchants-favor",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[69]}
+ evidence[70]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250997",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={83},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250997]={}
+ costs[250997][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[70]}
+ costs[250997][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[70]}
+ evidence[71]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="250998",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={95},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[250998]={}
+ costs[250998][248196]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[71]}
+ costs[250998][256729]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[71]}
+ evidence[72]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251355",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={336},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251355]={}
+ costs[251355][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[72]}
+ costs[251355][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[72]}
+ evidence[73]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251356",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={334},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251356]={}
+ costs[251356][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[73]}
+ costs[251356][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[73]}
+ evidence[74]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251357",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={335},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251357]={}
+ costs[251357][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[74]}
+ costs[251357][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[74]}
+ evidence[75]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251358",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={332},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251358]={}
+ costs[251358][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[75]}
+ costs[251358][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[75]}
+ evidence[76]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251359",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={333},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251359]={}
+ costs[251359][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[76]}
+ costs[251359][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[76]}
+ evidence[77]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251360",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={331},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251360]={}
+ costs[251360][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[77]}
+ costs[251360][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[77]}
+ evidence[78]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251361",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={329},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251361]={}
+ costs[251361][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[78]}
+ costs[251361][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[78]}
+ evidence[79]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251362",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={330},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251362]={}
+ costs[251362][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[79]}
+ costs[251362][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[79]}
+ evidence[80]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251363",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={327},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251363]={}
+ costs[251363][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[80]}
+ costs[251363][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[80]}
+ evidence[81]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251364",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={351},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251364]={}
+ costs[251364][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[81]}
+ costs[251364][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[81]}
+ evidence[82]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251365",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={324},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251365]={}
+ costs[251365][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[82]}
+ costs[251365][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[82]}
+ evidence[83]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251366",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={322},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251366]={}
+ costs[251366][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[83]}
+ costs[251366][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[83]}
+ evidence[84]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251367",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={323},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251367]={}
+ costs[251367][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[84]}
+ costs[251367][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[84]}
+ evidence[85]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251368",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={325},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251368]={}
+ costs[251368][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[85]}
+ costs[251368][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[85]}
+ evidence[86]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251369",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={326},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251369]={}
+ costs[251369][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[86]}
+ costs[251369][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[86]}
+ evidence[87]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251370",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={346},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251370]={}
+ costs[251370][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[87]}
+ costs[251370][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[87]}
+ evidence[88]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251371",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={344},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251371]={}
+ costs[251371][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[88]}
+ costs[251371][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[88]}
+ evidence[89]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251372",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={345},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251372]={}
+ costs[251372][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[89]}
+ costs[251372][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[89]}
+ evidence[90]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251373",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={342},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251373]={}
+ costs[251373][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[90]}
+ costs[251373][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[90]}
+ evidence[91]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251374",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={343},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251374]={}
+ costs[251374][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[91]}
+ costs[251374][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[91]}
+ evidence[92]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251375",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={328},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251375]={}
+ costs[251375][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[92]}
+ costs[251375][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[92]}
+ evidence[93]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251376",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={349},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251376]={}
+ costs[251376][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[93]}
+ costs[251376][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[93]}
+ evidence[94]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251377",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={350},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251377]={}
+ costs[251377][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[94]}
+ costs[251377][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[94]}
+ evidence[95]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251378",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={347},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251378]={}
+ costs[251378][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[95]}
+ costs[251378][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[95]}
+ evidence[96]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251379",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={348},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251379]={}
+ costs[251379][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[96]}
+ costs[251379][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[96]}
+ evidence[97]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251380",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={341},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251380]={}
+ costs[251380][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[97]}
+ costs[251380][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[97]}
+ evidence[98]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251381",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={339},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251381]={}
+ costs[251381][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[98]}
+ costs[251381][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[98]}
+ evidence[99]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251382",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={340},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251382]={}
+ costs[251382][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[99]}
+ costs[251382][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[99]}
+ evidence[100]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251383",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={337},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251383]={}
+ costs[251383][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[100]}
+ costs[251383][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[100]}
+ evidence[101]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251384",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={338},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251384]={}
+ costs[251384][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[101]}
+ costs[251384][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[101]}
+ evidence[102]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251413",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={370},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251413]={}
+ costs[251413][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[102]}
+ costs[251413][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[102]}
+ evidence[103]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251414",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={372},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251414]={}
+ costs[251414][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[103]}
+ costs[251414][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[103]}
+ evidence[104]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251415",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={373},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251415]={}
+ costs[251415][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[104]}
+ costs[251415][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[104]}
+ evidence[105]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251416",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={371},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251416]={}
+ costs[251416][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[105]}
+ costs[251416][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[105]}
+ evidence[106]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251417",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={369},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251417]={}
+ costs[251417][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[106]}
+ costs[251417][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[106]}
+ evidence[107]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251418",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={354},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251418]={}
+ costs[251418][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[107]}
+ costs[251418][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[107]}
+ evidence[108]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251419",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={356},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251419]={}
+ costs[251419][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[108]}
+ costs[251419][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[108]}
+ evidence[109]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251420",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={362},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251420]={}
+ costs[251420][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[109]}
+ costs[251420][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[109]}
+ evidence[110]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251421",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={355},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251421]={}
+ costs[251421][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[110]}
+ costs[251421][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[110]}
+ evidence[111]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251422",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={353},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251422]={}
+ costs[251422][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[111]}
+ costs[251422][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[111]}
+ evidence[112]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251423",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={375},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251423]={}
+ costs[251423][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[112]}
+ costs[251423][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[112]}
+ evidence[113]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251424",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={377},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251424]={}
+ costs[251424][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[113]}
+ costs[251424][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[113]}
+ evidence[114]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251425",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={365},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251425]={}
+ costs[251425][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[114]}
+ costs[251425][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[114]}
+ evidence[115]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251426",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={376},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251426]={}
+ costs[251426][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[115]}
+ costs[251426][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[115]}
+ evidence[116]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251427",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={374},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251427]={}
+ costs[251427][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[116]}
+ costs[251427][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[116]}
+ evidence[117]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251428",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={359},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251428]={}
+ costs[251428][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[117]}
+ costs[251428][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[117]}
+ evidence[118]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251429",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={361},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251429]={}
+ costs[251429][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[118]}
+ costs[251429][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[118]}
+ evidence[119]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251430",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={357},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251430]={}
+ costs[251430][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[119]}
+ costs[251430][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[119]}
+ evidence[120]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251431",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={360},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251431]={}
+ costs[251431][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[120]}
+ costs[251431][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[120]}
+ evidence[121]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251432",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={358},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251432]={}
+ costs[251432][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[121]}
+ costs[251432][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[121]}
+ evidence[122]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251433",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={380},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251433]={}
+ costs[251433][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[122]}
+ costs[251433][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[122]}
+ evidence[123]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251434",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={367},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251434]={}
+ costs[251434][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[123]}
+ costs[251434][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[123]}
+ evidence[124]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251435",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={368},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251435]={}
+ costs[251435][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[124]}
+ costs[251435][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[124]}
+ evidence[125]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251436",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={366},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251436]={}
+ costs[251436][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[125]}
+ costs[251436][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[125]}
+ evidence[126]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251437",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={364},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251437]={}
+ costs[251437][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[126]}
+ costs[251437][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[126]}
+ evidence[127]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251447",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={382},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251447]={}
+ costs[251447][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[127]}
+ costs[251447][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[127]}
+ evidence[128]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251448",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={384},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251448]={}
+ costs[251448][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[128]}
+ costs[251448][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[128]}
+ evidence[129]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251449",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={383},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251449]={}
+ costs[251449][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[129]}
+ costs[251449][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[129]}
+ evidence[130]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251465",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={379},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251465]={}
+ costs[251465][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[130]}
+ costs[251465][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[130]}
+ evidence[131]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251466",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={378},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251466]={}
+ costs[251466][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[131]}
+ costs[251466][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[131]}
+ evidence[132]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="251471",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=120,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={385},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[251471]={}
+ costs[251471][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[132]}
+ costs[251471][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=120,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[4],offerCostEvidence=evidence[132]}
+ evidence[133]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252765",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={134},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252765]={}
+ costs[252765][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[133]}
+ costs[252765][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[133]}
+ evidence[134]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252766",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={132},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252766]={}
+ costs[252766][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[134]}
+ costs[252766][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[134]}
+ evidence[135]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252767",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={135},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252767]={}
+ costs[252767][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[135]}
+ costs[252767][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[135]}
+ evidence[136]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252768",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={133},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252768]={}
+ costs[252768][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[136]}
+ costs[252768][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[136]}
+ evidence[137]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252769",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={131},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252769]={}
+ costs[252769][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[137]}
+ costs[252769][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[137]}
+ evidence[138]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252770",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={130},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252770]={}
+ costs[252770][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[138]}
+ costs[252770][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[138]}
+ evidence[139]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252777",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={161},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252777]={}
+ costs[252777][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[139]}
+ costs[252777][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[139]}
+ evidence[140]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252778",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={165},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252778]={}
+ costs[252778][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[140]}
+ costs[252778][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[140]}
+ evidence[141]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252779",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={163},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252779]={}
+ costs[252779][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[141]}
+ costs[252779][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[141]}
+ evidence[142]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252780",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={162},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252780]={}
+ costs[252780][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[142]}
+ costs[252780][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[142]}
+ evidence[143]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252781",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={136},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252781]={}
+ costs[252781][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[143]}
+ costs[252781][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[143]}
+ evidence[144]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252782",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={164},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252782]={}
+ costs[252782][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[144]}
+ costs[252782][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[144]}
+ evidence[145]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252786",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={156},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252786]={}
+ costs[252786][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[145]}
+ costs[252786][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[145]}
+ evidence[146]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252787",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={155},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252787]={}
+ costs[252787][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[146]}
+ costs[252787][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[146]}
+ evidence[147]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252788",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={160},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252788]={}
+ costs[252788][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[147]}
+ costs[252788][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[147]}
+ evidence[148]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252789",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={158},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252789]={}
+ costs[252789][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[148]}
+ costs[252789][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[148]}
+ evidence[149]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252790",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={157},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252790]={}
+ costs[252790][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[149]}
+ costs[252790][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[149]}
+ evidence[150]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252791",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={159},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252791]={}
+ costs[252791][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[150]}
+ costs[252791][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[150]}
+ evidence[151]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252798",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={154},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252798]={}
+ costs[252798][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[151]}
+ costs[252798][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[151]}
+ evidence[152]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252799",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={153},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252799]={}
+ costs[252799][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[152]}
+ costs[252799][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[152]}
+ evidence[153]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252800",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={149},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252800]={}
+ costs[252800][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[153]}
+ costs[252800][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[153]}
+ evidence[154]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252801",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={152},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252801]={}
+ costs[252801][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[154]}
+ costs[252801][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[154]}
+ evidence[155]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252802",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={151},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252802]={}
+ costs[252802][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[155]}
+ costs[252802][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[155]}
+ evidence[156]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252803",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={150},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252803]={}
+ costs[252803][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[156]}
+ costs[252803][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[156]}
+ evidence[157]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252805",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={145},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252805]={}
+ costs[252805][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[157]}
+ costs[252805][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[157]}
+ evidence[158]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252806",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={147},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252806]={}
+ costs[252806][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[158]}
+ costs[252806][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[158]}
+ evidence[159]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252807",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={146},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252807]={}
+ costs[252807][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[159]}
+ costs[252807][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[159]}
+ evidence[160]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252808",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={144},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252808]={}
+ costs[252808][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[160]}
+ costs[252808][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[160]}
+ evidence[161]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252809",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={148},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252809]={}
+ costs[252809][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[161]}
+ costs[252809][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[161]}
+ evidence[162]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252810",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={143},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252810]={}
+ costs[252810][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[162]}
+ costs[252810][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[162]}
+ evidence[163]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252820",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={140},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252820]={}
+ costs[252820][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[163]}
+ costs[252820][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[163]}
+ evidence[164]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252821",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={141},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252821]={}
+ costs[252821][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[164]}
+ costs[252821][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[164]}
+ evidence[165]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252822",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={138},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252822]={}
+ costs[252822][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[165]}
+ costs[252822][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[165]}
+ evidence[166]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252823",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={139},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252823]={}
+ costs[252823][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[166]}
+ costs[252823][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[166]}
+ evidence[167]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252824",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={137},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252824]={}
+ costs[252824][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[167]}
+ costs[252824][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[167]}
+ evidence[168]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252825",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={142},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252825]={}
+ costs[252825][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[168]}
+ costs[252825][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[168]}
+ evidence[169]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252834",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={169},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252834]={}
+ costs[252834][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[169]}
+ costs[252834][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[169]}
+ evidence[170]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252836",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={179},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252836]={}
+ costs[252836][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[170]}
+ costs[252836][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[170]}
+ evidence[171]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252837",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={178},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252837]={}
+ costs[252837][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[171]}
+ costs[252837][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[171]}
+ evidence[172]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252838",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={181},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252838]={}
+ costs[252838][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[172]}
+ costs[252838][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[172]}
+ evidence[173]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252839",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={176},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252839]={}
+ costs[252839][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[173]}
+ costs[252839][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[173]}
+ evidence[174]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252840",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={177},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252840]={}
+ costs[252840][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[174]}
+ costs[252840][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[174]}
+ evidence[175]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252841",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={180},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252841]={}
+ costs[252841][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[175]}
+ costs[252841][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[175]}
+ evidence[176]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252842",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={168},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252842]={}
+ costs[252842][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[176]}
+ costs[252842][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[176]}
+ evidence[177]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252848",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={173},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252848]={}
+ costs[252848][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[177]}
+ costs[252848][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[177]}
+ evidence[178]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252849",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={167},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252849]={}
+ costs[252849][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[178]}
+ costs[252849][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[178]}
+ evidence[179]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252850",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={170},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252850]={}
+ costs[252850][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[179]}
+ costs[252850][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[179]}
+ evidence[180]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252851",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={174},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252851]={}
+ costs[252851][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[180]}
+ costs[252851][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[180]}
+ evidence[181]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252852",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={175},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252852]={}
+ costs[252852][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[181]}
+ costs[252852][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[181]}
+ evidence[182]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252853",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={210},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252853]={}
+ costs[252853][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[182]}
+ costs[252853][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[182]}
+ evidence[183]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252854",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={187},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252854]={}
+ costs[252854][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[183]}
+ costs[252854][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[183]}
+ evidence[184]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252855",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={190},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252855]={}
+ costs[252855][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[184]}
+ costs[252855][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[184]}
+ evidence[185]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252856",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={189},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252856]={}
+ costs[252856][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[185]}
+ costs[252856][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[185]}
+ evidence[186]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252857",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={185},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252857]={}
+ costs[252857][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[186]}
+ costs[252857][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[186]}
+ evidence[187]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252860",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={197},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252860]={}
+ costs[252860][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[187]}
+ costs[252860][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[187]}
+ evidence[188]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252861",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={199},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252861]={}
+ costs[252861][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[188]}
+ costs[252861][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[188]}
+ evidence[189]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252862",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={198},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252862]={}
+ costs[252862][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[189]}
+ costs[252862][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[189]}
+ evidence[190]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252863",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={192},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252863]={}
+ costs[252863][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[190]}
+ costs[252863][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[190]}
+ evidence[191]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252864",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={193},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252864]={}
+ costs[252864][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[191]}
+ costs[252864][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[191]}
+ evidence[192]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252872",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={202},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252872]={}
+ costs[252872][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[192]}
+ costs[252872][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[192]}
+ evidence[193]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252873",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={184},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252873]={}
+ costs[252873][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[193]}
+ costs[252873][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[193]}
+ evidence[194]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252874",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={207},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252874]={}
+ costs[252874][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[194]}
+ costs[252874][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[194]}
+ evidence[195]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252875",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={203},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252875]={}
+ costs[252875][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[195]}
+ costs[252875][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[195]}
+ evidence[196]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252876",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={208},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252876]={}
+ costs[252876][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[196]}
+ costs[252876][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[196]}
+ evidence[197]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252900",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={166},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252900]={}
+ costs[252900][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[197]}
+ costs[252900][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[197]}
+ evidence[198]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252901",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={171},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252901]={}
+ costs[252901][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[198]}
+ costs[252901][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[198]}
+ evidence[199]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252902",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={182},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252902]={}
+ costs[252902][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[199]}
+ costs[252902][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[199]}
+ evidence[200]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252903",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={172},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252903]={}
+ costs[252903][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[200]}
+ costs[252903][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[200]}
+ evidence[201]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252904",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={186},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252904]={}
+ costs[252904][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[201]}
+ costs[252904][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[201]}
+ evidence[202]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252905",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={183},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252905]={}
+ costs[252905][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[202]}
+ costs[252905][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[202]}
+ evidence[203]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252906",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={188},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252906]={}
+ costs[252906][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[203]}
+ costs[252906][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[203]}
+ evidence[204]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252907",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={191},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252907]={}
+ costs[252907][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[204]}
+ costs[252907][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[204]}
+ evidence[205]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252910",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={200},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252910]={}
+ costs[252910][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[205]}
+ costs[252910][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[205]}
+ evidence[206]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252911",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={196},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252911]={}
+ costs[252911][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[206]}
+ costs[252911][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[206]}
+ evidence[207]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252912",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={194},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252912]={}
+ costs[252912][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[207]}
+ costs[252912][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[207]}
+ evidence[208]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252913",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={195},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252913]={}
+ costs[252913][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[208]}
+ costs[252913][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[208]}
+ evidence[209]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252922",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={204},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252922]={}
+ costs[252922][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[209]}
+ costs[252922][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[209]}
+ evidence[210]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252923",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={205},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252923]={}
+ costs[252923][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[210]}
+ costs[252923][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[210]}
+ evidence[211]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252924",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={209},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252924]={}
+ costs[252924][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[211]}
+ costs[252924][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[211]}
+ evidence[212]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252925",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={206},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252925]={}
+ costs[252925][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[212]}
+ costs[252925][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[212]}
+ evidence[213]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="252941",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={201},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[252941]={}
+ costs[252941][248201]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[213]}
+ costs[252941][256734]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[213]}
+ evidence[214]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253890",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={219},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253890]={}
+ costs[253890][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[214]}
+ costs[253890][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[214]}
+ evidence[215]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253892",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={217},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253892]={}
+ costs[253892][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[215]}
+ costs[253892][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[215]}
+ evidence[216]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253894",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={220},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253894]={}
+ costs[253894][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[216]}
+ costs[253894][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[216]}
+ evidence[217]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253896",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={221},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253896]={}
+ costs[253896][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[217]}
+ costs[253896][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[217]}
+ evidence[218]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253898",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={218},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253898]={}
+ costs[253898][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[218]}
+ costs[253898][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[218]}
+ evidence[219]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253900",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={222},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253900]={}
+ costs[253900][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[219]}
+ costs[253900][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[219]}
+ evidence[220]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253914",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={242},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253914]={}
+ costs[253914][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[220]}
+ costs[253914][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[220]}
+ evidence[221]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253916",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={239},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253916]={}
+ costs[253916][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[221]}
+ costs[253916][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[221]}
+ evidence[222]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253918",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={244},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253918]={}
+ costs[253918][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[222]}
+ costs[253918][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[222]}
+ evidence[223]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253920",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={241},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253920]={}
+ costs[253920][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[223]}
+ costs[253920][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[223]}
+ evidence[224]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253922",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={243},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253922]={}
+ costs[253922][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[224]}
+ costs[253922][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[224]}
+ evidence[225]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253924",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={240},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253924]={}
+ costs[253924][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[225]}
+ costs[253924][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[225]}
+ evidence[226]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253926",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={245},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253926]={}
+ costs[253926][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[226]}
+ costs[253926][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[226]}
+ evidence[227]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253928",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={234},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253928]={}
+ costs[253928][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[227]}
+ costs[253928][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[227]}
+ evidence[228]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253930",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={238},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253930]={}
+ costs[253930][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[228]}
+ costs[253930][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[228]}
+ evidence[229]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253932",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={236},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253932]={}
+ costs[253932][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[229]}
+ costs[253932][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[229]}
+ evidence[230]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253934",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={237},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253934]={}
+ costs[253934][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[230]}
+ costs[253934][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[230]}
+ evidence[231]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253936",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={235},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253936]={}
+ costs[253936][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[231]}
+ costs[253936][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[231]}
+ evidence[232]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253950",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={231},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253950]={}
+ costs[253950][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[232]}
+ costs[253950][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[232]}
+ evidence[233]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253952",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={228},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253952]={}
+ costs[253952][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[233]}
+ costs[253952][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[233]}
+ evidence[234]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253954",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={233},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253954]={}
+ costs[253954][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[234]}
+ costs[253954][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[234]}
+ evidence[235]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253956",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={230},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253956]={}
+ costs[253956][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[235]}
+ costs[253956][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[235]}
+ evidence[236]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253958",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={232},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253958]={}
+ costs[253958][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[236]}
+ costs[253958][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[236]}
+ evidence[237]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253960",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={229},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253960]={}
+ costs[253960][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[237]}
+ costs[253960][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[237]}
+ evidence[238]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253962",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={225},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253962]={}
+ costs[253962][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[238]}
+ costs[253962][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[238]}
+ evidence[239]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253964",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={246},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253964]={}
+ costs[253964][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[239]}
+ costs[253964][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[239]}
+ evidence[240]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253966",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={227},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253966]={}
+ costs[253966][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[240]}
+ costs[253966][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[240]}
+ evidence[241]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253968",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={224},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253968]={}
+ costs[253968][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[241]}
+ costs[253968][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[241]}
+ evidence[242]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253970",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={226},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253970]={}
+ costs[253970][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[242]}
+ costs[253970][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[242]}
+ evidence[243]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253972",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={223},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253972]={}
+ costs[253972][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[243]}
+ costs[253972][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[243]}
+ evidence[244]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253988",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={249},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253988]={}
+ costs[253988][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[244]}
+ costs[253988][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[244]}
+ evidence[245]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253990",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={252},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253990]={}
+ costs[253990][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[245]}
+ costs[253990][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[245]}
+ evidence[246]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253992",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={247},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253992]={}
+ costs[253992][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[246]}
+ costs[253992][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[246]}
+ evidence[247]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253994",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={250},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253994]={}
+ costs[253994][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[247]}
+ costs[253994][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[247]}
+ evidence[248]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253996",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={248},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253996]={}
+ costs[253996][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[248]}
+ costs[253996][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[248]}
+ evidence[249]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="253998",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={251},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[253998]={}
+ costs[253998][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[249]}
+ costs[253998][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[249]}
+ evidence[250]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254024",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={255},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254024]={}
+ costs[254024][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[250]}
+ costs[254024][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[250]}
+ evidence[251]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254026",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={254},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254026]={}
+ costs[254026][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[251]}
+ costs[254026][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[251]}
+ evidence[252]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254028",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={253},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254028]={}
+ costs[254028][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[252]}
+ costs[254028][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[252]}
+ evidence[253]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254030",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={277},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254030]={}
+ costs[254030][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[253]}
+ costs[254030][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[253]}
+ evidence[254]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254032",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={276},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254032]={}
+ costs[254032][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[254]}
+ costs[254032][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[254]}
+ evidence[255]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254036",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={275},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254036]={}
+ costs[254036][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[255]}
+ costs[254036][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[255]}
+ evidence[256]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254050",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={272},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254050]={}
+ costs[254050][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[256]}
+ costs[254050][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[256]}
+ evidence[257]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254052",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={273},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254052]={}
+ costs[254052][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[257]}
+ costs[254052][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[257]}
+ evidence[258]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254054",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={274},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254054]={}
+ costs[254054][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[258]}
+ costs[254054][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[258]}
+ evidence[259]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254056",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={270},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254056]={}
+ costs[254056][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[259]}
+ costs[254056][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[259]}
+ evidence[260]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254058",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={269},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254058]={}
+ costs[254058][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[260]}
+ costs[254058][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[260]}
+ evidence[261]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254060",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={271},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254060]={}
+ costs[254060][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[261]}
+ costs[254060][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[261]}
+ evidence[262]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254062",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={266},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254062]={}
+ costs[254062][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[262]}
+ costs[254062][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[262]}
+ evidence[263]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254064",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={267},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254064]={}
+ costs[254064][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[263]}
+ costs[254064][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[263]}
+ evidence[264]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254066",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={268},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254066]={}
+ costs[254066][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[264]}
+ costs[254066][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[264]}
+ evidence[265]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254068",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={264},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254068]={}
+ costs[254068][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[265]}
+ costs[254068][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[265]}
+ evidence[266]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254070",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={263},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254070]={}
+ costs[254070][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[266]}
+ costs[254070][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[266]}
+ evidence[267]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254072",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={265},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254072]={}
+ costs[254072][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[267]}
+ costs[254072][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[267]}
+ evidence[268]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254080",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={256},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254080]={}
+ costs[254080][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[268]}
+ costs[254080][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[268]}
+ evidence[269]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254082",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={259},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254082]={}
+ costs[254082][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[269]}
+ costs[254082][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[269]}
+ evidence[270]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254084",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={260},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254084]={}
+ costs[254084][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[270]}
+ costs[254084][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[270]}
+ evidence[271]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254086",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={261},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254086]={}
+ costs[254086][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[271]}
+ costs[254086][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[271]}
+ evidence[272]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254088",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={262},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254088]={}
+ costs[254088][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[272]}
+ costs[254088][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[272]}
+ evidence[273]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254090",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={258},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254090]={}
+ costs[254090][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[273]}
+ costs[254090][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[273]}
+ evidence[274]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254092",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={257},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254092]={}
+ costs[254092][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[274]}
+ costs[254092][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[274]}
+ evidence[275]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254108",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={281},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254108]={}
+ costs[254108][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[275]}
+ costs[254108][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[275]}
+ evidence[276]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254110",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={282},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254110]={}
+ costs[254110][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[276]}
+ costs[254110][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[276]}
+ evidence[277]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254112",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={283},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254112]={}
+ costs[254112][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[277]}
+ costs[254112][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[277]}
+ evidence[278]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254114",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={279},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254114]={}
+ costs[254114][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[278]}
+ costs[254114][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[278]}
+ evidence[279]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254116",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={280},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254116]={}
+ costs[254116][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[279]}
+ costs[254116][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[279]}
+ evidence[280]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="254118",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={278},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[254118]={}
+ costs[254118][248202]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[280]}
+ costs[254118][256735]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[280]}
+ evidence[281]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264201",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={291},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264201]={}
+ costs[264201][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[281]}
+ costs[264201][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[281]}
+ evidence[282]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264202",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={290},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264202]={}
+ costs[264202][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[282]}
+ costs[264202][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[282]}
+ evidence[283]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264203",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={292},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264203]={}
+ costs[264203][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[283]}
+ costs[264203][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[283]}
+ evidence[284]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264204",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={293},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264204]={}
+ costs[264204][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[284]}
+ costs[264204][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[284]}
+ evidence[285]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264205",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={295},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264205]={}
+ costs[264205][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[285]}
+ costs[264205][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[285]}
+ evidence[286]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264206",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={294},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264206]={}
+ costs[264206][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[286]}
+ costs[264206][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[286]}
+ evidence[287]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264209",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={304},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264209]={}
+ costs[264209][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[287]}
+ costs[264209][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[287]}
+ evidence[288]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264211",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={301},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264211]={}
+ costs[264211][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[288]}
+ costs[264211][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[288]}
+ components[10]={{["amount"]=270,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[289]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264216",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=270,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={307},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264216]={}
+ costs[264216][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[289]}
+ costs[264216][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[289]}
+ evidence[290]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264217",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=270,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={308},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264217]={}
+ costs[264217][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[290]}
+ costs[264217][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[290]}
+ evidence[291]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264220",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=270,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={309},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264220]={}
+ costs[264220][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[291]}
+ costs[264220][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[291]}
+ evidence[292]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264221",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["currencyAmount"]=270,["evidenceType"]="Reference-site currency-for table, readable item name and amount; not a native player vendor observation",["file"]="C:\\Users\\cgres\\AppData\\Local\\Temp\\codex-clipboard-776df856-76b7-4ab9-bd39-4906165ab873.png",["itemID"]=264221,["sha256"]="07738414c2afce6043c51742400ffbb7241cbb3dd6beea2b876bbf44a53ae682",["source"]="Owner-supplied reference screenshot",["suppliedDate"]="2026-11-19"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:07738414c2afce6043c51742400ffbb7241cbb3dd6beea2b876bbf44a53ae682"}
+ costs[264221]={}
+ costs[264221][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:07738414c2afce6043c51742400ffbb7241cbb3dd6beea2b876bbf44a53ae682",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[292]}
+ costs[264221][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:07738414c2afce6043c51742400ffbb7241cbb3dd6beea2b876bbf44a53ae682",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[292]}
+ evidence[293]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264222",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["currencyAmount"]=270,["evidenceType"]="Reference-site currency-for table, readable item name and amount; not a native player vendor observation",["file"]="C:\\Users\\cgres\\AppData\\Local\\Temp\\codex-clipboard-4310c844-afca-444e-9a7e-1ce4c13f8d20.png",["itemID"]=264222,["sha256"]="572e95059fdf45ec752eaaaa93940db9a0b03b1baacc93dca840a9a7d5d7da6c",["source"]="Owner-supplied reference screenshot",["suppliedDate"]="2026-11-19"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:572e95059fdf45ec752eaaaa93940db9a0b03b1baacc93dca840a9a7d5d7da6c"}
+ costs[264222]={}
+ costs[264222][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:572e95059fdf45ec752eaaaa93940db9a0b03b1baacc93dca840a9a7d5d7da6c",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[293]}
+ costs[264222][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:572e95059fdf45ec752eaaaa93940db9a0b03b1baacc93dca840a9a7d5d7da6c",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[293]}
+ components[11]={{["amount"]=360,["currencyID"]=3402,["kind"]="currency",["name"]="Merchant's Favor"}}
+ evidence[294]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264232",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["currencyAmount"]=360,["evidenceType"]="Reference-site currency-for table, readable item name and amount; not a native player vendor observation",["file"]="C:\\Users\\cgres\\AppData\\Local\\Temp\\codex-clipboard-150fc8ec-2822-416b-85ef-f48c47d91651.png",["itemID"]=264232,["sha256"]="926352ea3d2aa0c4143f2a5a22c9e6577a867fc64a62bcaed83b95de0eff3a3e",["source"]="Owner-supplied reference screenshot",["suppliedDate"]="2026-11-19"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:926352ea3d2aa0c4143f2a5a22c9e6577a867fc64a62bcaed83b95de0eff3a3e"}
+ costs[264232]={}
+ costs[264232][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=360,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:926352ea3d2aa0c4143f2a5a22c9e6577a867fc64a62bcaed83b95de0eff3a3e",["verifiedCoinCost"]=false,costComponents=components[11],offerCostEvidence=evidence[294]}
+ costs[264232][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="owner-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=360,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="user-reference:926352ea3d2aa0c4143f2a5a22c9e6577a867fc64a62bcaed83b95de0eff3a3e",["verifiedCoinCost"]=false,costComponents=components[11],offerCostEvidence=evidence[294]}
+ evidence[295]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264234",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=360,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={312},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264234]={}
+ costs[264234][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=360,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[11],offerCostEvidence=evidence[295]}
+ costs[264234][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=360,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[11],offerCostEvidence=evidence[295]}
+ evidence[296]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264235",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=360,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={314},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264235]={}
+ costs[264235][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=360,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[11],offerCostEvidence=evidence[296]}
+ costs[264235][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=360,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[11],offerCostEvidence=evidence[296]}
+ evidence[297]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="264237",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=360,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={315},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[264237]={}
+ costs[264237][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=360,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[11],offerCostEvidence=evidence[297]}
+ costs[264237][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=360,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[11],offerCostEvidence=evidence[297]}
+ evidence[298]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="274393",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={61},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[274393]={}
+ costs[274393][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[298]}
+ costs[274393][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[298]}
+ evidence[299]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="274394",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={65},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[274394]={}
+ costs[274394][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[299]}
+ costs[274394][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[299]}
+ evidence[300]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="274398",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={62},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[274398]={}
+ costs[274398][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[300]}
+ costs[274398][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[300]}
+ evidence[301]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="274399",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={63},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[274399]={}
+ costs[274399][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[301]}
+ costs[274399][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[301]}
+ evidence[302]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="274401",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=240,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={64},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[274401]={}
+ costs[274401][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[302]}
+ costs[274401][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=240,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[5],offerCostEvidence=evidence[302]}
+ evidence[303]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="280321",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={297},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[280321]={}
+ costs[280321][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[303]}
+ costs[280321][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[303]}
+ evidence[304]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="280322",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={298},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[280322]={}
+ costs[280322][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[304]}
+ costs[280322][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[304]}
+ evidence[305]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="280323",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={299},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[280323]={}
+ costs[280323][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[305]}
+ costs[280323][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[305]}
+ evidence[306]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="280325",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={300},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[280325]={}
+ costs[280325][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[306]}
+ costs[280325][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[306]}
+ evidence[307]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="280326",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={305},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[280326]={}
+ costs[280326][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[307]}
+ costs[280326][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[307]}
+ evidence[308]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="280327",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={302},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[280327]={}
+ costs[280327][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[308]}
+ costs[280327][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[308]}
+ evidence[309]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="280328",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={303},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[280328]={}
+ costs[280328][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[309]}
+ costs[280328][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[309]}
+ evidence[310]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="285285",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=45,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={296},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[285285]={}
+ costs[285285][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[310]}
+ costs[285285][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=45,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[3],offerCostEvidence=evidence[310]}
+ evidence[311]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="285286",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={306},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[285286]={}
+ costs[285286][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[311]}
+ costs[285286][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[311]}
+ evidence[312]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="285287",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=270,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={310},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[285287]={}
+ costs[285287][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[312]}
+ costs[285287][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[312]}
+ evidence[313]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="285288",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=270,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={311},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[285288]={}
+ costs[285288][248200]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[313]}
+ costs[285288][256733]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=270,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[10],offerCostEvidence=evidence[313]}
+ evidence[314]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="285289",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=30,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={352},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[285289]={}
+ costs[285289][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=30,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[7],offerCostEvidence=evidence[314]}
+ evidence[315]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="285290",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=60,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={363},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[285290]={}
+ costs[285290][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=60,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[8],offerCostEvidence=evidence[315]}
+ evidence[316]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="285291",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=90,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={381},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[285291]={}
+ costs[285291][248197]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[316]}
+ costs[285291][256730]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=90,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[9],offerCostEvidence=evidence[316]}
+ evidence[317]={["componentEvidence"]={["costURL"]="https://wago.tools/db2/ItemExtendedCost/csv?build=1.60.1.70959",["currencyURL"]="https://wago.tools/db2/CurrencyTypes/csv?build=1.60.1.70959",["kind"]="CurrencyTypes + ItemExtendedCost",["note"]="Matching components corroborate currency identity/amount, not a fabricated NPC→ExtendedCostID join.",["revision"]="1.60.1.70959",["source"]="Wago client DB2"},["identityEvidence"]={["kind"]="db2_snapshot_ItemSparse",["record_key"]="289560",["revision"]="1.60.1.70938",["source"]="Wago client DB2",["source_url"]="https://wago.tools/db2/ItemSparse/csv?build=1.60.1.70938"},["priceEvidence"]={{["amount"]=180,["currencyID"]=nil,["currencyName"]="Merchant's Favor",["evidenceType"]="Author firsthand in-game vendor screenshots and transcribed tables",["lineNumbers"]={51},["notes"]="Exact name linked to captured item ID. Currency ID/components require independent positive corroboration; no amount derived from reputation/skill.",["observedDate"]="2026-11-12",["observedFaction"]="Alliance",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}},["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/"}
+ costs[289560]={}
+ costs[289560][248199]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="counterpart-reference-qualified",["costReference"]=true,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[317]}
+ costs[289560][256732]={["costAvailabilityNote"]=nil,["costComponentsComplete"]=true,["costEvidence"]="reviewed-reference-offer",["costEvidenceTier"]="firsthand-Alliance-reference",["costReference"]=false,["currency"]="Merchant's Favor",["currencyAmount"]=180,["currencyID"]=3402,["hasExtendedCost"]=true,["merchantFavor"]=true,["price"]=0,["quantity"]=1,["sourceRevision"]="2026-11-19-reviewed:client1.60.1.70959",["sourceURL"]="https://gitm.gg/guides/wow-forever-merchants-favor-recipes/",["verifiedCoinCost"]=false,costComponents=components[6],offerCostEvidence=evidence[317]}
+end
+-- GF_REVIEWED_VENDOR_COSTS_20261119_END
+-- GF_RECIPE_INGREDIENTS70938_BEGIN
+-- Captured Forever client70938; actual crafting catalogue IDs only, not every reagent-using spell.
+-- Missing ingredient names remain unresolved for guarded client lookup.
+ns.RecipeSourceFacts.ingredients = {
+ [2149]={{2318,2},{2320,1}},
+ [2152]={{2318,1}},
+ [2153]={{2318,4},{2320,1}},
+ [2158]={{2318,7},{2320,2}},
+ [2159]={{2318,10},{2321,2}},
+ [2160]={{2318,8},{2320,4}},
+ [2161]={{2318,8},{2320,5}},
+ [2162]={{2318,5},{2320,2}},
+ [2163]={{2318,8},{2320,2},{2324,1}},
+ [2164]={{2318,4},{2320,2},{4231,1}},
+ [2165]={{2319,4},{2320,1}},
+ [2166]={{2319,10},{2321,2},{4231,2}},
+ [2167]={{2319,4},{2321,2},{4340,1}},
+ [2168]={{2319,8},{2321,1},{4340,1}},
+ [2169]={{2319,6},{2321,1},{4340,1}},
+ [2329]={{765,1},{2449,1},{3371,1}},
+ [2331]={{785,1},{2447,1},{3371,1}},
+ [2332]={{785,2},{2447,1},{3371,1}},
+ [2333]={{2452,1},{3355,1},{3372,1}},
+ [2334]={{2447,1},{2449,2},{3371,1}},
+ [2335]={{2450,1},{2452,1},{3371,1}},
+ [2385]={{2320,1},{2996,1}},
+ [2386]={{2318,1},{2320,1},{2996,3}},
+ [2387]={{2320,1},{2996,1}},
+ [2389]={{2320,2},{2604,2},{2996,3}},
+ [2392]={{2320,1},{2604,1},{2996,2}},
+ [2393]={{2320,1},{2324,1},{2996,1}},
+ [2394]={{2320,1},{2996,2},{6260,1}},
+ [2395]={{2318,1},{2321,1},{2996,4}},
+ [2396]={{2321,1},{2605,1},{2996,3}},
+ [2397]={{2320,3},{2996,2}},
+ [2399]={{2321,2},{2605,1},{2997,2}},
+ [2401]={{2318,2},{2321,2},{2997,4}},
+ [2402]={{2321,1},{2997,1}},
+ [2403]={{2321,3},{2997,4},{4340,1}},
+ [2406]={{2321,1},{2997,2},{4340,1}},
+ [2538]={{2672,1}},
+ [2539]={{2672,1},{2678,1}},
+ [2540]={{769,1}},
+ [2541]={{2673,1}},
+ [2542]={{723,1},{2678,1}},
+ [2543]={{729,1},{730,1},{731,1}},
+ [2544]={{2674,1},{2678,1}},
+ [2545]={{2675,1},{2678,1}},
+ [2546]={{2677,1},{2678,1}},
+ [2547]={{1080,1},{1081,1}},
+ [2548]={{2677,2},{2692,1}},
+ [2549]={{1015,2},{2678,1}},
+ [2657]={{2770,1}},
+ [2658]={{2775,1}},
+ [2659]={{2840,1},{3576,1}},
+ [2660]={{2835,1}},
+ [2661]={{2840,6}},
+ [2662]={{2840,4}},
+ [2663]={{2840,2}},
+ [2664]={{2840,10},{3470,3}},
+ [2665]={{2836,1}},
+ [2666]={{2840,10}},
+ [2667]={{1210,1},{2840,12},{3470,2}},
+ [2668]={{2841,6}},
+ [2670]={{2841,7}},
+ [2672]={{2841,5},{3478,2}},
+ [2673]={{1705,1},{2841,10},{2842,2},{3478,2}},
+ [2674]={{2838,1}},
+ [2675]={{1206,2},{1705,2},{2841,20},{2842,4},{5500,2}},
+ [2737]={{2589,2},{2840,6},{2880,1}},
+ [2738]={{2589,2},{2840,6},{2880,1}},
+ [2739]={{2589,2},{2840,6},{2880,1}},
+ [2740]={{2319,1},{2841,6},{2880,4}},
+ [2741]={{2319,1},{2841,7},{2880,4}},
+ [2742]={{2319,2},{2841,5},{2880,4}},
+ [2795]={{2886,1},{2894,1}},
+ [2881]={{2934,3}},
+ [2963]={{2589,2}},
+ [2964]={{2592,3}},
+ [3115]={{2835,1}},
+ [3116]={{2836,1}},
+ [3117]={{2838,1}},
+ [3170]={{2447,1},{2449,2},{3371,1}},
+ [3171]={{785,1},{2450,2},{3371,1}},
+ [3172]={{785,3},{3355,1},{3371,1}},
+ [3173]={{785,1},{3371,1},{3820,1}},
+ [3174]={{1288,1},{2453,1},{3372,1}},
+ [3175]={{8839,2},{8845,1},{8925,1}},
+ [3176]={{2450,2},{2453,2},{3372,1}},
+ [3177]={{3355,1},{3372,1},{3820,1}},
+ [3188]={{2449,1},{3356,1},{3372,1}},
+ [3230]={{765,1},{2452,1},{3371,1}},
+ [3276]={{2589,2}},
+ [3277]={{2592,1}},
+ [3278]={{2592,2}},
+ [3292]={{818,2},{2319,2},{2840,14},{2880,2}},
+ [3293]={{774,2},{2318,2},{2840,12},{2880,2},{3470,2}},
+ [3294]={{2318,2},{2840,10},{2842,2},{2880,2},{3470,2}},
+ [3295]={{1210,2},{2319,2},{2459,1},{2841,4},{3466,1},{3478,2}},
+ [3296]={{1206,1},{1210,1},{2319,2},{2841,8},{3466,1},{3478,2}},
+ [3297]={{1705,2},{2319,2},{3391,1},{3466,2},{3478,2},{3575,6}},
+ [3304]={{2771,1}},
+ [3307]={{2772,1}},
+ [3308]={{2776,1}},
+ [3319]={{2840,8}},
+ [3320]={{2835,2}},
+ [3321]={{774,1},{2840,8},{3470,2}},
+ [3323]={{2840,8},{3470,2}},
+ [3324]={{2320,3},{2840,8},{3470,3}},
+ [3325]={{774,1},{818,1},{2840,8}},
+ [3326]={{2836,2}},
+ [3328]={{1210,1},{2841,5},{3478,1}},
+ [3330]={{2841,8},{2842,2},{3478,2}},
+ [3331]={{2841,6},{2842,1},{3478,2}},
+ [3333]={{2841,8},{2842,1},{3478,2}},
+ [3334]={{1705,2},{2605,1},{3478,2},{3575,4}},
+ [3336]={{2605,1},{3478,2},{3575,4},{5498,2}},
+ [3337]={{2838,3}},
+ [3370]={{2678,1},{2924,1}},
+ [3371]={{3172,1},{3173,1},{3174,1}},
+ [3372]={{1468,2},{2692,1}},
+ [3373]={{2692,1},{3667,1}},
+ [3376]={{2692,1},{3685,1}},
+ [3377]={{2251,2},{2692,1}},
+ [3397]={{2692,1},{3730,1}},
+ [3398]={{2692,1},{3731,1}},
+ [3399]={{3713,1},{3731,2}},
+ [3400]={{3712,1},{3713,1}},
+ [3448]={{3355,1},{3372,1},{3818,1}},
+ [3449]={{3369,4},{3372,1},{3818,4}},
+ [3450]={{3355,1},{3372,1},{3821,1}},
+ [3451]={{2453,1},{3357,1},{3372,1}},
+ [3452]={{3356,1},{3372,1},{3820,1}},
+ [3453]={{3358,1},{3372,1},{3818,1}},
+ [3454]={{3358,4},{3372,1},{3819,2}},
+ [3491]={{818,1},{2319,1},{2841,6},{2880,4},{3470,2}},
+ [3492]={{1705,2},{3466,2},{3486,1},{3575,6},{4234,3}},
+ [3493]={{1529,2},{3466,2},{3486,2},{3575,8},{4234,3}},
+ [3494]={{2842,4},{3466,2},{3486,1},{3575,8},{4234,2}},
+ [3495]={{1705,2},{3466,2},{3486,2},{3575,10},{3577,4},{4234,2}},
+ [3496]={{1705,3},{3466,2},{3486,2},{3859,8},{4234,3}},
+ [3497]={{1529,2},{3466,2},{3486,2},{3829,1},{3859,8},{4234,4}},
+ [3498]={{3466,2},{3486,2},{3575,14},{3577,4},{4234,2}},
+ [3500]={{3466,2},{3486,3},{3824,1},{3859,10},{3864,2},{4234,3}},
+ [3501]={{2605,1},{3575,6}},
+ [3502]={{2605,1},{3575,12},{3864,1}},
+ [3503]={{3486,2},{3577,2},{3859,8}},
+ [3504]={{2605,1},{3486,1},{3575,7}},
+ [3505]={{3486,1},{3577,2},{3859,6}},
+ [3506]={{2605,1},{3486,1},{3575,8}},
+ [3507]={{3486,1},{3575,10},{3577,2}},
+ [3508]={{1206,2},{1529,2},{3486,4},{3575,20},{4255,1}},
+ [3511]={{1529,2},{3486,4},{3577,2},{3859,12}},
+ [3513]={{1705,1},{3486,2},{3859,8},{3864,1}},
+ [3515]={{3486,4},{3577,4},{3859,10},{3864,1}},
+ [3569]={{3575,1},{3857,1}},
+ [3753]={{2318,6},{2320,1}},
+ [3755]={{2320,3},{2996,3}},
+ [3756]={{2318,3},{2320,2}},
+ [3757]={{2321,1},{2997,3}},
+ [3758]={{2321,1},{2605,1},{2997,5}},
+ [3759]={{2318,6},{2320,2},{4231,1}},
+ [3760]={{2321,2},{4234,5}},
+ [3761]={{2318,6},{2320,4},{4231,3}},
+ [3762]={{2320,2},{4231,2},{4243,1}},
+ [3763]={{2318,6},{2320,2}},
+ [3764]={{2319,14},{2321,4}},
+ [3765]={{2312,1},{2321,1},{4233,1},{4340,1}},
+ [3766]={{2321,2},{4233,1},{4246,1},{4340,1}},
+ [3767]={{2319,8},{2321,2},{3383,1}},
+ [3768]={{2319,4},{2321,1},{4233,1}},
+ [3769]={{2319,12},{2321,2},{3390,1},{4340,1}},
+ [3770]={{2319,4},{2321,2},{3182,2},{3389,2},{4233,2}},
+ [3771]={{2321,1},{4234,6},{5637,2}},
+ [3772]={{2321,4},{2605,2},{4234,9}},
+ [3773]={{2321,2},{3824,1},{4234,12},{4236,2}},
+ [3774]={{2321,1},{2605,1},{4234,5},{4236,1},{7071,1}},
+ [3775]={{2321,1},{4234,4},{4236,2},{7071,1}},
+ [3776]={{2321,1},{2605,1},{4234,6},{4236,2}},
+ [3777]={{4234,6},{4236,2},{4291,1}},
+ [3778]={{1529,2},{2321,1},{3864,1},{4236,4},{5500,2}},
+ [3779]={{4096,2},{4234,6},{4236,2},{4291,1},{5633,1},{7071,1}},
+ [3780]={{2321,1},{4234,5}},
+ [3813]={{2321,3},{4234,2},{4305,3}},
+ [3816]={{783,1},{4289,1}},
+ [3817]={{4232,1},{4289,1}},
+ [3818]={{4235,1},{4289,3}},
+ [3839]={{4306,4}},
+ [3840]={{2320,1},{2996,2}},
+ [3841]={{2320,2},{2605,1},{2996,3}},
+ [3842]={{2321,2},{2996,4}},
+ [3843]={{2321,1},{2997,3}},
+ [3844]={{2321,2},{2997,3},{5498,2}},
+ [3845]={{2318,2},{2321,1},{2996,5}},
+ [3847]={{2318,2},{2321,1},{2604,2},{2997,4}},
+ [3848]={{2321,2},{2997,3}},
+ [3849]={{2319,2},{2321,2},{2997,6}},
+ [3850]={{2321,4},{2997,5}},
+ [3851]={{2321,3},{2997,6},{5500,1}},
+ [3852]={{2321,3},{2997,4},{3383,1}},
+ [3854]={{2321,2},{4234,2},{4305,3},{6260,2}},
+ [3855]={{2319,4},{3182,4},{4305,2},{5500,1}},
+ [3856]={{2321,2},{3182,1},{4305,3}},
+ [3857]={{2321,2},{4305,3},{4337,2}},
+ [3858]={{3824,1},{4291,1},{4305,4}},
+ [3859]={{4305,5},{6260,4}},
+ [3860]={{4291,1},{4305,4},{4337,2}},
+ [3861]={{3827,1},{4291,1},{4305,4}},
+ [3862]={{3829,1},{4291,2},{4337,2},{4339,3}},
+ [3863]={{4305,4},{4337,2},{7071,1}},
+ [3864]={{3864,1},{4234,4},{4291,1},{4339,4},{7071,1}},
+ [3865]={{4338,5}},
+ [3866]={{2321,1},{2604,2},{2997,3}},
+ [3868]={{2321,4},{2324,2},{2997,4},{5500,1}},
+ [3869]={{2321,1},{4305,1},{4341,1}},
+ [3870]={{2321,1},{4305,2},{4340,2}},
+ [3871]={{2321,1},{2324,2},{4305,3}},
+ [3872]={{4291,1},{4305,4},{4342,1}},
+ [3873]={{2325,1},{4291,1},{4305,5}},
+ [3914]={{2320,1},{2996,2}},
+ [3915]={{2320,1},{2996,1}},
+ [3918]={{2835,1}},
+ [3919]={{2589,1},{4357,1}},
+ [3920]={{2840,1},{4357,1}},
+ [3922]={{2840,1}},
+ [3923]={{2589,1},{2840,1},{4357,2},{4359,1}},
+ [3924]={{2840,2},{2880,1}},
+ [3925]={{4359,1},{4361,1},{4399,1}},
+ [3926]={{2589,2},{2840,1},{4359,2}},
+ [3928]={{774,2},{2840,1},{4359,1},{4363,1}},
+ [3929]={{2836,1}},
+ [3930]={{2840,1},{4364,1}},
+ [3931]={{2589,1},{4364,3}},
+ [3932]={{2592,1},{2841,1},{4359,2},{4363,1}},
+ [3933]={{159,1},{2318,1},{4363,1},{4364,2}},
+ [3934]={{818,2},{2318,6}},
+ [3936]={{2319,2},{4359,4},{4361,2},{4399,1}},
+ [3937]={{2840,3},{4364,4},{4404,1}},
+ [3938]={{2841,2},{2880,1}},
+ [3939]={{1206,3},{4359,2},{4371,2},{4400,1}},
+ [3940]={{1210,2},{2319,4}},
+ [3941]={{2592,1},{2841,2},{4364,4},{4404,1}},
+ [3942]={{2592,1},{2841,2}},
+ [3944]={{4375,1},{4402,1}},
+ [3945]={{2838,1}},
+ [3946]={{2592,1},{4377,2}},
+ [3947]={{2841,1},{4377,1}},
+ [3949]={{2842,3},{4371,2},{4375,2},{4400,1}},
+ [3950]={{2841,3},{4377,2},{4404,1}},
+ [3952]={{1206,1},{2319,2},{4371,1},{4375,2}},
+ [3953]={{2319,1},{2592,1},{2841,2}},
+ [3954]={{1705,2},{4371,3},{4375,3},{4400,1}},
+ [3955]={{2592,2},{4375,1},{4377,2},{4382,1}},
+ [3956]={{1206,2},{2319,4},{4368,1}},
+ [3957]={{3829,1},{4375,1}},
+ [3958]={{3575,2}},
+ [3959]={{1529,1},{4306,2},{4371,1},{4375,3}},
+ [3960]={{2319,4},{4371,4},{4377,4},{4387,1}},
+ [3961]={{3575,1},{10558,1}},
+ [3962]={{3575,1},{4306,1},{4377,1}},
+ [3963]={{4234,4},{4382,1},{4387,2},{4389,2}},
+ [3965]={{4234,4},{4382,1},{4387,1},{4389,1}},
+ [3966]={{3864,2},{4234,6}},
+ [3967]={{3575,3},{4377,3},{4404,1}},
+ [3968]={{3575,2},{4377,3},{4389,1}},
+ [3969]={{3864,2},{4382,1},{4387,4},{4389,4},{7191,1}},
+ [3971]={{1529,2},{1705,2},{3864,2},{4389,4},{7191,1}},
+ [3972]={{159,1},{4234,2},{10505,2}},
+ [3973]={{2842,1}},
+ [3977]={{774,1},{4359,1},{4361,1}},
+ [3978]={{1206,1},{4371,1}},
+ [3979]={{1529,1},{3864,1},{4371,1}},
+ [4094]={{2692,1},{3404,1}},
+ [4096]={{2321,2},{4234,4},{4461,6}},
+ [4097]={{2321,2},{4234,4},{4461,4}},
+ [4508]={{730,1},{2447,1},{3371,1}},
+ [4942]={{3372,1},{3821,1},{3858,1}},
+ [5244]={{2318,4},{2320,1},{5082,3}},
+ [6412]={{5465,1}},
+ [6413]={{5466,1}},
+ [6414]={{2678,1},{5467,1}},
+ [6415]={{2678,1},{5468,1}},
+ [6416]={{4536,1},{5469,1}},
+ [6417]={{5051,1}},
+ [6418]={{2692,1},{5470,1}},
+ [6419]={{2678,4},{5471,1}},
+ [6458]={{1206,1},{4363,1},{4371,2},{4375,2}},
+ [6499]={{159,1},{5503,1}},
+ [6500]={{2692,1},{5504,1}},
+ [6501]={{1179,1},{2678,1},{5503,1}},
+ [6517]={{2841,6},{3466,1},{3478,2},{5498,2}},
+ [6518]={{2319,2},{2841,10},{3466,1},{3478,2},{5500,1}},
+ [6521]={{2321,2},{2997,3},{5498,1}},
+ [6617]={{2450,1},{3371,1},{5635,1}},
+ [6618]={{3356,1},{3372,1},{5637,1}},
+ [6624]={{3372,1},{3820,1},{6370,2}},
+ [6661]={{2321,2},{4234,14},{7071,1}},
+ [6686]={{2321,1},{2604,1},{2996,4}},
+ [6688]={{2321,1},{2604,1},{2997,5}},
+ [6690]={{2321,2},{3182,2},{4305,2}},
+ [6692]={{2321,2},{3182,2},{4305,4}},
+ [6693]={{2321,3},{2605,1},{4234,3},{4305,5}},
+ [6695]={{2321,4},{2325,1},{4305,6}},
+ [6702]={{2318,6},{2321,1},{5784,8}},
+ [6703]={{2318,8},{2321,1},{4231,1},{5784,12}},
+ [6704]={{2321,3},{4234,10},{4236,1},{5785,12}},
+ [6705]={{4234,14},{4236,1},{4291,1},{5785,16}},
+ [7126]={{2318,3},{2320,1}},
+ [7133]={{2319,8},{2321,1},{2997,1}},
+ [7135]={{2319,12},{2321,1},{4340,1}},
+ [7147]={{2321,2},{4234,12},{4305,2}},
+ [7149]={{1206,1},{2321,2},{4234,10}},
+ [7151]={{2321,2},{4234,8},{4236,1}},
+ [7153]={{4234,14},{4291,2},{4305,2}},
+ [7156]={{4234,4},{4236,1},{4291,1}},
+ [7179]={{3371,1},{3820,1},{6370,2}},
+ [7183]={{765,1},{2447,1},{3371,1}},
+ [7213]={{2692,1},{4655,1}},
+ [7221]={{3478,4},{3575,6}},
+ [7222]={{1705,1},{3478,2},{3575,4}},
+ [7223]={{3486,2},{3859,5}},
+ [7224]={{3486,2},{3859,8},{4234,4}},
+ [7255]={{2452,1},{2453,1},{3371,1}},
+ [7256]={{3356,1},{3369,1},{3372,1}},
+ [7257]={{3372,1},{4402,1},{6371,1}},
+ [7258]={{3372,1},{3819,1},{3821,1}},
+ [7259]={{3357,1},{3372,1},{3820,1}},
+ [7408]={{2318,2},{2840,12},{2880,2}},
+ [7418]={{247786,1}},
+ [7420]={{10940,1}},
+ [7421]={{6217,1},{247786,1}},
+ [7426]={{10938,1}},
+ [7428]={{10938,1}},
+ [7430]={{2840,6}},
+ [7443]={{10938,1}},
+ [7454]={{10938,1},{10940,1}},
+ [7457]={{10940,2}},
+ [7623]={{2320,1},{2996,3}},
+ [7624]={{2320,1},{2324,1},{2996,3}},
+ [7629]={{2320,1},{2604,1},{2996,3}},
+ [7630]={{2320,1},{2996,3},{6260,1}},
+ [7633]={{2320,2},{2996,4},{6260,2}},
+ [7639]={{2321,2},{2997,4},{6260,2}},
+ [7643]={{2321,3},{2604,3},{2997,5}},
+ [7745]={{10940,1},{10978,1}},
+ [7748]={{10938,1},{10940,1}},
+ [7751]={{6291,1}},
+ [7752]={{6303,1}},
+ [7753]={{6289,1}},
+ [7754]={{2678,1},{6317,1}},
+ [7755]={{6308,1}},
+ [7766]={{10938,1}},
+ [7771]={{10940,2}},
+ [7776]={{10938,2}},
+ [7779]={{10938,2},{10940,1}},
+ [7782]={{10940,3}},
+ [7786]={{10939,1},{10940,2}},
+ [7788]={{10938,1},{10940,1},{10978,1}},
+ [7793]={{10938,4}},
+ [7795]={{1210,1},{6338,1},{10938,4},{10940,3}},
+ [7817]={{2841,6},{3470,6}},
+ [7818]={{2842,1},{3470,2}},
+ [7827]={{6361,1}},
+ [7828]={{6362,1}},
+ [7836]={{3371,1},{6358,2}},
+ [7837]={{3371,1},{6359,2}},
+ [7841]={{2452,1},{3371,1},{6370,1}},
+ [7845]={{3356,1},{3372,1},{6371,2}},
+ [7857]={{10940,2},{10998,1}},
+ [7859]={{10998,1}},
+ [7861]={{6371,1},{10998,1}},
+ [7863]={{10940,4}},
+ [7867]={{10940,3},{10998,1}},
+ [7892]={{2321,1},{2997,4},{4340,1},{6260,2}},
+ [7893]={{2321,1},{2605,2},{2997,4},{4340,1}},
+ [7928]={{4306,1}},
+ [7934]={{1475,1}},
+ [7953]={{2321,1},{4231,1},{6470,8}},
+ [7954]={{2321,2},{6470,6},{6471,2}},
+ [7955]={{2321,2},{6470,10},{6471,10}},
+ [8238]={{2678,1},{6522,1}},
+ [8240]={{2449,1},{3371,1},{6522,1}},
+ [8243]={{4306,1},{4377,1},{4611,1}},
+ [8322]={{2318,6},{2320,4},{4231,1},{5498,1}},
+ [8334]={{2841,1},{2880,1},{4359,2}},
+ [8339]={{2589,1},{4364,3},{260794,1}},
+ [8367]={{818,2},{2840,16},{3470,3}},
+ [8465]={{2320,1},{2324,1},{2996,2},{6260,1}},
+ [8467]={{2321,1},{2324,4},{2997,3}},
+ [8483]={{2324,2},{4291,1},{4305,3}},
+ [8489]={{2604,2},{4291,1},{4305,3}},
+ [8604]={{2678,1},{6889,1}},
+ [8607]={{3173,1}},
+ [8758]={{2321,3},{4305,4},{6260,2}},
+ [8760]={{2321,1},{4305,2},{6260,2}},
+ [8762]={{2321,2},{4305,3}},
+ [8764]={{2321,2},{4305,3},{7067,1}},
+ [8766]={{2321,2},{4305,4},{6260,2},{7070,1},{7071,1}},
+ [8768]={{3575,1}},
+ [8770]={{4291,2},{4339,2},{7067,2},{7068,2},{7069,2},{7070,2}},
+ [8772]={{2604,2},{4291,1},{4305,4},{7071,1}},
+ [8774]={{4291,2},{4305,5}},
+ [8776]={{2320,1},{2996,1}},
+ [8780]={{2321,2},{4234,2},{4305,3},{6048,2}},
+ [8782]={{929,4},{2321,1},{4234,2},{4305,3}},
+ [8784]={{2605,2},{4291,1},{4305,5}},
+ [8786]={{2321,2},{4305,3},{6260,2}},
+ [8789]={{2604,2},{4291,1},{4305,5},{6371,2}},
+ [8791]={{2321,2},{2604,2},{4305,4}},
+ [8793]={{2604,2},{4291,2},{4305,5},{6371,2}},
+ [8795]={{4291,2},{4305,6},{6260,2},{7072,2}},
+ [8797]={{4234,4},{4291,2},{4305,5},{7067,4},{7071,1}},
+ [8799]={{2604,2},{4291,2},{4305,4}},
+ [8802]={{2604,4},{3827,2},{4291,1},{4305,8},{7068,4}},
+ [8804]={{2604,4},{4291,2},{4304,2},{4305,6},{6371,2},{7068,2}},
+ [8880]={{2318,1},{2840,6},{2880,1},{3470,1}},
+ [8895]={{4234,4},{9061,2},{10026,1},{10559,2},{10560,1}},
+ [9058]={{2318,2},{2320,1}},
+ [9059]={{2318,2},{2320,3}},
+ [9060]={{2318,4},{2320,2}},
+ [9062]={{2318,3},{2320,4}},
+ [9064]={{2318,5},{2320,5}},
+ [9065]={{2318,6},{2320,4}},
+ [9068]={{2318,10},{2321,1},{4231,1}},
+ [9070]={{2319,4},{2321,1},{7286,12}},
+ [9072]={{2319,4},{2321,1},{7287,6}},
+ [9074]={{2319,6},{2321,1},{2457,1}},
+ [9145]={{2319,8},{2321,2},{5116,4}},
+ [9146]={{2319,8},{2321,2},{3356,4}},
+ [9147]={{2319,6},{2321,2},{7067,1}},
+ [9148]={{2319,10},{2321,2},{5373,2}},
+ [9149]={{2319,12},{2321,2},{2997,2},{7067,2}},
+ [9193]={{2321,2},{4234,8}},
+ [9194]={{2321,2},{4234,8}},
+ [9195]={{2321,2},{2325,1},{4234,10}},
+ [9196]={{2321,2},{3824,1},{4234,10}},
+ [9197]={{2321,2},{4234,10},{7392,4}},
+ [9198]={{2321,2},{4234,6},{7067,2},{7070,2}},
+ [9201]={{2325,1},{4234,16},{4291,2}},
+ [9202]={{4234,8},{4291,2},{7392,6}},
+ [9206]={{2325,2},{4234,10},{4305,2},{7071,1}},
+ [9207]={{3824,1},{4234,8},{4291,2},{7428,2}},
+ [9208]={{2459,2},{4234,10},{4291,1},{4337,2}},
+ [9269]={{774,1},{814,2},{818,1},{2841,6},{4375,1}},
+ [9271]={{2841,2},{4364,1},{6530,1}},
+ [9273]={{814,2},{1210,2},{3575,6},{4306,2},{4375,2},{7191,1}},
+ [9513]={{159,1},{2452,1}},
+ [9811]={{1210,2},{3486,2},{3575,8},{5635,4}},
+ [9813]={{3486,4},{3575,20}},
+ [9814]={{3575,10},{5635,2},{5637,2}},
+ [9818]={{818,4},{3486,2},{3575,12},{5637,4}},
+ [9820]={{3486,3},{3575,14},{5637,2}},
+ [9916]={{3486,3},{3859,16}},
+ [9918]={{7912,1}},
+ [9920]={{7912,4}},
+ [9921]={{7912,1}},
+ [9926]={{3860,8},{4234,6}},
+ [9928]={{3860,6},{4338,4}},
+ [9931]={{3860,12}},
+ [9933]={{1705,2},{3860,10}},
+ [9935]={{3859,14},{7966,1}},
+ [9937]={{3860,8},{3864,2}},
+ [9939]={{3860,4},{6037,2},{7966,4}},
+ [9945]={{3860,12},{6037,1},{7909,1},{7966,1}},
+ [9950]={{3860,10},{4338,6},{6037,1},{7966,1}},
+ [9952]={{3860,12},{4304,6},{6037,1}},
+ [9954]={{3860,10},{3864,3},{5966,1},{6037,8},{7909,3},{7966,2}},
+ [9957]={{3860,12},{7067,1}},
+ [9959]={{3860,16}},
+ [9961]={{3860,10},{4338,6}},
+ [9964]={{3860,4},{7966,3}},
+ [9966]={{3860,14},{3864,4},{4304,4}},
+ [9968]={{3860,14},{4304,4}},
+ [9970]={{3860,14},{7909,1}},
+ [9972]={{3860,16},{6037,6},{7077,1},{7966,1}},
+ [9974]={{3860,12},{6037,24},{7910,4},{7966,2},{7971,4}},
+ [9979]={{3860,14},{4304,4},{6037,2},{7909,1},{7966,1}},
+ [9980]={{3860,16},{6037,2},{7966,1},{7971,1}},
+ [9983]={{2318,1},{2840,10},{2880,2},{3470,1}},
+ [9985]={{2319,1},{2841,8},{3466,1}},
+ [9986]={{2319,2},{2841,12},{3466,2}},
+ [9987]={{2319,2},{2841,14},{3466,1}},
+ [9993]={{3860,12},{3864,2},{4234,4},{7966,1}},
+ [9995]={{3860,16},{4304,4},{7909,2},{7966,1}},
+ [9997]={{3860,14},{4304,2},{6037,4},{7966,1}},
+ [10001]={{1210,4},{3860,16},{4304,2},{7966,1},{7971,1}},
+ [10003]={{1529,5},{3860,24},{3864,5},{4304,4},{6037,6},{7075,4},{7966,4}},
+ [10005]={{1206,2},{1705,2},{3860,14},{4338,2},{7909,1},{7966,1}},
+ [10007]={{3823,2},{3860,28},{4304,2},{6037,8},{7081,6},{7909,6},{7966,4}},
+ [10009]={{3860,18},{4304,4},{7075,2},{7966,1}},
+ [10011]={{3860,28},{4304,6},{6037,10},{7966,6},{7972,10}},
+ [10013]={{3860,12},{4304,2},{6037,6},{7910,2},{7966,1}},
+ [10015]={{3860,30},{4304,6},{6037,16},{7081,4},{7910,6},{7966,8}},
+ [10097]={{3858,1}},
+ [10098]={{7911,1}},
+ [10482]={{8150,1},{8169,1}},
+ [10487]={{4291,1},{4304,5}},
+ [10490]={{4234,12},{4236,2},{4291,2}},
+ [10499]={{4291,2},{4304,7}},
+ [10507]={{4291,2},{4304,5}},
+ [10509]={{4304,6},{8167,8},{8343,1}},
+ [10511]={{4304,6},{8167,12},{8343,1}},
+ [10516]={{4291,3},{4304,8},{4338,6}},
+ [10518]={{4304,8},{8167,12},{8343,1}},
+ [10520]={{4304,10},{8151,4},{8343,1}},
+ [10525]={{4291,4},{4304,12},{8154,12}},
+ [10529]={{4304,10},{8153,1},{8172,1}},
+ [10531]={{4304,8},{8151,6},{8343,1}},
+ [10533]={{4291,2},{4304,10},{8154,4}},
+ [10542]={{4291,2},{4304,6},{8154,8}},
+ [10544]={{4304,12},{8153,2},{8172,1}},
+ [10546]={{4304,10},{8153,2},{8172,1}},
+ [10548]={{4291,4},{4304,14}},
+ [10552]={{4304,14},{8167,24},{8343,1}},
+ [10554]={{4291,6},{4304,12},{8154,12}},
+ [10556]={{4304,14},{8167,28},{8343,1}},
+ [10558]={{4304,16},{8343,2}},
+ [10560]={{4304,10},{8152,6},{8343,2}},
+ [10562]={{4304,14},{8152,4},{8343,2}},
+ [10564]={{4304,12},{8154,16},{8343,2}},
+ [10566]={{4304,14},{8153,4},{8172,2}},
+ [10568]={{4304,14},{8154,8},{8343,2}},
+ [10570]={{4304,10},{8154,20},{8343,2}},
+ [10572]={{4304,16},{8153,2},{8172,2}},
+ [10574]={{4304,16},{8153,2},{8172,2}},
+ [10619]={{4304,24},{8165,12},{8172,2},{8343,4}},
+ [10621]={{4304,18},{8146,8},{8172,2},{8343,4},{8368,2}},
+ [10630]={{4304,20},{7075,2},{7079,8},{8172,1},{8343,4}},
+ [10632]={{4304,40},{7075,4},{7077,8},{8172,2},{8343,4}},
+ [10647]={{4304,40},{7971,2},{8168,40},{8172,4},{8343,4}},
+ [10650]={{4304,40},{8165,30},{8172,4},{8343,4}},
+ [11448]={{3358,1},{3372,1},{3821,1}},
+ [11449]={{3372,1},{3820,1},{3821,1}},
+ [11450]={{3355,1},{3372,1},{3821,1}},
+ [11451]={{3821,1},{4625,1},{8925,1}},
+ [11452]={{3821,1},{7067,1},{8925,1}},
+ [11453]={{3358,1},{8831,1},{8925,1}},
+ [11454]={{3577,1},{3860,5},{6037,1}},
+ [11456]={{3372,1},{4625,1},{9260,1}},
+ [11458]={{8153,1},{8831,1},{8925,1}},
+ [11459]={{3575,4},{4625,4},{8831,4},{9262,1}},
+ [11460]={{8836,1},{8925,1}},
+ [11461]={{3821,1},{8839,1},{8925,1}},
+ [11464]={{8838,1},{8845,1},{8925,1}},
+ [11465]={{3358,1},{8839,1},{8925,1}},
+ [11466]={{8836,1},{8839,1},{8925,1}},
+ [11467]={{3821,1},{8838,1},{8925,1}},
+ [11468]={{8831,3},{8925,1}},
+ [11472]={{8838,1},{8846,1},{8925,1}},
+ [11473]={{4342,1},{8845,2},{8925,1}},
+ [11476]={{8845,3},{8925,1}},
+ [11477]={{8845,1},{8846,1},{8925,1}},
+ [11478]={{8846,2},{8925,1}},
+ [11479]={{3575,1}},
+ [11480]={{3860,1}},
+ [11643]={{3486,4},{3577,4},{3859,10},{3864,1}},
+ [12044]={{2320,1},{2996,1}},
+ [12045]={{2318,1},{2320,1},{2996,2}},
+ [12046]={{2321,1},{2996,4}},
+ [12047]={{2321,1},{2604,3},{2997,5}},
+ [12048]={{4291,3},{4339,2}},
+ [12049]={{4291,3},{4339,2}},
+ [12050]={{4339,3},{8343,1}},
+ [12052]={{4339,3},{8343,1},{10285,2}},
+ [12053]={{4339,2},{8343,2}},
+ [12055]={{4339,3},{8343,1},{10285,2}},
+ [12056]={{2604,2},{4339,3},{8343,1}},
+ [12059]={{2324,1},{4339,1},{8343,1}},
+ [12060]={{2604,2},{4339,3},{8343,1}},
+ [12061]={{4339,1},{6261,1},{8343,1}},
+ [12063]={{4339,3},{7079,2},{8343,2}},
+ [12064]={{4339,2},{6261,2},{8343,1}},
+ [12065]={{4291,2},{4339,4}},
+ [12066]={{2604,2},{4339,3},{8343,2}},
+ [12067]={{4339,4},{8153,4},{8343,2},{10286,2}},
+ [12069]={{4339,5},{7077,2},{8343,2}},
+ [12070]={{4339,6},{8153,6},{8343,2},{10286,2}},
+ [12071]={{4339,5},{8343,2},{10285,5}},
+ [12072]={{4339,3},{8343,2}},
+ [12073]={{4304,2},{4339,3},{8343,2}},
+ [12074]={{4339,3},{8343,2}},
+ [12075]={{4339,2},{4342,2},{8343,2}},
+ [12076]={{4339,5},{8343,2},{10285,4}},
+ [12077]={{2324,1},{2325,1},{4339,3},{8343,1}},
+ [12078]={{2604,2},{4339,4},{8343,3}},
+ [12079]={{2604,2},{4339,5},{8343,2}},
+ [12080]={{4339,3},{8343,1},{10290,1}},
+ [12081]={{4339,3},{4589,6},{8343,2}},
+ [12082]={{4304,2},{4339,6},{8343,3},{10285,6}},
+ [12084]={{2604,2},{4339,4},{8343,2}},
+ [12085]={{4339,4},{8343,2}},
+ [12086]={{4339,2},{8343,2},{10285,8}},
+ [12088]={{4304,2},{4339,5},{7077,1},{8343,3}},
+ [12089]={{4339,4},{8343,3}},
+ [12091]={{2324,1},{4339,5},{8343,3}},
+ [12092]={{1529,1},{4339,8},{6037,1},{8153,4},{8343,3},{10286,2}},
+ [12093]={{4339,5},{8343,3}},
+ [12259]={{2841,12},{2842,4},{3478,2}},
+ [12260]={{2840,4}},
+ [12584]={{3577,1}},
+ [12585]={{7912,2}},
+ [12586]={{4306,1},{10505,1}},
+ [12587]={{3864,2},{4234,6}},
+ [12589]={{3860,3}},
+ [12590]={{3859,4}},
+ [12591]={{3860,1},{4338,1},{10505,1}},
+ [12594]={{3864,2},{4234,4},{4385,1},{7068,2}},
+ [12595]={{3860,4},{4400,1},{7068,2},{10559,1},{10560,1}},
+ [12596]={{3860,1},{10505,1}},
+ [12597]={{4304,2},{7909,2},{10559,1}},
+ [12599]={{3860,3}},
+ [12603]={{10505,1},{10560,1},{10561,1}},
+ [12607]={{4304,4},{7909,2},{10592,1}},
+ [12609]={{3372,1},{3818,1},{3821,1}},
+ [12614]={{3860,6},{3864,2},{4400,1},{10559,2},{10560,1}},
+ [12615]={{4304,4},{7910,2}},
+ [12616]={{4339,4},{10285,2},{10505,4},{10560,1}},
+ [12617]={{774,4},{818,4},{3860,8},{6037,1},{10561,1}},
+ [12618]={{4304,6},{7910,2}},
+ [12619]={{10505,2},{10560,1},{10561,2}},
+ [12620]={{6037,2},{7910,1},{10559,1}},
+ [12621]={{3860,2},{10505,2}},
+ [12622]={{1529,3},{4304,8},{7909,3},{8153,2},{10286,2}},
+ [12624]={{3860,14},{6037,4},{7077,4},{7910,2},{9060,2},{9061,2}},
+ [12715]={{10647,1},{10648,1}},
+ [12716]={{3860,4},{7068,1},{10505,5},{10558,1},{10559,2}},
+ [12717]={{3860,8},{3864,1},{7067,4}},
+ [12718]={{3860,8},{3864,1},{7068,4}},
+ [12754]={{9061,1},{10507,6},{10560,1},{10561,1}},
+ [12755]={{4407,2},{6037,6},{10505,4},{10560,1},{10561,2}},
+ [12758]={{3860,4},{9061,4},{10543,1},{10560,1}},
+ [12759]={{7972,4},{9060,1},{10559,2},{10560,1},{12808,1}},
+ [12760]={{4338,1},{10505,3},{10560,1}},
+ [12895]={{10647,1},{10648,1}},
+ [12897]={{4234,2},{8151,2},{10500,1},{10558,2},{10559,1}},
+ [12899]={{1529,2},{3860,4},{8151,4},{10559,1},{10560,1}},
+ [12902]={{3860,4},{4337,4},{10285,2},{10505,2},{10559,1}},
+ [12903]={{3860,4},{6037,2},{7387,1},{7909,2},{10560,1}},
+ [12905]={{4234,4},{4389,4},{10026,1},{10505,8},{10559,2}},
+ [12906]={{1529,2},{3860,6},{6037,6},{9060,2},{10558,1},{10561,1}},
+ [12907]={{3860,10},{4338,4},{6037,4},{7910,2},{10558,1}},
+ [12908]={{3860,6},{6037,6},{9061,4},{10559,2},{10560,1}},
+ [13028]={{159,1},{3821,1}},
+ [13240]={{3860,1},{10505,3},{10577,1}},
+ [13378]={{10940,1},{10998,1}},
+ [13380]={{10940,3},{10998,1}},
+ [13419]={{10998,1}},
+ [13421]={{10940,3},{10978,1}},
+ [13464]={{10940,1},{10978,1}},
+ [13485]={{10940,2},{10998,1}},
+ [13501]={{11083,1}},
+ [13503]={{11083,1},{11084,1}},
+ [13522]={{6048,1},{10998,1}},
+ [13529]={{11083,1},{11084,1}},
+ [13536]={{11083,1}},
+ [13538]={{10940,1},{10998,1},{11084,1}},
+ [13607]={{11082,1}},
+ [13612]={{2772,1},{11083,1}},
+ [13617]={{3356,1},{11083,1}},
+ [13620]={{6370,1},{11083,1}},
+ [13622]={{11082,1}},
+ [13626]={{10998,1},{11083,1},{11084,1}},
+ [13628]={{5500,1},{11082,1},{11083,1},{11128,1}},
+ [13631]={{11134,1}},
+ [13635]={{11083,1},{11138,1}},
+ [13637]={{11083,1}},
+ [13640]={{11083,2}},
+ [13642]={{11134,1}},
+ [13644]={{11083,2}},
+ [13646]={{11083,1},{11134,1}},
+ [13648]={{11083,3}},
+ [13653]={{5637,1},{11138,1}},
+ [13655]={{7067,1},{11138,1}},
+ [13657]={{7068,1},{11134,1}},
+ [13659]={{11134,1},{11137,1}},
+ [13661]={{11137,1}},
+ [13663]={{11134,1}},
+ [13687]={{11134,2}},
+ [13689]={{11135,1},{11137,1},{11139,1}},
+ [13693]={{11135,1},{11139,1}},
+ [13695]={{11137,2},{11139,1}},
+ [13698]={{7392,1},{11137,1}},
+ [13700]={{11135,1},{11137,1},{11139,1}},
+ [13702]={{7971,1},{11135,1},{11137,1},{11144,1}},
+ [13746]={{11137,1}},
+ [13794]={{11174,1}},
+ [13815]={{11137,1}},
+ [13817]={{11137,2}},
+ [13822]={{11174,1}},
+ [13836]={{11137,2}},
+ [13841]={{6037,1},{11137,2}},
+ [13846]={{11137,1},{11174,1}},
+ [13858]={{11137,3}},
+ [13868]={{8838,1},{11137,2}},
+ [13882]={{11174,1}},
+ [13887]={{11137,2},{11174,1}},
+ [13890]={{7909,1},{11174,1},{11177,1}},
+ [13898]={{7078,1},{11177,2}},
+ [13905]={{11174,2},{11176,1}},
+ [13915]={{9224,1},{11176,1},{11177,1}},
+ [13917]={{11175,1}},
+ [13931]={{11174,2},{11176,1}},
+ [13933]={{3829,1},{11178,1}},
+ [13935]={{11175,1}},
+ [13937]={{11176,1},{11178,1}},
+ [13939]={{11174,2},{11176,1}},
+ [13941]={{11175,1},{11176,1},{11178,1}},
+ [13943]={{11175,1},{11178,1}},
+ [13945]={{11176,3}},
+ [13947]={{11176,2},{11178,1}},
+ [13948]={{8153,1},{11178,1}},
+ [14293]={{4470,1},{10938,1}},
+ [14379]={{3478,2},{3577,1}},
+ [14380]={{3486,1},{6037,1}},
+ [14807]={{4470,1},{10938,2}},
+ [14809]={{11134,1},{11291,1}},
+ [14810]={{11134,1},{11137,1},{11291,1}},
+ [14891]={{11370,8}},
+ [14930]={{4291,4},{4304,12},{8172,1},{8949,1}},
+ [14932]={{4291,6},{4304,10},{8172,1},{8951,1}},
+ [15255]={{3860,1},{4338,1},{10505,1}},
+ [15292]={{7077,4},{11371,18}},
+ [15293]={{7077,2},{11371,10}},
+ [15294]={{7077,4},{11371,26}},
+ [15295]={{7077,1},{11371,6}},
+ [15296]={{7077,8},{11371,20}},
+ [15596]={{7078,1},{11382,1},{14343,3}},
+ [15628]={{3860,6},{4394,1},{7077,1},{7191,1}},
+ [15633]={{3860,2},{4389,2},{6037,1},{7075,1},{7191,1}},
+ [15833]={{8831,3},{8925,1}},
+ [15853]={{1015,1},{2678,1}},
+ [15855]={{2692,1},{12184,1}},
+ [15856]={{2692,1},{12203,1}},
+ [15861]={{159,1},{4536,2},{12202,1}},
+ [15863]={{2692,1},{12037,1}},
+ [15865]={{2596,1},{12037,1}},
+ [15906]={{2692,1},{4402,1},{12037,1}},
+ [15910]={{159,1},{3713,1},{12204,2}},
+ [15915]={{2692,2},{12206,1}},
+ [15933]={{3713,2},{12207,1}},
+ [15935]={{2678,1},{12223,1}},
+ [15972]={{1206,1},{3466,2},{3859,10},{4234,1},{7067,1}},
+ [15973]={{3577,4},{3859,10},{4234,2},{7068,2}},
+ [16153]={{10620,1}},
+ [16639]={{12365,4}},
+ [16640]={{12365,1}},
+ [16641]={{12365,1}},
+ [16642]={{11188,4},{12359,16},{12361,1}},
+ [16643]={{11186,4},{12359,12}},
+ [16644]={{11184,4},{12359,12}},
+ [16645]={{7077,2},{12359,10}},
+ [16646]={{3864,2},{8170,6},{12359,24}},
+ [16647]={{7909,1},{8170,6},{12359,22}},
+ [16648]={{7077,2},{7910,1},{12359,18}},
+ [16649]={{7910,1},{12359,20}},
+ [16650]={{8153,4},{8170,40},{12364,1},{12803,4},{12810,2},{14341,1}},
+ [16651]={{7076,2},{12359,4},{12644,4}},
+ [16652]={{8170,8},{11185,4},{12359,20}},
+ [16653]={{7910,1},{11188,4},{12359,24}},
+ [16654]={{7077,4},{12359,18}},
+ [16655]={{7078,2},{7910,4},{12359,20},{12655,6}},
+ [16656]={{7077,4},{12359,14}},
+ [16657]={{7909,1},{7910,1},{12359,34}},
+ [16658]={{7910,2},{12359,34}},
+ [16659]={{7077,4},{12359,18}},
+ [16660]={{7080,2},{12359,20},{12360,4},{12364,2}},
+ [16661]={{7080,4},{8170,20},{12361,4},{12810,4},{14341,1}},
+ [16662]={{11186,4},{12359,26}},
+ [16663]={{7910,2},{12359,40}},
+ [16664]={{3577,6},{12359,20},{12360,2}},
+ [16665]={{2842,10},{12359,20},{12360,2}},
+ [16667]={{7910,4},{12359,40},{12361,4},{12662,10}},
+ [16724]={{3577,6},{6037,6},{12359,20},{12655,4},{12800,2}},
+ [16725]={{7077,4},{12359,20}},
+ [16726]={{6037,2},{12359,30},{12360,2},{12364,1}},
+ [16728]={{8168,60},{8170,40},{12364,2},{12799,6},{12810,4},{14341,1}},
+ [16729]={{8146,40},{12359,80},{12360,12},{12361,10},{12800,4}},
+ [16730]={{7910,2},{12359,44}},
+ [16731]={{7910,1},{12359,40},{12360,2}},
+ [16732]={{7910,1},{12359,40},{12360,2}},
+ [16741]={{7076,10},{12360,15},{12361,4},{12655,20},{12799,4}},
+ [16742]={{7076,6},{12360,6},{12655,16},{12799,2},{12800,1}},
+ [16744]={{7080,6},{12360,10},{12361,2},{12364,1},{12655,20}},
+ [16745]={{7076,4},{7080,4},{12360,8},{12364,2},{12655,24},{12800,2}},
+ [16746]={{12364,6},{12800,6},{12810,30},{14341,2},{249427,20},{249429,10}},
+ [16969]={{8170,4},{12359,20},{12644,2},{12799,2}},
+ [16970]={{7910,4},{8170,4},{12359,30},{12361,4},{12644,2},{12655,4}},
+ [16971]={{8170,6},{12359,40},{12644,6}},
+ [16973]={{8170,4},{12359,20},{12364,2},{12655,6},{12804,4}},
+ [16978]={{7077,4},{7078,4},{12644,2},{12655,10},{12800,2}},
+ [16983]={{12360,2},{12361,2},{12364,1},{12655,6},{12799,2},{12804,4}},
+ [16984]={{7077,4},{7910,4},{8170,4},{12359,30}},
+ [16985]={{8170,4},{12359,40},{12360,2},{12361,2},{12644,2},{12662,16},{12808,8}},
+ [16988]={{7076,10},{12359,50},{12360,15},{12809,4},{12810,6}},
+ [16990]={{12360,15},{12644,2},{12799,4},{12800,8},{12810,8},{12811,1}},
+ [16991]={{12359,40},{12360,12},{12364,8},{12644,2},{12808,10},{12810,4}},
+ [16992]={{7080,4},{12360,18},{12361,8},{12644,2},{12800,8},{12810,4}},
+ [16993]={{7076,6},{12364,8},{12655,20},{12799,8},{12810,4}},
+ [16994]={{12360,20},{12644,2},{12810,6}},
+ [16995]={{7910,6},{12360,10},{12644,4},{12655,10},{12799,6},{12800,6},{12810,2}},
+ [17180]={{11176,3},{12359,1}},
+ [17181]={{8170,1},{16202,1}},
+ [17187]={{12359,1},{12363,1}},
+ [17551]={{3372,1},{13422,1}},
+ [17552]={{8846,3},{8925,1}},
+ [17553]={{8838,2},{8839,2},{8925,1}},
+ [17554]={{8838,1},{8925,1},{13423,2}},
+ [17555]={{8925,1},{13463,1},{13466,2}},
+ [17557]={{8846,2},{8925,1},{13466,2}},
+ [17559]={{7082,1}},
+ [17560]={{7078,1}},
+ [17561]={{7076,1}},
+ [17562]={{7080,1}},
+ [17563]={{12808,1}},
+ [17564]={{7080,1}},
+ [17565]={{12803,1}},
+ [17566]={{7076,1}},
+ [17570]={{8925,1},{10620,1},{13423,3}},
+ [17571]={{8925,1},{13465,2},{13466,2}},
+ [17572]={{8925,1},{13466,2},{13467,2}},
+ [17573]={{8925,1},{13463,3},{13465,1}},
+ [17574]={{7068,1},{8925,1},{13463,1}},
+ [17575]={{7070,1},{8925,1},{13463,1}},
+ [17576]={{7067,1},{8925,1},{13463,1}},
+ [17577]={{8925,1},{11176,1},{13463,1}},
+ [17578]={{3824,1},{8925,1},{13463,1}},
+ [17580]={{8925,1},{13463,3},{13467,2}},
+ [17634]={{8925,1},{13423,30},{13465,10},{13468,1}},
+ [17635]={{8846,30},{8925,1},{13423,10},{13468,1}},
+ [17636]={{8925,1},{13463,30},{13467,10},{13468,1}},
+ [17637]={{8925,1},{13463,30},{13465,10},{13468,1}},
+ [17638]={{8925,1},{13465,10},{13467,30},{13468,1}},
+ [18238]={{4603,1}},
+ [18239]={{3713,1},{13754,1}},
+ [18240]={{3713,1},{13755,1}},
+ [18241]={{13758,1}},
+ [18242]={{2692,2},{13756,1}},
+ [18243]={{159,1},{13759,1}},
+ [18244]={{13760,1}},
+ [18245]={{159,1},{13888,1}},
+ [18246]={{2692,1},{3713,1},{13893,1}},
+ [18247]={{3713,1},{13889,1}},
+ [18401]={{14047,5}},
+ [18402]={{14048,3},{14341,1}},
+ [18403]={{7079,2},{14048,5},{14341,1}},
+ [18404]={{7079,2},{14048,5},{14341,1}},
+ [18405]={{8170,2},{14048,5},{14341,1},{249409,2},{249430,4}},
+ [18406]={{14048,5},{14227,1},{14341,1}},
+ [18407]={{14048,5},{14227,1},{14341,1}},
+ [18408]={{7077,3},{14048,5},{14341,1}},
+ [18409]={{14048,4},{14227,1},{14341,1}},
+ [18410]={{9210,2},{14048,3},{14227,1},{14341,1}},
+ [18411]={{7080,1},{14048,3},{14341,1}},
+ [18412]={{7077,3},{14048,4},{14341,1}},
+ [18413]={{9210,2},{14048,4},{14227,1},{14341,1}},
+ [18414]={{3577,2},{14048,5},{14341,1}},
+ [18415]={{3577,2},{14048,4},{14341,1}},
+ [18416]={{9210,4},{14048,6},{14227,1},{14341,1}},
+ [18417]={{8170,4},{14048,4},{14341,1}},
+ [18418]={{7078,1},{14048,5},{14341,1}},
+ [18419]={{14048,5},{14256,4},{14341,1}},
+ [18420]={{3577,2},{14048,4},{14341,1}},
+ [18421]={{11176,1},{14048,6},{14341,1}},
+ [18422]={{7068,4},{7077,4},{7078,4},{14048,6},{14341,1}},
+ [18423]={{8170,4},{14048,4},{14227,2},{14341,1}},
+ [18424]={{7080,1},{14048,6},{14341,1}},
+ [18434]={{7078,1},{14048,6},{14341,1}},
+ [18436]={{7080,4},{12808,4},{14048,10},{14256,12},{14341,1}},
+ [18437]={{8170,4},{14048,6},{14256,4},{14341,1}},
+ [18438]={{14048,6},{14227,2},{14341,1}},
+ [18439]={{3577,4},{14048,6},{14227,1},{14341,1}},
+ [18440]={{14048,6},{14341,1},{14342,4}},
+ [18441]={{9210,4},{14048,6},{14341,1}},
+ [18442]={{14048,5},{14256,4},{14341,1}},
+ [18444]={{14048,4},{14227,2},{14341,1}},
+ [18445]={{14048,4},{14341,1},{14342,1},{249409,4},{249430,2},{249431,10}},
+ [18446]={{11176,2},{14048,8},{14341,1}},
+ [18447]={{14048,6},{14341,1},{14342,4}},
+ [18448]={{14048,5},{14341,1},{14342,5}},
+ [18449]={{8170,4},{14048,7},{14227,2},{14341,1}},
+ [18450]={{7910,1},{11176,4},{14048,6},{14341,1}},
+ [18451]={{12662,4},{14048,8},{14256,8},{14341,2}},
+ [18452]={{12800,1},{12810,2},{14048,4},{14341,2},{14342,6}},
+ [18453]={{8170,4},{12662,4},{14048,7},{14256,6},{14341,2}},
+ [18454]={{9210,8},{12364,4},{12810,6},{13926,4},{14048,10},{14341,2},{14342,8},{249431,10}},
+ [18455]={{14048,8},{14341,2},{14342,12},{14344,2},{249428,5},{249429,5},{249431,8}},
+ [18456]={{9210,8},{12811,2},{13926,2},{14048,12},{14341,2},{14342,8},{249431,10}},
+ [18457]={{7076,8},{7078,8},{7080,8},{7082,8},{14048,12},{14341,2},{249431,10}},
+ [18458]={{7078,8},{12662,20},{12808,8},{14048,12},{14256,40},{14341,2},{249431,10}},
+ [18560]={{14256,2}},
+ [19047]={{8171,1},{15409,1}},
+ [19048]={{8170,4},{14341,1},{15408,4}},
+ [19049]={{2325,1},{8170,8},{14341,1}},
+ [19050]={{8170,20},{14341,2},{15412,25}},
+ [19051]={{8170,6},{14341,1},{15408,6}},
+ [19052]={{2325,1},{8170,8},{14341,1}},
+ [19053]={{8170,6},{14341,1},{15423,6}},
+ [19054]={{8170,40},{14341,1},{15414,30}},
+ [19055]={{8170,10},{14047,6},{14341,1}},
+ [19058]={{8170,5}},
+ [19059]={{7075,1},{7078,1},{8170,6},{14341,1}},
+ [19060]={{8170,20},{14341,1},{15412,25}},
+ [19061]={{8170,12},{12803,4},{14341,1}},
+ [19062]={{1529,2},{8170,24},{14341,1},{15420,80}},
+ [19063]={{8170,4},{14341,1},{15423,8}},
+ [19064]={{8170,6},{14341,1},{15408,8}},
+ [19065]={{7971,1},{8170,6},{14047,6},{14341,1}},
+ [19066]={{8170,4},{14341,1},{15422,6}},
+ [19067]={{7080,2},{7082,2},{8170,16},{14341,1}},
+ [19068]={{8170,28},{14341,1},{15419,12}},
+ [19070]={{8170,6},{14341,1},{15408,8}},
+ [19071]={{2325,1},{8170,12},{14341,1}},
+ [19072]={{8170,12},{14047,10},{14341,1}},
+ [19073]={{8170,8},{14341,1},{15423,8}},
+ [19074]={{8170,6},{14341,1},{15422,8}},
+ [19075]={{8170,8},{14341,1},{15408,12}},
+ [19076]={{7076,1},{7078,1},{8170,8},{14341,1}},
+ [19077]={{8170,28},{14341,1},{15407,1},{15415,30}},
+ [19078]={{8170,16},{12803,6},{14341,1},{15407,1}},
+ [19079]={{7080,3},{7082,3},{8170,16},{14341,1},{15407,1}},
+ [19080]={{8170,24},{14341,1},{15419,14}},
+ [19081]={{8170,10},{14341,1},{15423,10}},
+ [19082]={{8170,14},{14047,10},{14341,1}},
+ [19083]={{2325,3},{8170,16},{14341,1},{15407,1}},
+ [19084]={{8170,30},{14341,1},{15417,8}},
+ [19085]={{8170,40},{14341,2},{15407,1},{15416,60}},
+ [19086]={{1529,1},{8170,40},{14341,1},{15407,1},{15420,120}},
+ [19087]={{8170,6},{14341,1},{15422,10}},
+ [19088]={{8170,8},{14341,1},{15407,1},{15408,12}},
+ [19089]={{8170,28},{12810,2},{14341,1},{15407,1},{15415,30}},
+ [19090]={{7080,3},{7082,3},{8170,12},{12810,2},{14341,1}},
+ [19091]={{8170,18},{12810,2},{14047,12},{14341,1}},
+ [19092]={{2325,2},{8170,14},{14341,2}},
+ [19093]={{14044,1},{14341,1},{15410,1}},
+ [19094]={{8170,44},{12810,2},{14341,1},{15407,1},{15416,45}},
+ [19095]={{8170,16},{12803,8},{14341,2},{14342,2},{15407,1}},
+ [19097]={{8170,30},{14341,1},{15407,1},{15417,14}},
+ [19098]={{2325,4},{8170,20},{14256,6},{14341,2},{15407,2}},
+ [19100]={{8170,14},{14341,2},{15407,1},{15408,14}},
+ [19101]={{7076,1},{7078,1},{8170,10},{14341,2}},
+ [19102]={{8170,22},{12810,4},{14047,16},{14341,2},{15407,1}},
+ [19103]={{8170,16},{12810,4},{14047,18},{14341,2},{15407,1}},
+ [19104]={{8170,12},{14341,2},{15407,1},{15422,12}},
+ [19107]={{8170,40},{12810,4},{14341,2},{15407,1},{15416,60}},
+ [19435]={{7971,2},{14048,6},{14341,1},{14342,4}},
+ [19567]={{10558,1},{10560,4},{10561,1},{12359,6}},
+ [19666]={{2842,1},{3470,1}},
+ [19667]={{3486,1},{3577,1}},
+ [19668]={{6037,1},{7966,1}},
+ [19669]={{12360,1},{12644,1}},
+ [19788]={{12365,2}},
+ [19790]={{12359,3},{14047,3},{15992,3},{15994,1}},
+ [19791]={{12359,3},{14047,1}},
+ [19792]={{10546,1},{10559,2},{10561,2},{12359,4},{15994,2}},
+ [19793]={{8170,1},{10558,1},{12803,1},{15994,4}},
+ [19794]={{7910,4},{10502,1},{12810,2},{14047,8}},
+ [19795]={{12359,6}},
+ [19796]={{8170,4},{10546,2},{11371,6},{12361,2},{12799,2},{16000,2}},
+ [19799]={{11371,1},{14047,3},{15992,3},{15994,2}},
+ [19800]={{12359,2},{15992,1}},
+ [19814]={{6037,1},{8170,2},{10561,1},{14047,4},{15994,2},{16000,1}},
+ [19815]={{12360,1},{14227,1}},
+ [19819]={{10558,1},{12799,1},{15994,1},{16006,2}},
+ [19825]={{10500,1},{12364,2},{12810,4}},
+ [19830]={{10558,4},{10576,1},{12655,10},{12810,6},{15994,6},{16006,8}},
+ [19831]={{12359,3},{14047,1},{16006,1}},
+ [19833]={{7076,2},{7078,2},{12360,10},{12800,2},{12810,2},{16000,2}},
+ [20008]={{16202,2}},
+ [20009]={{11176,7},{16202,2}},
+ [20010]={{16203,6},{16204,6}},
+ [20011]={{16204,15}},
+ [20012]={{16202,2},{16204,2}},
+ [20013]={{16203,4},{16204,4}},
+ [20014]={{7075,1},{7077,1},{7079,1},{7081,1},{7972,1},{16202,1}},
+ [20015]={{16204,8}},
+ [20016]={{16203,2},{16204,4}},
+ [20017]={{11176,6}},
+ [20020]={{11176,6}},
+ [20023]={{16203,8}},
+ [20024]={{16202,1},{16203,2}},
+ [20025]={{14344,4},{16203,10},{16204,15}},
+ [20026]={{14343,1},{16204,6}},
+ [20028]={{14343,1},{16203,3}},
+ [20029]={{7080,1},{7082,1},{13467,1},{14343,4}},
+ [20030]={{14344,4},{16204,10}},
+ [20031]={{14344,2},{16203,10}},
+ [20032]={{12803,6},{12808,6},{14344,6}},
+ [20033]={{12808,4},{14344,4}},
+ [20034]={{12811,2},{14344,4}},
+ [20035]={{14344,2},{16203,12}},
+ [20036]={{14344,2},{16203,12}},
+ [20051]={{13926,1},{14343,4},{14344,2},{16203,4},{16204,10},{16206,1}},
+ [20201]={{12360,3},{12644,1}},
+ [20626]={{1179,1},{2692,1},{7974,2}},
+ [20648]={{2318,4}},
+ [20649]={{2319,5}},
+ [20650]={{4234,6}},
+ [20848]={{12810,6},{14048,12},{14341,2},{17010,4},{17011,4}},
+ [20849]={{7078,4},{12810,2},{14048,8},{14341,2},{17010,6}},
+ [20853]={{14341,2},{17010,6},{17011,2},{17012,20}},
+ [20854]={{14341,2},{17010,3},{17011,6},{17012,15}},
+ [20855]={{12810,6},{14341,2},{15416,30},{17010,4},{17011,3}},
+ [20872]={{11371,6},{17010,3},{17011,3}},
+ [20873]={{11371,16},{17010,4},{17011,5}},
+ [20874]={{11371,4},{17010,2},{17011,2}},
+ [20876]={{11371,16},{17010,4},{17011,6}},
+ [20890]={{11371,16},{11382,2},{12810,2},{17010,12}},
+ [20897]={{11371,18},{11382,2},{12810,2},{17011,12}},
+ [20916]={{8365,1}},
+ [21143]={{6889,1},{17194,1}},
+ [21144]={{1179,1},{6889,1},{17194,1},{17196,1}},
+ [21161]={{7078,25},{11371,20},{11382,10},{12360,50},{17010,10},{17011,10},{17203,8}},
+ [21175]={{12205,2}},
+ [21913]={{3829,1},{3859,10},{4234,2},{7069,2},{7070,2}},
+ [21923]={{3358,1},{3372,1},{3819,2}},
+ [21931]={{3819,1},{11135,1},{11137,1},{11139,1}},
+ [21943]={{4234,8},{4291,1},{7067,4}},
+ [21945]={{2605,4},{4291,1},{4305,5}},
+ [22331]={{4304,6}},
+ [22480]={{3713,1},{12208,1}},
+ [22704]={{7067,2},{7068,1},{7191,1},{8170,4},{12359,12}},
+ [22711]={{1210,4},{4236,2},{4304,6},{7428,8},{7971,2},{8343,1}},
+ [22727]={{14341,2},{17012,3}},
+ [22732]={{10286,1},{13463,4},{13464,4},{18256,1}},
+ [22749]={{7078,4},{7080,4},{7082,4},{13926,2},{14344,4},{16203,12}},
+ [22750]={{7080,6},{12803,6},{12811,1},{14344,4},{16203,8}},
+ [22757]={{7067,2},{12365,3}},
+ [22759]={{7078,2},{12810,6},{14341,4},{14342,6},{17010,8}},
+ [22761]={{3713,1},{18255,1}},
+ [22793]={{7076,2},{11371,6},{16000,1},{16006,4},{17011,2}},
+ [22795]={{12360,6},{16000,2},{16006,2},{17010,4},{17011,2}},
+ [22797]={{7076,8},{7082,8},{12360,6},{12803,12},{16006,2}},
+ [22808]={{7972,1},{8831,2},{8925,1}},
+ [22813]={{8170,4},{14048,2},{14341,1},{18240,1}},
+ [22815]={{8170,4},{14048,2},{14341,1},{18240,1}},
+ [22866]={{7078,10},{7080,10},{9210,8},{14048,16},{14341,6},{14342,8},{14344,4},{249431,10}},
+ [22867]={{12662,6},{12808,8},{14048,12},{14256,20},{14341,2}},
+ [22868]={{7078,10},{7910,2},{14048,12},{14341,2}},
+ [22869]={{13926,2},{14048,12},{14341,2},{14342,6}},
+ [22870]={{12360,1},{12809,4},{14048,12},{14341,2}},
+ [22902]={{13926,2},{14048,6},{14341,2},{14342,4}},
+ [22921]={{8170,12},{12804,12},{14341,4},{15407,2}},
+ [22922]={{7082,6},{8170,12},{11754,4},{14341,4},{15407,2}},
+ [22923]={{8170,12},{14341,4},{15407,4},{15420,60},{18512,8}},
+ [22926]={{8170,30},{12607,12},{14341,8},{15407,5},{15414,30},{15416,30}},
+ [22927]={{7080,10},{8170,30},{12803,12},{14341,8},{15407,3},{18512,8}},
+ [22928]={{7082,12},{8170,30},{12753,4},{12809,8},{14341,8},{15407,4}},
+ [22967]={{12360,10},{17010,1},{18562,1},{18567,3}},
+ [23066]={{4234,1},{4377,1}},
+ [23067]={{4234,1},{4377,1}},
+ [23068]={{4234,1},{4377,1}},
+ [23069]={{4306,1},{10505,1},{260801,1}},
+ [23070]={{14047,3},{15992,2}},
+ [23071]={{6037,2},{7067,2},{7069,1}},
+ [23077]={{3829,2},{7078,4},{12361,2},{13467,4},{15994,6},{18631,2}},
+ [23078]={{7191,2},{7910,2},{14227,2},{15994,2},{18631,2}},
+ [23079]={{14047,2},{16000,2},{18631,1}},
+ [23080]={{159,1},{8170,2},{15992,3},{15994,2}},
+ [23081]={{7080,6},{7910,4},{11371,4},{12800,2},{18631,3}},
+ [23082]={{11371,8},{12799,2},{12800,2},{12803,6},{12808,4},{18631,4}},
+ [23096]={{7191,1},{7910,1},{8170,4},{12359,4},{15994,2}},
+ [23129]={{3864,1},{10558,1},{10560,1},{10561,1},{15994,2}},
+ [23190]={{2321,1},{4234,2}},
+ [23399]={{4234,8},{4236,2},{4461,1},{5498,4},{5637,4}},
+ [23486]={{3860,10},{7077,4},{7910,2},{10586,1},{18631,1}},
+ [23489]={{3860,12},{7075,4},{7079,2},{7909,4},{9060,1},{18631,2}},
+ [23507]={{8150,1},{14047,2},{15992,2}},
+ [23628]={{7076,3},{8170,12},{12803,3},{14341,1}},
+ [23629]={{7076,6},{8170,20},{12803,6},{14341,1}},
+ [23632]={{6037,6},{12359,8},{12811,1}},
+ [23633]={{6037,10},{12360,2},{12811,1}},
+ [23636]={{11371,4},{17010,2},{17011,4}},
+ [23637]={{11371,4},{11382,2},{17010,5},{17011,3},{17012,4}},
+ [23638]={{11371,4},{11382,1},{12360,12},{17010,6},{17011,3}},
+ [23639]={{11371,6},{12360,16},{17010,2},{17011,5}},
+ [23650]={{11371,8},{12360,12},{12800,4},{17010,7},{17011,4}},
+ [23652]={{11371,6},{12360,10},{12809,12},{17010,6},{17011,6}},
+ [23653]={{11371,12},{12360,10},{12364,4},{17010,5},{17011,8}},
+ [23662]={{7076,3},{12803,3},{14048,8},{14227,2}},
+ [23663]={{7076,5},{12803,5},{14227,2},{14342,5}},
+ [23664]={{12809,2},{12810,4},{13926,2},{14048,6},{14227,2}},
+ [23665]={{12809,2},{14227,2},{14342,5}},
+ [23666]={{7078,6},{14227,4},{14342,10},{17010,2},{17011,3}},
+ [23667]={{7078,10},{14227,4},{14342,8},{17010,5},{17011,3}},
+ [23703]={{8170,30},{12803,4},{12804,2},{14341,2},{15407,2}},
+ [23704]={{12803,6},{12804,6},{12810,8},{14227,2},{15407,2}},
+ [23705]={{7080,4},{8170,30},{12809,2},{14341,2},{15407,2}},
+ [23706]={{12803,4},{12809,4},{12810,8},{14341,2},{15407,2}},
+ [23707]={{14227,4},{15407,4},{17011,5}},
+ [23708]={{12607,4},{14227,4},{15407,4},{17010,5},{17011,2},{17012,4}},
+ [23709]={{12810,10},{14227,4},{15407,4},{17010,8},{17012,12}},
+ [23710]={{7076,6},{14227,4},{15407,4},{17010,2},{17011,7}},
+ [23799]={{7076,2},{14344,6},{16203,6},{16204,4}},
+ [23800]={{7082,2},{14344,6},{16203,6},{16204,4}},
+ [23801]={{7080,2},{16203,4},{16204,16}},
+ [23802]={{12803,6},{14344,2},{16203,4},{16204,20}},
+ [23803]={{14344,10},{16203,8},{16204,15}},
+ [23804]={{14344,15},{16203,12},{16204,20}},
+ [24091]={{12804,4},{14048,4},{14227,2},{14342,3},{19726,5}},
+ [24092]={{12804,4},{14048,4},{14227,2},{14342,4},{19726,4}},
+ [24093]={{12810,4},{14048,4},{14227,4},{14342,3},{19726,3}},
+ [24121]={{12803,4},{14341,4},{15407,5},{19767,14}},
+ [24122]={{12803,4},{14341,3},{15407,4},{19767,10}},
+ [24123]={{12803,4},{14341,3},{15407,3},{19767,8}},
+ [24124]={{14341,3},{15407,3},{19726,2},{19768,35}},
+ [24125]={{14341,3},{15407,3},{19726,2},{19768,25}},
+ [24136]={{7910,2},{12359,20},{19726,2},{19774,10}},
+ [24137]={{7910,1},{12359,16},{19726,2},{19774,8}},
+ [24138]={{12359,12},{12810,4},{19726,2},{19774,6}},
+ [24139]={{12359,20},{12799,2},{19774,14}},
+ [24140]={{12359,18},{12799,2},{19774,12}},
+ [24141]={{12359,16},{12799,1},{19774,10}},
+ [24266]={{12804,6},{12938,1},{13468,1},{19943,1}},
+ [24356]={{12804,8},{12810,4},{16006,2},{19726,4},{19774,5}},
+ [24357]={{12804,8},{12810,4},{16006,1},{19726,5},{19774,5}},
+ [24365]={{8925,1},{13463,1},{13466,2}},
+ [24366]={{8925,1},{13463,2},{13464,1}},
+ [24367]={{8925,1},{10286,2},{13465,2},{13467,2}},
+ [24368]={{8846,1},{8925,1},{13466,2}},
+ [24399]={{11371,6},{17010,3},{17011,3},{17012,4}},
+ [24418]={{3667,2},{3713,1}},
+ [24654]={{8170,28},{14341,2},{15407,2},{15415,36}},
+ [24655]={{8170,20},{14341,2},{15407,1},{15412,30}},
+ [24703]={{12803,4},{12810,12},{14227,6},{15407,4},{20381,6}},
+ [24801]={{3713,1},{20424,1}},
+ [24846]={{7078,2},{20498,20},{20500,1}},
+ [24847]={{7078,2},{15407,1},{20498,30},{20500,2}},
+ [24848]={{7078,2},{15407,2},{20498,40},{20500,3}},
+ [24849]={{18512,2},{20498,20},{20501,1}},
+ [24850]={{15407,1},{18512,2},{20498,30},{20501,2}},
+ [24851]={{15407,2},{18512,2},{20498,40},{20501,3}},
+ [24901]={{14048,6},{14227,2},{14256,6},{20520,8}},
+ [24902]={{12810,2},{14048,2},{14227,2},{14256,2},{20520,6}},
+ [24903]={{12810,2},{14048,4},{14227,2},{14256,4},{20520,6}},
+ [24912]={{6037,6},{12359,12},{12810,2},{20520,6}},
+ [24913]={{6037,8},{11754,1},{12359,16},{20520,8}},
+ [24914]={{6037,10},{12359,20},{20520,10}},
+ [24940]={{2319,8},{2321,2},{4231,1},{7286,8}},
+ [25072]={{14344,6},{18512,8},{20725,4}},
+ [25073]={{12808,6},{14344,10},{20725,3}},
+ [25074]={{7080,4},{14344,10},{20725,3}},
+ [25078]={{7078,4},{14344,10},{20725,2}},
+ [25079]={{12811,1},{14344,8},{20725,3}},
+ [25080]={{7082,4},{14344,8},{20725,3}},
+ [25081]={{7078,4},{14344,8},{20725,3}},
+ [25082]={{12803,4},{14344,8},{20725,2}},
+ [25083]={{13468,2},{14344,8},{20725,3}},
+ [25084]={{11754,2},{14344,6},{20725,4}},
+ [25086]={{12809,8},{14344,8},{20725,3}},
+ [25124]={{3371,1},{10940,1},{17034,1}},
+ [25125]={{3372,1},{11083,1},{17034,2}},
+ [25126]={{3372,1},{11137,1},{17035,2}},
+ [25127]={{8831,1},{8925,1},{11176,1}},
+ [25128]={{4625,2},{8925,1},{16204,3}},
+ [25129]={{4625,3},{14344,2},{18256,1}},
+ [25130]={{8831,3},{14344,2},{18256,1}},
+ [25146]={{7077,1}},
+ [25659]={{2692,1},{8150,1},{9061,1},{21024,1}},
+ [25704]={{2678,1},{21071,1}},
+ [25954]={{2692,1},{21153,1}},
+ [26011]={{7079,2},{10558,1},{15407,1},{15994,4},{18631,2}},
+ [26085]={{7972,2},{8170,4},{14048,6},{14341,1}},
+ [26086]={{12810,6},{14227,4},{14256,12},{20520,2}},
+ [26087]={{7078,4},{14227,4},{14256,20},{17012,16},{19726,8}},
+ [26277]={{4625,3},{6371,3},{8925,1}},
+ [26279]={{7080,4},{7082,4},{12810,6},{14227,2},{15407,2}},
+ [26403]={{2604,2},{4625,2},{14048,4},{14341,1}},
+ [26407]={{2604,2},{4625,2},{14048,4},{14341,1}},
+ [26416]={{2319,1},{4364,1}},
+ [26417]={{2319,1},{4364,1}},
+ [26418]={{2319,1},{4364,1}},
+ [26420]={{4234,1},{4377,1}},
+ [26421]={{4234,1},{4377,1}},
+ [26422]={{4234,1},{4377,1}},
+ [26423]={{4304,1},{10505,1}},
+ [26424]={{4304,1},{10505,1}},
+ [26425]={{4304,1},{10505,1}},
+ [26426]={{8170,1},{15992,1}},
+ [26427]={{8170,1},{15992,1}},
+ [26428]={{8170,1},{15992,1}},
+ [26442]={{9060,2},{9061,2},{10560,2},{10561,1}},
+ [26443]={{9060,3},{9061,3},{10561,1},{18631,1}},
+ [27585]={{7076,2},{12655,4},{22202,14}},
+ [27586]={{7076,4},{12655,8},{22202,24},{22203,8}},
+ [27587]={{7076,10},{12364,4},{12655,12},{22202,40},{22203,18}},
+ [27588]={{12810,4},{22202,14}},
+ [27589]={{12810,8},{13512,1},{22202,24},{22203,8}},
+ [27590]={{12800,4},{12809,10},{12810,12},{22202,36},{22203,15}},
+ [27658]={{4339,4},{8343,2},{11137,4}},
+ [27659]={{14048,5},{14341,2},{16203,2}},
+ [27660]={{12810,4},{14048,6},{14227,4},{14344,4}},
+ [27724]={{8831,10},{11040,8},{14048,5},{14341,2}},
+ [27725]={{13468,1},{14048,6},{14227,4},{14342,2}},
+ [27829]={{7076,10},{12360,12},{12655,20},{13510,2}},
+ [27830]={{11371,10},{12360,15},{12753,2},{12808,20},{15417,10},{20520,20}},
+ [27832]={{12360,12},{12810,4},{13512,2},{20725,2}},
+ [27837]={{7082,4},{14344,10},{16203,6},{16204,14}},
+ [28205]={{7080,4},{14048,4},{14227,4},{22682,5}},
+ [28207]={{7080,6},{14048,8},{14227,8},{22682,7}},
+ [28208]={{7080,2},{14048,4},{14227,4},{22682,5}},
+ [28209]={{7080,2},{14048,2},{14227,4},{22682,4}},
+ [28210]={{12803,4},{14227,4},{14342,2},{19726,1}},
+ [28219]={{7080,2},{12810,16},{14227,4},{15407,4},{22682,7}},
+ [28220]={{7080,2},{12810,12},{14227,4},{15407,3},{22682,5}},
+ [28221]={{7080,2},{12810,12},{14227,4},{15407,2},{22682,4}},
+ [28222]={{7080,2},{14227,4},{15407,4},{15408,24},{22682,7}},
+ [28223]={{7080,2},{14227,4},{15407,3},{15408,16},{22682,5}},
+ [28224]={{7080,2},{14227,4},{15407,2},{15408,16},{22682,4}},
+ [28242]={{7080,4},{12359,16},{12360,2},{22682,7}},
+ [28243]={{7080,2},{12359,12},{12360,2},{22682,5}},
+ [28244]={{7080,2},{12359,12},{12360,2},{22682,4}},
+ [28327]={{10558,1},{10561,1},{15994,2}},
+ [28461]={{12360,2},{12655,12},{12803,2},{19726,2}},
+ [28462]={{12655,8},{12803,2},{19726,1}},
+ [28463]={{12655,6},{12803,2}},
+ [28472]={{12803,2},{12810,12},{15407,2},{19726,2}},
+ [28473]={{12803,2},{12810,6},{15407,2},{18512,2}},
+ [28474]={{12803,2},{12810,4},{15407,1}},
+ [28480]={{12803,2},{14048,4},{14227,2},{19726,2}},
+ [28481]={{12803,2},{14048,4},{14227,2},{14342,2}},
+ [28482]={{12803,4},{14048,2},{14227,2}},
+ [424641]={{4234,1},{4375,2},{4382,1}},
+ [426607]={{3369,5},{3372,1},{3820,5},{11083,1}},
+ [428424]={{814,2},{2321,2},{2997,6}},
+ [431362]={{1210,4},{9262,1},{16583,1}},
+ [435819]={{8172,1},{213370,5}},
+ [435827]={{4339,2},{8343,5},{213378,5}},
+ [435841]={{1210,1},{2321,1},{4305,3},{4340,1}},
+ [435848]={{2321,1},{4305,4},{4340,4},{6260,4}},
+ [435910]={{6037,1},{213373,5}},
+ [435956]={{6037,1},{213381,5}},
+ [435964]={{3860,2},{10505,1},{215430,1}},
+ [435966]={{3860,2},{10505,2},{215430,1}},
+ [439118]={{4304,6},{8167,8},{8343,1}},
+ [439134]={{11135,1},{11137,1},{11291,1}},
+ [439156]={{11137,5}},
+ [448624]={{4470,1},{10940,4}},
+ [461727]={{8170,2},{14048,5},{14341,1},{15407,1}},
+ [463866]={{16204,1}},
+ [463869]={{4625,1},{8925,1},{16204,2}},
+ [463871]={{7076,1},{7078,4},{7080,4},{12811,1},{14344,4},{16203,12}},
+ [470359]={{13888,1},{227813,1}},
+ [470370]={{13758,1}},
+ [471400]={{8151,3},{8152,3},{14344,2},{18256,1}},
+ [1213610]={{16204,2},{234011,3},{234012,3}},
+ [1213622]={{12735,2},{13180,5},{14344,5},{20725,2}},
+ [1213626]={{12753,2},{14344,5},{20725,2}},
+ [1219579]={{7080,1},{7082,1},{14344,6},{16204,18}},
+ [1219580]={{8831,6},{12938,1},{16204,24},{20725,3}},
+ [1219587]={{7078,1},{16203,3},{16204,9}},
+ [1220624]={{8831,2},{12808,12},{16203,3},{16204,9}},
+ [1229432]={{2318,5}},
+ [1229504]={{2320,1},{2996,1}},
+ [1229517]={{2318,3},{4470,2}},
+ [1229705]={{765,1},{2447,1}},
+ [1229737]={{4470,1}},
+ [1229745]={{3371,1},{6291,1}},
+ [1230117]={{159,1},{1251,3}},
+ [1230161]={{2835,1},{2840,1}},
+ [1230171]={{2835,1},{2840,1}},
+ [1230564]={{2447,1},{3371,1}},
+ [1230643]={{4470,1},{10940,1}},
+ [1230656]={{4359,1},{4361,1}},
+ [1231583]={{730,1},{8925,1},{13466,1}},
+ [1244432]={{2450,1},{2678,2},{3371,1}},
+ [1244433]={{2453,1},{2692,1},{3372,1}},
+ [1244645]={{730,1},{2450,1},{3371,1}},
+ [1244646]={{730,1},{2453,1},{3372,1}},
+ [1244647]={{730,1},{3356,1},{3372,1}},
+ [1244648]={{730,1},{8838,1},{8925,1}},
+ [1245246]={{2447,1},{3371,1}},
+ [1245250]={{765,1},{3371,1}},
+ [1245287]={{2840,1}},
+ [1245320]={{10940,1}},
+ [1245321]={{4470,1},{247786,1}},
+ [1248458]={{10938,1}},
+ [1248459]={{10938,2}},
+ [1248460]={{11134,1}},
+ [1248498]={{11134,2}},
+ [1248607]={{7076,4},{12808,4},{16203,6},{20725,4},{248819,4},{248820,2}},
+ [1248636]={{16203,6},{20725,4},{248819,4},{248820,4},{249274,4},{249726,4}},
+ [1248640]={{7076,4},{16203,8},{20725,4}},
+ [1248645]={{14344,5},{20725,2},{248822,4}},
+ [1248650]={{11291,1},{14344,2},{16203,1},{16204,3}},
+ [1248661]={{16203,10}},
+ [1248665]={{14344,3}},
+ [1248703]={{10940,5},{10978,2},{11082,1},{11084,4},{11291,4},{249391,3}},
+ [1248739]={{1210,2},{10978,1},{11082,1},{11083,6},{11084,2},{11291,4}},
+ [1248745]={{10940,5},{10978,2},{11082,2}},
+ [1248748]={{10978,2},{11082,2},{11083,2}},
+ [1248752]={{4605,1},{10939,2},{10940,5},{10978,1}},
+ [1248754]={{3013,5},{10939,1},{10940,2},{11084,1}},
+ [1248755]={{4470,1},{10939,2},{10940,3},{11084,1}},
+ [1248757]={{10940,10},{11082,4},{11084,4},{249391,4},{249399,4}},
+ [1248760]={{2775,4},{11082,6},{11083,6},{11084,4},{249391,4}},
+ [1248805]={{11082,2},{11083,8},{11084,6},{249409,4},{249410,4}},
+ [1248974]={{11175,4},{11176,6},{11178,2},{11291,1},{249409,1},{249430,2}},
+ [1249006]={{2289,4},{11175,3},{11176,4},{11178,3},{249409,1},{249430,2}},
+ [1249015]={{11175,2},{11176,2},{11178,4},{11291,2},{249410,2},{249432,4}},
+ [1249019]={{11175,4},{11176,10},{11178,4},{249410,4},{249425,4}},
+ [1249057]={{11175,5},{11176,8},{11178,3},{249409,4},{249430,4}},
+ [1249058]={{11175,3},{11176,4},{11178,5},{249391,4},{249424,4}},
+ [1249059]={{11175,2},{11176,6},{11178,8},{249410,4},{249430,4}},
+ [1249060]={{11175,8},{11176,2},{11178,2},{249409,4},{249430,4}},
+ [1249061]={{11175,4},{11176,6},{11177,2},{11178,6},{11291,4},{249409,2},{249430,4}},
+ [1249064]={{11175,6},{11176,8},{11177,4},{11178,4},{11291,4},{249409,2},{249430,4}},
+ [1249069]={{11175,2},{11176,3},{11177,1},{11178,3},{11291,2},{249409,1},{249430,2}},
+ [1249070]={{6037,4},{11135,12},{11175,12},{249409,1},{249430,2}},
+ [1249071]={{11175,4},{11176,10},{11178,2}},
+ [1249128]={{11291,4},{14344,2},{16203,4},{16204,6},{249409,2},{249430,4},{249431,8}},
+ [1249152]={{10308,4},{14344,4},{16203,3},{16204,4},{249409,2},{249430,4},{249431,8}},
+ [1249154]={{11291,4},{14344,1},{16203,8},{16204,10},{249409,2},{249430,4},{249431,8}},
+ [1249630]={{3371,1},{249399,2}},
+ [1249631]={{3372,1},{249424,2}},
+ [1249632]={{8925,1},{249274,2}},
+ [1249633]={{3371,1},{249391,2}},
+ [1249634]={{2996,1},{249425,2}},
+ [1249637]={{3857,1},{249426,2}},
+ [1249957]={{159,1},{2447,2}},
+ [1249958]={{785,2},{1179,1}},
+ [1249959]={{1205,1},{3357,2}},
+ [1249963]={{159,1},{1475,1},{2678,1}},
+ [1249964]={{1179,1},{2678,2},{3174,1}},
+ [1249965]={{1205,1},{1468,1},{2692,2}},
+ [1249966]={{1708,1},{2692,3},{5637,1}},
+ [1249967]={{1645,1},{3713,3},{4402,1}},
+ [1249968]={{3713,4},{8146,1},{8766,1}},
+ [1250144]={{3713,2},{12223,3}},
+ [1250147]={{3713,3},{3730,3}},
+ [1250151]={{2692,3},{3730,2}},
+ [1250154]={{2678,2},{12184,1}},
+ [1250156]={{2678,4},{3685,1}},
+ [1250157]={{2678,4},{6889,1}},
+ [1250776]={{3372,1},{3818,2},{3821,2}},
+ [1250777]={{8846,2},{8925,1},{13463,3}},
+ [1250778]={{8838,4},{8925,1},{13464,2}},
+ [1250779]={{785,2},{2453,1},{3371,1}},
+ [1250780]={{3356,2},{3357,2},{3372,1}},
+ [1250781]={{3372,1},{3819,2},{4625,2}},
+ [1250782]={{8831,1},{8836,3},{8925,1}},
+ [1250784]={{8838,4},{8925,1}},
+ [1250785]={{8925,1},{13463,2},{13464,3}},
+ [1250786]={{13463,4},{13465,2},{18256,1}},
+ [1250787]={{13463,4},{13464,2},{18256,1}},
+ [1250788]={{785,2},{3371,1}},
+ [1250789]={{3356,3},{3371,1}},
+ [1250790]={{8836,2},{8839,3},{8925,1}},
+ [1250791]={{3356,4},{3372,1}},
+ [1250792]={{8838,2},{8925,1},{13464,4}},
+ [1250793]={{2447,1},{2449,2},{3371,1}},
+ [1250794]={{785,1},{3355,2},{3371,1}},
+ [1250795]={{3356,1},{3358,3},{3372,1}},
+ [1250796]={{8831,2},{8836,3},{8925,1}},
+ [1250797]={{8846,1},{8925,1},{13463,3}},
+ [1250799]={{8845,1},{8846,3},{8925,1}},
+ [1250800]={{8839,1},{8846,3},{8925,1}},
+ [1250801]={{3356,3},{3372,1}},
+ [1250802]={{3358,3},{3372,1}},
+ [1251729]={{765,1},{2447,1},{3371,1}},
+ [1251730]={{765,2},{785,1},{3371,1}},
+ [1251731]={{3355,1},{3369,1},{3371,1}},
+ [1251732]={{3356,2},{3372,1},{3818,1}},
+ [1251734]={{13463,2},{13465,1},{18256,1}},
+ [1251735]={{765,1},{2449,1},{3371,1}},
+ [1251736]={{2449,2},{2450,1},{3371,1}},
+ [1251737]={{2450,2},{3372,1},{3818,2}},
+ [1251738]={{3372,1},{3818,2},{4625,3}},
+ [1251740]={{8839,2},{13466,3},{18256,1}},
+ [1251741]={{785,2},{2453,1},{3371,1}},
+ [1251742]={{3356,2},{3357,2},{3372,1}},
+ [1251743]={{3372,1},{3819,2},{4625,2}},
+ [1251747]={{8838,1},{13463,3},{18256,1}},
+ [1251748]={{8846,3},{8925,1},{13466,2}},
+ [1251749]={{3369,2},{8845,2},{8925,1}},
+ [1251750]={{3369,2},{8845,3},{8925,1}},
+ [1251751]={{4625,2},{8925,1},{13465,2}},
+ [1251752]={{3819,2},{4625,2},{8925,1}},
+ [1252229]={{774,2},{818,2},{2318,4},{2840,2}},
+ [1252230]={{2318,2},{2840,2},{10940,4}},
+ [1252231]={{2318,2},{2840,2},{10938,4}},
+ [1252232]={{2319,2},{2840,2},{2842,6},{3478,2}},
+ [1252233]={{2840,3},{2842,10},{3478,3}},
+ [1252234]={{2840,2},{2842,6},{3478,2}},
+ [1252235]={{2840,2},{2842,6},{3478,2}},
+ [1252236]={{2840,4},{2842,12},{3478,3}},
+ [1252237]={{2841,4},{3470,2},{5498,2}},
+ [1252238]={{1210,2},{2841,4},{3470,2}},
+ [1252239]={{818,2},{2841,4},{3470,2}},
+ [1252240]={{2841,4},{3470,2},{10940,2}},
+ [1252241]={{2841,4},{3470,2},{10938,2}},
+ [1252242]={{2841,6},{3478,2},{5498,4}},
+ [1252243]={{1210,4},{2841,6},{3478,2}},
+ [1252244]={{818,4},{2841,6},{3478,2}},
+ [1252245]={{2841,6},{3478,2},{10940,4}},
+ [1252246]={{2841,6},{3478,2},{10938,4}},
+ [1252252]={{2841,12},{3478,2},{5498,5},{249427,4}},
+ [1252253]={{1210,5},{2841,12},{3478,2},{249427,4}},
+ [1252254]={{818,5},{2841,12},{3478,2},{249427,4}},
+ [1252255]={{2841,12},{3478,2},{10940,5},{249427,4}},
+ [1252256]={{2841,12},{3478,2},{10938,5},{249427,4}},
+ [1252257]={{2841,10},{3470,4},{5498,3},{249410,2}},
+ [1252258]={{1210,3},{2841,10},{3470,4},{249410,2}},
+ [1252259]={{818,3},{2841,10},{3470,4},{249410,2}},
+ [1252260]={{2841,10},{3470,4},{10940,3},{249410,2}},
+ [1252261]={{2841,10},{3470,4},{10938,3},{249410,2}},
+ [1252262]={{2840,12},{3470,4},{5498,2},{249427,2}},
+ [1252263]={{1210,2},{2840,12},{3470,4},{249427,2}},
+ [1252264]={{818,2},{2840,12},{3470,4},{249427,2}},
+ [1252265]={{2840,12},{3470,4},{10940,2},{249427,2}},
+ [1252266]={{2840,12},{3470,4},{10938,2},{249427,2}},
+ [1252267]={{2841,20},{2842,5},{3478,6},{5498,8},{249427,6}},
+ [1252268]={{1210,8},{2841,20},{2842,5},{3478,6},{249427,6}},
+ [1252269]={{818,8},{2841,20},{2842,5},{3478,6},{249427,6}},
+ [1252270]={{2841,20},{2842,5},{3478,6},{10940,8},{249427,6}},
+ [1252271]={{2841,20},{2842,5},{3478,6},{10938,8},{249427,6}},
+ [1252272]={{2841,20},{2842,6},{3478,8},{5498,8},{249427,6}},
+ [1252273]={{1210,8},{2841,20},{2842,6},{3478,8},{249427,6}},
+ [1252274]={{818,8},{2841,20},{2842,6},{3478,8},{249427,6}},
+ [1252275]={{2841,20},{2842,6},{3478,8},{10940,8},{249427,6}},
+ [1252276]={{2841,20},{2842,6},{3478,8},{10938,8},{249427,6}},
+ [1252277]={{2841,15},{2842,4},{3478,6},{5498,6},{249427,4}},
+ [1252278]={{1210,6},{2841,15},{2842,4},{3478,6},{249427,4}},
+ [1252279]={{818,6},{2841,15},{2842,4},{3478,6},{249427,4}},
+ [1252280]={{2841,15},{2842,4},{3478,6},{10940,6},{249427,4}},
+ [1252281]={{2841,15},{2842,4},{3478,6},{10938,6},{249427,4}},
+ [1252282]={{3486,2},{3577,12},{3859,3}},
+ [1252283]={{3486,2},{3577,6},{3859,2},{4234,2}},
+ [1252286]={{3486,2},{3577,10},{3859,2}},
+ [1252287]={{3486,2},{3577,8},{3859,2}},
+ [1252288]={{3486,2},{3577,8},{3859,2}},
+ [1252291]={{3486,2},{3860,4},{4304,4},{6037,3}},
+ [1252305]={{1529,2},{3486,2},{3575,6}},
+ [1252306]={{3486,2},{3575,6},{8831,2}},
+ [1252307]={{3486,2},{3575,6},{7971,2}},
+ [1252308]={{3486,2},{3575,6},{13926,2}},
+ [1252309]={{3486,2},{3575,6},{7079,2}},
+ [1252310]={{1529,6},{7966,3},{12359,20},{249410,4},{249427,4},{249432,4}},
+ [1252311]={{7966,3},{8831,6},{12359,20},{249410,4},{249427,4},{249432,4}},
+ [1252312]={{7966,3},{7971,6},{12359,20},{249410,4},{249427,4},{249432,4}},
+ [1252313]={{7966,3},{12359,20},{13926,6},{249410,4},{249427,4},{249432,4}},
+ [1252314]={{7079,6},{7966,3},{12359,20},{249410,4},{249427,4},{249432,4}},
+ [1252315]={{1529,4},{3486,4},{3859,10},{249410,2},{249432,4}},
+ [1252316]={{3486,4},{3859,10},{8831,4},{249410,2},{249432,4}},
+ [1252317]={{3486,4},{3859,10},{7971,4},{249410,2},{249432,4}},
+ [1252318]={{3486,4},{3859,10},{13926,4},{249410,2},{249432,4}},
+ [1252319]={{3486,4},{3859,10},{7079,4},{249410,2},{249432,4}},
+ [1252320]={{1529,10},{7966,4},{12359,24},{249410,6},{249432,6}},
+ [1252321]={{7966,4},{8831,10},{12359,24},{249410,6},{249432,6}},
+ [1252322]={{7966,4},{7971,10},{12359,24},{249410,6},{249432,6}},
+ [1252323]={{7966,4},{12359,24},{13926,10},{249410,6},{249432,6}},
+ [1252324]={{7079,10},{7966,4},{12359,24},{249410,6},{249432,6}},
+ [1252325]={{1529,8},{3860,20},{7966,2},{11139,1},{249410,4},{249432,6}},
+ [1252326]={{3860,20},{7966,2},{8831,8},{11139,1},{249410,4},{249432,6}},
+ [1252327]={{3860,20},{7966,2},{7971,8},{11139,1},{249410,4},{249432,6}},
+ [1252328]={{3860,20},{7966,2},{11139,1},{13926,8},{249410,4},{249432,6}},
+ [1252329]={{3860,20},{7079,8},{7966,2},{11139,1},{249410,4},{249432,6}},
+ [1252330]={{1529,6},{7966,2},{11139,1},{12359,16},{249410,4},{249432,6}},
+ [1252331]={{7966,2},{8831,6},{11139,1},{12359,16},{249410,4},{249432,6}},
+ [1252332]={{7966,2},{7971,6},{11139,1},{12359,16},{249410,4},{249432,6}},
+ [1252333]={{7966,2},{11139,1},{12359,16},{13926,6},{249410,4},{249432,6}},
+ [1252334]={{7079,6},{7966,2},{11139,1},{12359,16},{249410,4},{249432,6}},
+ [1252344]={{7078,4},{7082,4},{249726,4},{251290,8},{251291,24}},
+ [1252345]={{7082,6},{249726,3},{251290,10},{251291,20}},
+ [1252346]={{7078,6},{249726,3},{251290,6},{251291,16}},
+ [1252351]={{1210,2},{2319,1},{2841,6},{2880,4},{3470,2}},
+ [1252352]={{2319,1},{2841,8},{2880,4}},
+ [1252353]={{2842,2},{3466,2},{3486,1},{3575,6},{4234,2}},
+ [1252354]={{3466,2},{3486,4},{3859,10},{4234,1},{7069,1}},
+ [1252355]={{3466,2},{3486,2},{3575,14},{3864,4},{4234,2}},
+ [1252356]={{1705,4},{3466,2},{3486,2},{3860,8},{4234,2}},
+ [1252357]={{3860,12},{3864,2},{4234,4},{7966,1}},
+ [1252358]={{1529,1},{3860,8},{4234,2},{7966,1}},
+ [1252360]={{1210,6},{3577,2},{3860,16},{7966,1}},
+ [1252362]={{7076,4},{12359,30},{12644,2},{249726,10},{251291,4}},
+ [1252363]={{7082,4},{12359,20},{12644,1},{249726,10},{251291,8}},
+ [1252368]={{248820,4},{248822,1},{249726,10},{251290,15},{251291,8}},
+ [1252566]={{2678,1},{251524,1}},
+ [1254965]={{9206,2},{11176,2},{15564,1},{248824,1},{249429,1}},
+ [1254966]={{11176,2},{13444,2},{15564,1},{248824,1},{249429,1}},
+ [1254974]={{8170,20},{14341,1},{15408,10}},
+ [1254982]={{5500,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1254983]={{3864,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1254984]={{7070,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1254985]={{7069,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1254994]={{4304,16},{5500,6},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1254995]={{3864,6},{4304,16},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1254996]={{4304,16},{7070,6},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1254997]={{4304,16},{7069,6},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1255000]={{4236,4},{4304,12},{5500,4},{8343,2},{249427,3},{249428,6}},
+ [1255001]={{3864,4},{4236,4},{4304,12},{8343,2},{249427,3},{249428,6}},
+ [1255002]={{4236,4},{4304,12},{7070,4},{8343,2},{249427,3},{249428,6}},
+ [1255003]={{4236,4},{4304,12},{7069,4},{8343,2},{249427,3},{249428,6}},
+ [1255004]={{4236,3},{4291,2},{4304,10},{5500,3},{249427,2},{249428,4}},
+ [1255005]={{3864,3},{4236,3},{4291,2},{4304,10},{249427,2},{249428,4}},
+ [1255006]={{4236,3},{4291,2},{4304,10},{7070,3},{249427,2},{249428,4}},
+ [1255007]={{4236,3},{4291,2},{4304,10},{7069,3},{249427,2},{249428,4}},
+ [1255008]={{4233,2},{4234,8},{5500,2}},
+ [1255030]={{6261,3},{8170,16},{13423,6},{14341,1},{15407,2}},
+ [1255031]={{5500,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1255032]={{7070,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1255033]={{7067,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1255034]={{3182,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1255035]={{1529,8},{8170,12},{8172,4},{8343,2},{249427,5},{249428,10}},
+ [1255043]={{4304,16},{5500,6},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1255044]={{4304,16},{7070,6},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1255045]={{4304,16},{7067,6},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1255046]={{3182,6},{4304,16},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1255047]={{1529,6},{4304,16},{8172,2},{8343,2},{249427,4},{249428,8}},
+ [1255050]={{4236,4},{4304,12},{5500,4},{8343,2},{249427,3},{249428,6}},
+ [1255051]={{4236,4},{4304,12},{7070,4},{8343,2},{249427,3},{249428,6}},
+ [1255052]={{4236,4},{4304,12},{7067,4},{8343,2},{249427,3},{249428,6}},
+ [1255053]={{3182,4},{4236,4},{4304,12},{8343,2},{249427,3},{249428,6}},
+ [1255054]={{1529,4},{4236,4},{4304,12},{8343,2},{249427,3},{249428,6}},
+ [1255055]={{4236,3},{4291,2},{4304,10},{5500,3},{249427,2},{249428,4}},
+ [1255056]={{4236,3},{4291,2},{4304,10},{7070,3},{249427,2},{249428,4}},
+ [1255057]={{4236,3},{4291,2},{4304,10},{7067,3},{249427,2},{249428,4}},
+ [1255058]={{3182,3},{4236,3},{4291,2},{4304,10},{249427,2},{249428,4}},
+ [1255059]={{1529,3},{4236,3},{4291,2},{4304,10},{249427,2},{249428,4}},
+ [1255060]={{4233,2},{4234,8},{5500,2}},
+ [1255061]={{4233,2},{4234,8},{7070,2}},
+ [1255062]={{4233,2},{4234,8},{7067,2}},
+ [1255065]={{4234,16},{4236,2},{4291,2},{5500,2},{249427,1},{249428,2}},
+ [1255066]={{4234,16},{4236,2},{4291,2},{7070,2},{249427,1},{249428,2}},
+ [1255067]={{3864,2},{4234,16},{4236,2},{4291,2},{249427,1},{249428,2}},
+ [1255068]={{4234,16},{4236,2},{4291,2},{7067,2},{249427,1},{249428,2}},
+ [1255069]={{4234,16},{4236,2},{4291,2},{7069,2},{249427,1},{249428,2}},
+ [1255070]={{3182,2},{4234,16},{4236,2},{4291,2},{249427,1},{249428,2}},
+ [1255071]={{1529,2},{4234,16},{4236,2},{4291,2},{249427,1},{249428,2}},
+ [1255073]={{3391,2},{8173,1},{11137,2}},
+ [1255074]={{3827,2},{8173,1},{11137,2}},
+ [1255075]={{4233,2},{4234,8},{5500,1}},
+ [1255076]={{4233,2},{4234,8},{7070,1}},
+ [1255077]={{3864,1},{4233,2},{4234,8}},
+ [1255078]={{4233,2},{4234,8},{7067,1}},
+ [1255079]={{4233,2},{4234,8},{7069,1}},
+ [1255080]={{3182,1},{4233,2},{4234,8}},
+ [1255081]={{1529,1},{4233,2},{4234,8}},
+ [1255082]={{2319,12},{2321,3},{4233,4},{5498,8},{249427,8}},
+ [1255083]={{2319,12},{2321,3},{4233,4},{249409,8},{249427,8}},
+ [1255084]={{2319,12},{2321,3},{4233,4},{249410,8},{249427,8}},
+ [1255085]={{2319,12},{2321,3},{2458,8},{4233,4},{249427,8}},
+ [1255086]={{2319,12},{2321,3},{4233,4},{6470,8},{249427,8}},
+ [1255087]={{1210,8},{2319,12},{2321,3},{4233,4},{249427,8}},
+ [1255088]={{2319,12},{4233,2},{5498,3}},
+ [1255089]={{2319,12},{4233,2},{249409,3}},
+ [1255090]={{2319,12},{4233,2},{249410,3}},
+ [1255092]={{2319,12},{4233,2},{6470,3}},
+ [1255093]={{1210,3},{2319,12},{4233,2}},
+ [1255095]={{4265,1},{6662,2},{11083,2}},
+ [1255096]={{3385,2},{4265,1},{11083,2}},
+ [1255097]={{2319,10},{2321,3},{4233,3},{5498,6},{249427,6}},
+ [1255098]={{2319,10},{2321,3},{4233,3},{249409,6},{249427,6}},
+ [1255099]={{2319,10},{2321,3},{4233,3},{249410,6},{249427,6}},
+ [1255100]={{2319,10},{2321,3},{2458,6},{4233,3},{249427,6}},
+ [1255101]={{2319,10},{2321,3},{4233,3},{6470,6},{249427,6}},
+ [1255102]={{1210,6},{2319,10},{2321,3},{4233,3},{249427,6}},
+ [1255103]={{2319,6},{2321,1},{4233,1}},
+ [1255104]={{2319,8},{2321,2},{4233,2},{5498,4},{249427,4}},
+ [1255105]={{2319,8},{2321,2},{4233,2},{249409,4},{249427,4}},
+ [1255106]={{2319,8},{2321,2},{4233,2},{249410,4},{249427,4}},
+ [1255107]={{2319,8},{2321,2},{2458,4},{4233,2},{249427,4}},
+ [1255108]={{2319,8},{2321,2},{4233,2},{6470,4},{249427,4}},
+ [1255109]={{1210,4},{2319,8},{2321,2},{4233,2},{249427,4}},
+ [1255110]={{2319,8},{4231,4},{5498,2}},
+ [1255111]={{2319,8},{4231,4},{249409,2}},
+ [1255112]={{2319,8},{4231,4},{249410,2}},
+ [1255113]={{2319,8},{2458,2},{4231,4}},
+ [1255114]={{2319,8},{4231,4},{6470,2}},
+ [1255115]={{1210,2},{2319,8},{4231,4}},
+ [1255116]={{2318,14},{2321,1},{4231,4},{5498,3},{249427,3}},
+ [1255117]={{2318,14},{2321,1},{4231,4},{249409,3},{249427,3}},
+ [1255118]={{2318,14},{2321,1},{4231,4},{249410,3},{249427,3}},
+ [1255119]={{2318,14},{2321,1},{2458,3},{4231,4},{249427,3}},
+ [1255120]={{2318,14},{2321,1},{4231,4},{6470,3},{249427,3}},
+ [1255121]={{1210,3},{2318,14},{2321,1},{4231,4},{249427,3}},
+ [1255123]={{2313,1},{2454,2},{10940,2}},
+ [1255124]={{2313,1},{2455,2},{10940,2}},
+ [1255125]={{2318,12},{2321,1},{4231,3},{5498,2},{249427,2}},
+ [1255126]={{2318,12},{2321,1},{4231,3},{249409,2},{249427,2}},
+ [1255127]={{2318,12},{2321,1},{4231,3},{249410,2},{249427,2}},
+ [1255128]={{2318,12},{2321,1},{2458,2},{4231,3},{249427,2}},
+ [1255129]={{2318,12},{2321,1},{4231,3},{6470,2},{249427,2}},
+ [1255130]={{1210,2},{2318,12},{2321,1},{4231,3},{249427,2}},
+ [1255131]={{2318,16},{4231,2},{5498,1}},
+ [1255132]={{2318,16},{4231,2},{249409,1}},
+ [1255133]={{2318,16},{4231,2},{249410,1}},
+ [1255134]={{2318,16},{2458,1},{4231,2}},
+ [1255135]={{2318,16},{4231,2},{6470,1}},
+ [1255136]={{1210,1},{2318,16},{4231,2}},
+ [1255137]={{2318,10},{2320,1},{4231,2},{5498,1},{249427,2}},
+ [1255138]={{2318,10},{2320,1},{4231,2},{249409,1},{249427,2}},
+ [1255139]={{2318,10},{2320,1},{4231,2},{249410,1},{249427,2}},
+ [1255140]={{2318,10},{2320,1},{2458,1},{4231,2},{249427,2}},
+ [1255141]={{2318,10},{2320,1},{4231,2},{6470,1},{249427,2}},
+ [1255142]={{1210,1},{2318,10},{2320,1},{4231,2},{249427,2}},
+ [1255143]={{2318,12},{4231,2},{5498,1}},
+ [1255144]={{2318,12},{4231,2},{5784,4}},
+ [1255145]={{2318,24},{4231,2},{4340,1}},
+ [1255146]={{2318,12},{4231,2},{7286,2}},
+ [1257013]={{2320,6},{2996,6}},
+ [1257017]={{2321,1},{2997,3},{249409,1}},
+ [1257368]={{2321,2},{2455,2},{2996,8}},
+ [1257369]={{118,2},{2321,2},{2996,12}},
+ [1257370]={{2321,2},{2997,8},{249409,2},{249427,1}},
+ [1257371]={{2321,2},{2997,8},{3182,1},{249409,2}},
+ [1257372]={{2321,2},{2997,8},{6371,1},{249409,2}},
+ [1257373]={{1210,1},{2321,2},{2997,8},{249409,2}},
+ [1257374]={{2321,2},{2997,8},{5498,1},{249409,2}},
+ [1257375]={{2321,2},{2997,8},{249391,1},{249409,2}},
+ [1257376]={{2321,4},{2997,8},{249409,2},{249427,2}},
+ [1257377]={{2321,4},{2997,8},{3182,2},{249409,2}},
+ [1257378]={{2321,4},{2997,8},{6371,2},{249409,2}},
+ [1257379]={{1210,2},{2321,4},{2997,8},{249409,2}},
+ [1257380]={{2321,4},{2997,8},{5498,2},{249409,2}},
+ [1257381]={{2321,4},{2997,8},{249391,2},{249409,2}},
+ [1257382]={{2321,4},{2997,6},{249409,3},{249427,2}},
+ [1257383]={{2321,4},{2997,6},{3182,2},{249409,3}},
+ [1257384]={{2321,4},{2997,6},{6371,2},{249409,3}},
+ [1257385]={{1210,2},{2321,4},{2997,6},{249409,3}},
+ [1257386]={{2321,4},{2997,6},{5498,2},{249409,3}},
+ [1257387]={{2321,4},{2997,6},{249391,2},{249409,3}},
+ [1257388]={{2321,4},{4305,8},{249409,3},{249427,3}},
+ [1257389]={{2321,4},{3182,3},{4305,8},{249409,3}},
+ [1257390]={{2321,4},{4305,8},{6371,3},{249409,3}},
+ [1257391]={{1210,3},{2321,4},{4305,8},{249409,3}},
+ [1257392]={{2321,4},{4305,8},{5498,3},{249409,3}},
+ [1257393]={{2321,4},{4305,8},{249391,3},{249409,3}},
+ [1257394]={{2321,4},{4305,8},{249409,2},{249427,4}},
+ [1257395]={{2321,4},{3182,4},{4305,8},{249409,2}},
+ [1257396]={{2321,4},{4305,8},{6371,4},{249409,2}},
+ [1257397]={{1210,4},{2321,4},{4305,8},{249409,2}},
+ [1257398]={{2321,4},{4305,8},{5498,4},{249409,2}},
+ [1257399]={{2321,4},{4305,8},{249391,4},{249409,2}},
+ [1257400]={{2842,1},{4291,2},{4305,10},{11082,2},{249409,4},{249427,4}},
+ [1257401]={{2842,1},{3182,4},{4291,2},{4305,10},{11082,2},{249409,4}},
+ [1257402]={{2842,1},{4291,2},{4305,10},{6371,4},{11082,2},{249409,4}},
+ [1257403]={{1210,4},{2842,1},{4291,2},{4305,10},{11082,2},{249409,4}},
+ [1257404]={{2842,1},{4291,2},{4305,10},{5498,4},{11082,2},{249409,4}},
+ [1257405]={{2842,1},{4291,2},{4305,10},{11082,2},{249391,4},{249409,4}},
+ [1257406]={{2842,2},{4291,2},{4305,12},{11082,2},{249409,6},{249427,6}},
+ [1257407]={{2842,2},{3182,6},{4291,2},{4305,12},{11082,2},{249409,6}},
+ [1257408]={{2842,2},{4291,2},{4305,12},{6371,6},{11082,2},{249409,6}},
+ [1257409]={{1210,6},{2842,2},{4291,2},{4305,12},{11082,2},{249409,6}},
+ [1257410]={{2842,2},{4291,2},{4305,12},{5498,6},{11082,2},{249409,6}},
+ [1257411]={{2842,2},{4291,2},{4305,12},{11082,2},{249391,6},{249409,6}},
+ [1257412]={{2321,3},{4234,2},{4305,3},{249409,3}},
+ [1257413]={{2321,4},{4305,8},{249409,2},{249427,6}},
+ [1257414]={{2321,4},{3182,6},{4305,8},{249409,2}},
+ [1257415]={{2321,4},{4305,8},{6371,6},{249409,2}},
+ [1257416]={{1210,6},{2321,4},{4305,8},{249409,2}},
+ [1257417]={{2321,4},{4305,8},{5498,6},{249409,2}},
+ [1257418]={{2321,4},{4305,8},{249391,6},{249409,2}},
+ [1257419]={{2321,3},{2842,2},{4305,14},{11082,3},{249409,8},{249427,8}},
+ [1257420]={{2321,3},{2842,2},{3182,8},{4305,14},{11082,3},{249409,8}},
+ [1257421]={{2321,3},{2842,2},{4305,14},{6371,8},{11082,3},{249409,8}},
+ [1257422]={{1210,8},{2321,3},{2842,2},{4305,14},{11082,3},{249409,8}},
+ [1257423]={{2321,3},{2842,2},{4305,14},{5498,8},{11082,3},{249409,8}},
+ [1257424]={{2321,3},{2842,2},{4305,14},{11082,3},{249391,8},{249409,8}},
+ [1257426]={{3577,2},{4339,8},{8343,4},{249409,2},{249430,2}},
+ [1257427]={{4339,8},{7079,2},{8343,4},{249409,2},{249430,2}},
+ [1257428]={{4339,8},{7077,2},{8343,4},{249409,2},{249430,2}},
+ [1257429]={{4339,8},{7971,2},{8343,4},{249409,2},{249430,2}},
+ [1257430]={{4339,8},{8343,4},{13926,2},{249409,2},{249430,2}},
+ [1257431]={{4339,8},{8343,4},{11178,2},{249409,2},{249430,2}},
+ [1257435]={{4291,1},{4305,4},{7067,1}},
+ [1257437]={{4339,12},{7079,4},{8343,4},{249409,1},{249430,2}},
+ [1257438]={{4339,12},{7077,4},{8343,4},{249409,1},{249430,2}},
+ [1257439]={{4339,12},{7971,4},{8343,4},{249409,1},{249430,2}},
+ [1257440]={{4339,12},{8343,4},{13926,4},{249409,1},{249430,2}},
+ [1257441]={{4339,12},{8343,4},{11178,4},{249409,1},{249430,2}},
+ [1257442]={{4291,3},{4305,6},{7067,2}},
+ [1257443]={{4339,4},{8343,2},{249409,1},{249430,1}},
+ [1257450]={{3577,8},{4339,16},{8343,3},{11175,2},{249409,3},{249430,4}},
+ [1257451]={{4339,16},{7079,8},{8343,3},{11175,2},{249409,3},{249430,4}},
+ [1257452]={{4339,16},{7077,8},{8343,3},{11175,2},{249409,3},{249430,4}},
+ [1257453]={{4339,16},{7971,8},{8343,3},{11175,2},{249409,3},{249430,4}},
+ [1257454]={{4339,16},{8343,3},{11175,2},{13926,8},{249409,3},{249430,4}},
+ [1257455]={{4339,16},{8343,3},{11175,2},{11178,8},{249409,3},{249430,4}},
+ [1257456]={{3577,10},{4339,18},{8343,3},{11175,4},{249409,4},{249430,6}},
+ [1257457]={{4339,18},{7079,10},{8343,3},{11175,4},{249409,4},{249430,6}},
+ [1257458]={{4339,18},{7077,10},{8343,3},{11175,4},{249409,4},{249430,6}},
+ [1257459]={{4339,18},{7971,10},{8343,3},{11175,4},{249409,4},{249430,6}},
+ [1257460]={{4339,18},{8343,3},{11175,4},{13926,10},{249409,4},{249430,6}},
+ [1257461]={{4339,18},{8343,3},{11175,4},{11178,10},{249409,4},{249430,6}},
+ [1257465]={{8170,2},{14048,5},{14341,1},{249431,1}},
+ [1257466]={{3577,12},{8343,4},{14048,8},{249409,5},{249430,8}},
+ [1257467]={{7079,12},{8343,4},{14048,8},{249409,5},{249430,8}},
+ [1257468]={{7077,12},{8343,4},{14048,8},{249409,5},{249430,8}},
+ [1257469]={{7971,12},{8343,4},{14048,8},{249409,5},{249430,8}},
+ [1257470]={{8343,4},{13926,12},{14048,8},{249409,5},{249430,8}},
+ [1257471]={{8343,4},{11178,12},{14048,8},{249409,5},{249430,8}},
+ [1257479]={{3577,14},{8343,4},{14048,10},{249409,6},{249427,4},{249430,10}},
+ [1257480]={{7079,14},{8343,4},{14048,10},{249409,6},{249427,4},{249430,10}},
+ [1257481]={{7077,14},{8343,4},{14048,10},{249409,6},{249427,4},{249430,10}},
+ [1257482]={{7971,14},{8343,4},{14048,10},{249409,6},{249427,4},{249430,10}},
+ [1257483]={{8343,4},{13926,14},{14048,10},{249409,6},{249427,4},{249430,10}},
+ [1257484]={{8343,4},{11178,14},{14048,10},{249409,6},{249427,4},{249430,10}},
+ [1257487]={{14048,5},{14227,1},{14341,1}},
+ [1257492]={{14048,4},{14341,1},{14342,1},{249409,1},{249430,1},{249431,10}},
+ [1262975]={{2772,1},{2838,2},{2842,1}},
+ [1262978]={{3713,1},{12037,2},{12204,1}},
+ [1262980]={{4470,2},{8831,1},{8836,1}},
+ [1262985]={{2319,3},{2321,1},{5784,2}},
+ [1262990]={{4470,2},{8365,2},{8925,1}},
+ [1262996]={{4470,2},{6452,1},{8544,2}},
+ [1263005]={{2452,1},{3356,1},{3372,1}},
+ [1263031]={{2319,5},{2321,3},{4470,2}},
+ [1263032]={{2321,3},{4305,5},{4470,2}},
+ [1263034]={{4234,1},{4371,1},{4375,2}},
+ [1263041]={{2319,2},{2841,5},{3478,2}},
+ [1263056]={{11137,2},{11174,1}},
+ [1263425]={{2320,1},{2996,1}},
+ [1266893]={{2570,1},{249409,1}},
+ [1266905]={{2589,1},{4357,2}},
+ [1266906]={{2570,1},{2840,1},{4357,2},{4359,1},{260784,2}},
+ [1266907]={{2592,1},{249410,1}},
+ [1266908]={{2840,3},{4364,4},{4404,1},{260794,1}},
+ [1266909]={{4234,1},{249430,1}},
+ [1266910]={{2592,1},{2841,2},{4364,4},{4404,1},{260796,1}},
+ [1266912]={{2841,2},{249432,1}},
+ [1266914]={{4404,1},{249428,1}},
+ [1266919]={{4397,1},{260804,1}},
+ [1266920]={{4234,10},{10558,1},{10559,10},{11175,2}},
+ [1266923]={{10518,1},{260804,1}},
+ [1266924]={{10558,1},{10561,1},{15994,2}},
+ [1266925]={{12359,5},{16203,5}},
+ [1266935]={{3860,1},{12359,3},{248822,1},{249410,2},{249426,1},{249431,1}},
+ [1266937]={{14344,2},{16204,10},{249726,2},{251290,2}},
+ [1266938]={{12359,8},{249429,8},{249431,2},{249726,2}},
+ [1266940]={{7082,6},{16204,6},{248820,2},{248823,4},{251290,2}},
+ [1270633]={{6889,2},{10284,1}},
+ [1270635]={{2675,1},{10284,1}},
+ [1283400]={{11291,1}},
+ [1286792]={{4234,30},{4387,6},{4389,2},{10558,4}},
+ [1286796]={{4234,4},{4382,2},{4387,3},{4389,1},{10558,1}},
+ [1292920]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1292921]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292923]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292924]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292925]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1292926]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292927]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292928]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292929]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1292930]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292931]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292932]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292933]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1292934]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292935]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292936]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292937]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1292938]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292939]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292940]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292941]={{14048,22},{14341,8},{14342,3},{274030,5}},
+ [1292942]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292943]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292944]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292945]={{12360,4},{18567,1},{251291,18},{274030,5}},
+ [1292946]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292947]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292948]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292949]={{12360,4},{18567,1},{251291,18},{274030,5}},
+ [1292950]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292951]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292952]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292953]={{12360,4},{18567,1},{251291,18},{274030,5}},
+ [1292954]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292955]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292956]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292957]={{14048,22},{14341,8},{14342,3},{274030,5}},
+ [1292958]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292959]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292960]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292961]={{14048,22},{14341,8},{14342,3},{274030,5}},
+ [1292962]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292963]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292964]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292965]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1292966]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292967]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292968]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292969]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1292970]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292971]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292972]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292973]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1292974]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292975]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292976]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1292977]={{14048,22},{14341,8},{14342,3},{274030,5}},
+ [1292978]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292979]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292980]={{14048,16},{14341,8},{14342,2},{274030,3}},
+ [1292981]={{12360,4},{18567,1},{251291,18},{274030,5}},
+ [1292982]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292983]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292984]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292985]={{12360,4},{18567,1},{251291,18},{274030,5}},
+ [1292986]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292987]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1292988]={{12360,2},{18567,1},{251291,12},{274030,3}},
+ [1293088]={{3575,1},{249391,1},{249409,1}},
+ [1295834]={{769,2},{2678,1}},
+ [1297120]={{7082,3},{14048,4},{14341,6},{14343,1}},
+ [1297121]={{7082,3},{14048,6},{14341,6},{14343,1}},
+ [1297122]={{7082,3},{14048,5},{14341,6},{14343,1}},
+ [1297123]={{7080,3},{14048,4},{14341,6},{14343,1}},
+ [1297124]={{7080,3},{14048,6},{14341,6},{14343,1}},
+ [1297125]={{7080,3},{14048,5},{14341,6},{14343,1}},
+ [1297138]={{7078,3},{12359,7},{12655,5},{18567,1}},
+ [1297139]={{7078,3},{12359,11},{12655,5},{18567,1}},
+ [1297140]={{7078,3},{12359,9},{12655,5},{18567,1}},
+ [1297141]={{7076,3},{12359,7},{12655,5},{18567,1}},
+ [1297142]={{7076,3},{12359,11},{12655,5},{18567,1}},
+ [1297143]={{7076,3},{12359,9},{12655,5},{18567,1}},
+ [1299914]={{14341,8},{15407,4},{248825,24},{274030,5}},
+ [1299915]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1299916]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1299917]={{14341,8},{15407,2},{248825,18},{274030,3}},
+ [1301421]={{2840,8},{2880,1}},
+ [1301422]={{2840,5}},
+ [1301423]={{2840,7}},
+ [1301424]={{2840,6}},
+ [1301425]={{2840,8},{2880,1}},
+ [1301426]={{2840,7}},
+ [1301427]={{2318,7},{2320,2},{4231,1}},
+ [1301428]={{2318,4},{2320,3}},
+ [1301429]={{2318,6},{2320,4}},
+ [1301430]={{2318,5},{2320,3}},
+ [1301431]={{2318,7},{2320,2}},
+ [1301432]={{2318,6},{2320,3}},
+ [1301433]={{2318,7},{2320,2},{4231,1}},
+ [1301434]={{2318,4},{2320,3}},
+ [1301435]={{2318,6},{2320,4}},
+ [1301436]={{2318,5},{2320,3}},
+ [1301437]={{2318,7},{2320,2}},
+ [1301438]={{2318,6},{2320,3}},
+ [1301439]={{2320,2},{2996,5}},
+ [1301440]={{2320,3},{2996,3}},
+ [1301441]={{2320,4},{2996,4}},
+ [1301442]={{2320,3},{2996,3}},
+ [1301443]={{2320,2},{2996,5}},
+ [1301444]={{2320,3},{2996,4}},
+ [1301445]={{2840,8},{2880,1}},
+ [1301446]={{2840,5}},
+ [1301447]={{2840,7}},
+ [1301448]={{2840,6}},
+ [1301449]={{2840,8},{2880,1}},
+ [1301450]={{2840,7}},
+ [1301451]={{2318,7},{2320,2},{4231,1}},
+ [1301452]={{2318,4},{2320,3}},
+ [1301453]={{2318,6},{2320,4}},
+ [1301454]={{2318,5},{2320,3}},
+ [1301455]={{2318,7},{2320,2}},
+ [1301456]={{2318,6},{2320,3}},
+ [1301457]={{2318,7},{2320,2},{4231,1}},
+ [1301458]={{2318,4},{2320,3}},
+ [1301459]={{2318,6},{2320,4}},
+ [1301460]={{2318,5},{2320,3}},
+ [1301461]={{2318,7},{2320,2}},
+ [1301462]={{2318,6},{2320,3}},
+ [1301463]={{2320,2},{2996,5}},
+ [1301464]={{2320,3},{2996,3}},
+ [1301465]={{2320,4},{2996,4}},
+ [1301466]={{2320,3},{2996,3}},
+ [1301468]={{2320,2},{2996,5}},
+ [1301469]={{2320,3},{2996,4}},
+ [1301526]={{3486,5},{3575,18},{5498,1}},
+ [1301527]={{3486,3},{3575,14},{5498,1}},
+ [1301528]={{2324,8},{4234,15},{4236,3},{8343,1}},
+ [1301529]={{2324,6},{4234,12},{4236,2},{8343,1}},
+ [1301530]={{2324,8},{4234,15},{4236,3},{8343,1}},
+ [1301531]={{2324,6},{4234,12},{4236,2},{8343,1}},
+ [1301532]={{2324,8},{4305,7},{8343,1},{11134,2}},
+ [1301533]={{2324,6},{4305,5},{8343,1},{11134,1}},
+ [1301534]={{3486,5},{3575,18},{7909,1}},
+ [1301535]={{3486,3},{3575,14},{7909,1}},
+ [1301536]={{4234,15},{4236,3},{6260,4},{8343,1}},
+ [1301537]={{4234,12},{4236,2},{6260,3},{8343,1}},
+ [1301538]={{4234,15},{4236,3},{6260,4},{8343,1}},
+ [1301539]={{4234,12},{4236,2},{6260,3},{8343,1}},
+ [1301540]={{4305,7},{6260,4},{8343,1},{11134,2}},
+ [1301541]={{4305,5},{6260,3},{8343,1},{11134,1}},
+ [1302161]={{4363,2},{4405,1},{255007,4}},
+ [1302598]={{2840,9}},
+ [1302604]={{2318,8},{2320,3},{4231,1}},
+ [1306126]={{248815,1}},
+ [1308178]={{4305,2},{4375,1},{4382,2}},
+ [1308179]={{2319,4},{4375,2},{4382,1}},
+ [1308180]={{2319,4},{4363,1},{4371,2}},
+ [1308183]={{4339,4},{4389,1},{5507,1}},
+ [1308184]={{4234,8},{4389,1},{5507,1}},
+ [1308185]={{4234,8},{4389,1},{5507,1}},
+ [1308186]={{3860,2},{4389,1},{5507,1}},
+ [1317958]={{2318,6},{4359,4},{4360,20}},
+ [1317959]={{2319,6},{4375,1},{4380,20}},
+ [1317960]={{4304,6},{4389,1},{4394,20}},
+ [1317961]={{8170,6},{10560,1},{16005,20}},
+ [1317962]={{818,1},{2841,18},{2842,2}},
+ [1317963]={{3577,2},{3860,10},{7910,1}},
+ [1317964]={{11371,4},{12360,1},{12361,1}},
+ [1328948]={{11175,2},{11176,8},{11178,2},{12361,1}},
+}
+ns.RecipeSourceFacts.ingredientNames = {
+ [118]="Minor Healing Potion",
+ [159]="Refreshing Spring Water",
+ [723]="Goretusk Liver",
+ [724]="Goretusk Liver Pie",
+ [728]="Recipe: Westfall Stew",
+ [729]="Stringy Vulture Meat",
+ [730]="Murloc Eye",
+ [731]="Goretusk Snout",
+ [733]="Westfall Stew",
+ [765]="Silverleaf",
+ [769]="Chunk of Boar Meat",
+ [774]="Malachite",
+ [783]="Light Hide",
+ [785]="Mageroyal",
+ [787]="Slitherskin Mackerel",
+ [814]="Flask of Oil",
+ [818]="Tigerseye",
+ [858]="Lesser Healing Potion",
+ [929]="Healing Potion",
+ [1015]="Lean Wolf Flank",
+ [1017]="Seasoned Wolf Kabob",
+ [1080]="Tough Condor Meat",
+ [1081]="Crisp Spider Meat",
+ [1082]="Redridge Goulash",
+ [1179]="Ice Cold Milk",
+ [1205]="Melon Juice",
+ [1206]="Moss Agate",
+ [1210]="Shadowgem",
+ [1251]="Linen Bandage",
+ [1288]="Large Venom Sac",
+ [1468]="Murloc Fin",
+ [1475]="Small Venom Sac",
+ [1529]="Jade",
+ [1645]="Moonberry Juice",
+ [1705]="Lesser Moonstone",
+ [1708]="Sweet Nectar",
+ [2251]="Gooey Spider Leg",
+ [2289]="Scroll of Strength II",
+ [2300]="Embossed Leather Vest",
+ [2302]="Handstitched Leather Boots",
+ [2303]="Handstitched Leather Pants",
+ [2304]="Light Armor Kit",
+ [2307]="Fine Leather Boots",
+ [2308]="Fine Leather Cloak",
+ [2309]="Embossed Leather Boots",
+ [2310]="Embossed Leather Cloak",
+ [2311]="White Leather Jerkin",
+ [2312]="Fine Leather Gloves",
+ [2313]="Medium Armor Kit",
+ [2314]="Toughened Leather Armor",
+ [2315]="Gray Leather Boots",
+ [2316]="Dark Leather Cloak",
+ [2317]="Dark Leather Tunic",
+ [2318]="Light Leather",
+ [2319]="Medium Leather",
+ [2320]="Coarse Thread",
+ [2321]="Fine Thread",
+ [2324]="Bleach",
+ [2325]="Black Dye",
+ [2406]="Pattern: Fine Leather Boots",
+ [2407]="Pattern: White Leather Jerkin",
+ [2408]="Pattern: Fine Leather Gloves",
+ [2409]="Pattern: Dark Leather Tunic",
+ [2447]="Peacebloom",
+ [2449]="Earthroot",
+ [2450]="Briarthorn",
+ [2452]="Swiftthistle",
+ [2453]="Bruiseweed",
+ [2454]="Elixir of Minor Strength",
+ [2455]="Minor Mana Potion",
+ [2456]="Minor Rejuvenation Potion",
+ [2457]="Elixir of Minor Agility",
+ [2458]="Elixir of Minor Fortitude",
+ [2459]="Swiftness Potion",
+ [2553]="Recipe: Elixir of Minor Agility",
+ [2555]="Recipe: Swiftness Potion",
+ [2568]="Brown Linen Vest",
+ [2569]="Linen Boots",
+ [2570]="Linen Cloak",
+ [2572]="Red Linen Robe",
+ [2575]="Red Linen Shirt",
+ [2576]="White Linen Shirt",
+ [2577]="Blue Linen Shirt",
+ [2578]="Barbaric Linen Vest",
+ [2579]="Green Linen Shirt",
+ [2580]="Reinforced Linen Cape",
+ [2581]="Heavy Linen Bandage",
+ [2582]="Green Woolen Vest",
+ [2583]="Woolen Boots",
+ [2584]="Woolen Cape",
+ [2585]="Gray Woolen Robe",
+ [2587]="Gray Woolen Shirt",
+ [2589]="Linen Cloth",
+ [2592]="Wool Cloth",
+ [2596]="Skin of Dwarven Stout",
+ [2598]="Pattern: Red Linen Robe",
+ [2601]="Pattern: Gray Woolen Robe",
+ [2604]="Red Dye",
+ [2605]="Green Dye",
+ [2672]="Stringy Wolf Meat",
+ [2673]="Coyote Meat",
+ [2674]="Crawler Meat",
+ [2675]="Crawler Claw",
+ [2677]="Boar Ribs",
+ [2678]="Mild Spices",
+ [2679]="Charred Wolf Meat",
+ [2680]="Spiced Wolf Meat",
+ [2681]="Roasted Boar Meat",
+ [2682]="Cooked Crab Claw",
+ [2683]="Crab Cake",
+ [2684]="Coyote Steak",
+ [2685]="Succulent Pork Ribs",
+ [2687]="Dry Pork Ribs",
+ [2692]="Hot Spices",
+ [2697]="Recipe: Goretusk Liver Pie",
+ [2698]="Recipe: Cooked Crab Claw",
+ [2699]="Recipe: Redridge Goulash",
+ [2700]="Recipe: Succulent Pork Ribs",
+ [2701]="Recipe: Seasoned Wolf Kabob",
+ [2770]="Copper Ore",
+ [2771]="Tin Ore",
+ [2772]="Iron Ore",
+ [2775]="Silver Ore",
+ [2776]="Gold Ore",
+ [2835]="Rough Stone",
+ [2836]="Coarse Stone",
+ [2838]="Heavy Stone",
+ [2840]="Copper Bar",
+ [2841]="Bronze Bar",
+ [2842]="Silver Bar",
+ [2844]="Copper Mace",
+ [2845]="Copper Axe",
+ [2847]="Copper Shortsword",
+ [2848]="Bronze Mace",
+ [2849]="Bronze Axe",
+ [2850]="Bronze Shortsword",
+ [2851]="Copper Chain Belt",
+ [2852]="Copper Chain Pants",
+ [2853]="Copper Bracers",
+ [2854]="Runed Copper Bracers",
+ [2857]="Runed Copper Belt",
+ [2862]="Rough Sharpening Stone",
+ [2863]="Coarse Sharpening Stone",
+ [2864]="Runed Copper Breastplate",
+ [2865]="Rough Bronze Leggings",
+ [2866]="Rough Bronze Cuirass",
+ [2868]="Patterned Bronze Bracers",
+ [2869]="Silvered Bronze Breastplate",
+ [2870]="Shining Silver Breastplate",
+ [2871]="Heavy Sharpening Stone",
+ [2880]="Weak Flux",
+ [2881]="Plans: Runed Copper Breastplate",
+ [2882]="Plans: Silvered Bronze Shoulders",
+ [2883]="Plans: Deadly Bronze Poniard",
+ [2886]="Crag Boar Rib",
+ [2888]="Beer Basted Boar Ribs",
+ [2889]="Recipe: Beer Basted Boar Ribs",
+ [2894]="Rhapsody Malt",
+ [2924]="Crocolisk Meat",
+ [2934]="Ruined Leather Scraps",
+ [2996]="Bolt of Linen Cloth",
+ [2997]="Bolt of Woolen Cloth",
+ [3013]="Scroll of Protection",
+ [3172]="Boar Intestines",
+ [3173]="Bear Meat",
+ [3174]="Spider Ichor",
+ [3182]="Spider's Silk",
+ [3220]="Blood Sausage",
+ [3239]="Rough Weightstone",
+ [3240]="Coarse Weightstone",
+ [3241]="Heavy Weightstone",
+ [3355]="Wild Steelbloom",
+ [3356]="Kingsblood",
+ [3357]="Liferoot",
+ [3358]="Khadgar's Whisker",
+ [3369]="Grave Moss",
+ [3371]="Empty Vial",
+ [3372]="Leaded Vial",
+ [3382]="Minor Troll's Blood Elixir",
+ [3383]="Elixir of Wisdom",
+ [3384]="Minor Magic Resistance Potion",
+ [3385]="Lesser Mana Potion",
+ [3386]="Potion of Poison Cleansing",
+ [3387]="Limited Invulnerability Potion",
+ [3388]="Lesser Troll's Blood Elixir",
+ [3389]="Elixir of Lesser Defense",
+ [3390]="Elixir of Lesser Agility",
+ [3391]="Elixir of Ogre Strength",
+ [3393]="Recipe: Minor Magic Resistance Potion",
+ [3394]="Recipe: Potion of Poison Cleansing",
+ [3395]="Recipe: Limited Invulnerability Potion",
+ [3396]="Recipe: Elixir of Lesser Agility",
+ [3404]="Buzzard Wing",
+ [3466]="Strong Flux",
+ [3469]="Copper Chain Boots",
+ [3470]="Rough Grinding Stone",
+ [3471]="Copper Chain Vest",
+ [3472]="Runed Copper Gauntlets",
+ [3473]="Runed Copper Pants",
+ [3474]="Gemmed Copper Gauntlets",
+ [3478]="Coarse Grinding Stone",
+ [3480]="Rough Bronze Shoulders",
+ [3481]="Silvered Bronze Shoulders",
+ [3482]="Silvered Bronze Boots",
+ [3483]="Silvered Bronze Gauntlets",
+ [3484]="Green Iron Boots",
+ [3485]="Green Iron Gauntlets",
+ [3486]="Heavy Grinding Stone",
+ [3487]="Heavy Copper Broadsword",
+ [3488]="Copper Battle Axe",
+ [3489]="Thick War Axe",
+ [3490]="Deadly Bronze Poniard",
+ [3491]="Heavy Bronze Mace",
+ [3492]="Mighty Iron Hammer",
+ [3530]="Wool Bandage",
+ [3531]="Heavy Wool Bandage",
+ [3575]="Iron Bar",
+ [3576]="Tin Bar",
+ [3577]="Gold Bar",
+ [3608]="Plans: Mighty Iron Hammer",
+ [3609]="Plans: Copper Chain Vest",
+ [3610]="Plans: Gemmed Copper Gauntlets",
+ [3611]="Plans: Green Iron Boots",
+ [3612]="Plans: Green Iron Gauntlets",
+ [3662]="Crocolisk Steak",
+ [3663]="Murloc Fin Soup",
+ [3664]="Crocolisk Gumbo",
+ [3665]="Curiously Tasty Omelet",
+ [3666]="Gooey Spider Cake",
+ [3667]="Tender Crocolisk Meat",
+ [3678]="Recipe: Crocolisk Steak",
+ [3679]="Recipe: Blood Sausage",
+ [3680]="Recipe: Murloc Fin Soup",
+ [3681]="Recipe: Crocolisk Gumbo",
+ [3682]="Recipe: Curiously Tasty Omelet",
+ [3683]="Recipe: Gooey Spider Cake",
+ [3685]="Raptor Egg",
+ [3712]="Turtle Meat",
+ [3713]="Soothing Spices",
+ [3719]="Hillman's Cloak",
+ [3726]="Big Bear Steak",
+ [3727]="Hot Lion Chops",
+ [3728]="Tasty Lion Steak",
+ [3729]="Soothing Turtle Bisque",
+ [3730]="Big Bear Meat",
+ [3731]="Lion Meat",
+ [3734]="Recipe: Big Bear Steak",
+ [3735]="Recipe: Hot Lion Chops",
+ [3736]="Recipe: Tasty Lion Steak",
+ [3737]="Recipe: Soothing Turtle Bisque",
+ [3818]="Fadeleaf",
+ [3819]="Wintersbite",
+ [3820]="Stranglekelp",
+ [3821]="Goldthorn",
+ [3823]="Lesser Invisibility Potion",
+ [3824]="Shadow Oil",
+ [3825]="Elixir of Lesser Fortitude",
+ [3826]="Troll's Blood Elixir",
+ [3827]="Mana Potion",
+ [3828]="Draught of Detect Lesser Invisibility",
+ [3829]="Frost Oil",
+ [3830]="Recipe: Elixir of Lesser Fortitude",
+ [3831]="Recipe: Troll's Blood Elixir",
+ [3832]="Recipe: Elixir of Detect Lesser Invisibility",
+ [3835]="Green Iron Bracers",
+ [3836]="Green Iron Helm",
+ [3837]="Golden Scale Coif",
+ [3840]="Green Iron Shoulders",
+ [3841]="Golden Scale Shoulders",
+ [3842]="Green Iron Leggings",
+ [3843]="Golden Scale Leggings",
+ [3844]="Green Iron Hauberk",
+ [3845]="Golden Scale Cuirass",
+ [3846]="Polished Steel Boots",
+ [3847]="Golden Scale Boots",
+ [3848]="Big Bronze Knife",
+ [3849]="Hardened Iron Shortsword",
+ [3850]="Jade Serpentblade",
+ [3851]="Solid Iron Maul",
+ [3852]="Golden Iron Destroyer",
+ [3853]="Moonsteel Broadsword",
+ [3854]="Frost Tiger Blade",
+ [3855]="Massive Iron Axe",
+ [3856]="Shadow Crescent Axe",
+ [3857]="Coal",
+ [3858]="Mithril Ore",
+ [3859]="Steel Bar",
+ [3860]="Mithril Bar",
+ [3864]="Citrine",
+ [3866]="Plans: Jade Serpentblade",
+ [3867]="Plans: Golden Iron Destroyer",
+ [3868]="Plans: Frost Tiger Blade",
+ [3869]="Plans: Shadow Crescent Axe",
+ [3870]="Plans: Green Iron Shoulders",
+ [3871]="Plans: Golden Scale Shoulders",
+ [3872]="Plans: Golden Scale Leggings",
+ [3873]="Plans: Golden Scale Cuirass",
+ [3874]="Plans: Polished Steel Boots",
+ [3875]="Plans: Golden Scale Boots",
+ [4096]="Coarse Gorilla Hair",
+ [4231]="Cured Light Hide",
+ [4232]="Medium Hide",
+ [4233]="Cured Medium Hide",
+ [4234]="Heavy Leather",
+ [4235]="Heavy Hide",
+ [4236]="Cured Heavy Hide",
+ [4237]="Handstitched Leather Belt",
+ [4238]="Linen Bag",
+ [4239]="Embossed Leather Gloves",
+ [4240]="Woolen Bag",
+ [4241]="Green Woolen Bag",
+ [4242]="Embossed Leather Pants",
+ [4243]="Fine Leather Tunic",
+ [4244]="Hillman's Leather Vest",
+ [4245]="Small Silk Pack",
+ [4246]="Fine Leather Belt",
+ [4247]="Hillman's Leather Gloves",
+ [4248]="Dark Leather Gloves",
+ [4249]="Dark Leather Belt",
+ [4250]="Hillman's Belt",
+ [4251]="Hillman's Shoulders",
+ [4252]="Dark Leather Shoulders",
+ [4253]="Toughened Leather Gloves",
+ [4254]="Barbaric Gloves",
+ [4255]="Green Leather Armor",
+ [4256]="Guardian Armor",
+ [4257]="Green Leather Belt",
+ [4258]="Guardian Belt",
+ [4259]="Green Leather Bracers",
+ [4260]="Guardian Leather Bracers",
+ [4262]="Gem-studded Leather Belt",
+ [4264]="Barbaric Belt",
+ [4265]="Heavy Armor Kit",
+ [4289]="Salt",
+ [4291]="Silken Thread",
+ [4292]="Pattern: Green Woolen Bag",
+ [4293]="Pattern: Hillman's Leather Vest",
+ [4294]="Pattern: Hillman's Belt",
+ [4296]="Pattern: Dark Leather Shoulders",
+ [4297]="Pattern: Barbaric Gloves",
+ [4298]="Pattern: Guardian Belt",
+ [4299]="Pattern: Guardian Armor",
+ [4300]="Pattern: Guardian Leather Bracers",
+ [4301]="Pattern: Barbaric Belt",
+ [4304]="Thick Leather",
+ [4305]="Bolt of Silk Cloth",
+ [4306]="Silk Cloth",
+ [4307]="Heavy Linen Gloves",
+ [4308]="Green Linen Bracers",
+ [4309]="Handstitched Linen Britches",
+ [4310]="Heavy Woolen Gloves",
+ [4311]="Heavy Woolen Cloak",
+ [4312]="Soft-soled Linen Boots",
+ [4313]="Red Woolen Boots",
+ [4314]="Double-Stitched Woolen Shoulders",
+ [4315]="Reinforced Woolen Shoulders",
+ [4316]="Heavy Woolen Pants",
+ [4317]="Phoenix Pants",
+ [4318]="Gloves of Meditation",
+ [4319]="Azure Silk Gloves",
+ [4320]="Spidersilk Boots",
+ [4321]="Spider Silk Slippers",
+ [4322]="Enchanter's Cowl",
+ [4323]="Shadow Hood",
+ [4324]="Azure Silk Vest",
+ [4325]="Boots of the Enchanter",
+ [4326]="Long Silken Cloak",
+ [4327]="Icy Cloak",
+ [4328]="Spider Belt",
+ [4329]="Star Belt",
+ [4330]="Stylish Red Shirt",
+ [4331]="Phoenix Gloves",
+ [4332]="Bright Yellow Shirt",
+ [4333]="Dark Silk Shirt",
+ [4334]="Formal White Shirt",
+ [4335]="Rich Purple Silk Shirt",
+ [4336]="Black Swashbuckler's Shirt",
+ [4337]="Thick Spider's Silk",
+ [4338]="Mageweave Cloth",
+ [4339]="Bolt of Mageweave",
+ [4340]="Gray Dye",
+ [4341]="Yellow Dye",
+ [4342]="Purple Dye",
+ [4343]="Brown Linen Pants",
+ [4344]="Brown Linen Shirt",
+ [4345]="Pattern: Red Woolen Boots",
+ [4346]="Pattern: Heavy Woolen Cloak",
+ [4347]="Pattern: Reinforced Woolen Shoulders",
+ [4348]="Pattern: Phoenix Gloves",
+ [4349]="Pattern: Phoenix Pants",
+ [4350]="Pattern: Spider Silk Slippers",
+ [4351]="Pattern: Shadow Hood",
+ [4352]="Pattern: Boots of the Enchanter",
+ [4353]="Pattern: Spider Belt",
+ [4354]="Pattern: Rich Purple Silk Shirt",
+ [4355]="Pattern: Icy Cloak",
+ [4356]="Pattern: Star Belt",
+ [4357]="Rough Blasting Powder",
+ [4358]="Rough Dynamite",
+ [4359]="Handful of Copper Bolts",
+ [4360]="Rough Copper Bomb",
+ [4361]="Copper Tube",
+ [4362]="Rough Boomstick",
+ [4363]="Copper Modulator",
+ [4364]="Coarse Blasting Powder",
+ [4365]="Coarse Dynamite",
+ [4366]="Target Dummy",
+ [4367]="Small Seaforium Charge",
+ [4368]="Flying Tiger Goggles",
+ [4369]="Deadly Blunderbuss",
+ [4370]="Large Copper Bomb",
+ [4371]="Bronze Tube",
+ [4372]="Lovingly Crafted Boomstick",
+ [4373]="Shadow Goggles",
+ [4374]="Small Bronze Bomb",
+ [4375]="Whirring Bronze Gizmo",
+ [4376]="Flame Deflector",
+ [4377]="Heavy Blasting Powder",
+ [4378]="Heavy Dynamite",
+ [4379]="Silver-plated Shotgun",
+ [4380]="Big Bronze Bomb",
+ [4381]="Minor Recombobulator",
+ [4382]="Bronze Framework",
+ [4383]="Moonsight Rifle",
+ [4384]="Explosive Sheep",
+ [4385]="Green Tinted Goggles",
+ [4386]="Ice Deflector",
+ [4387]="Iron Strut",
+ [4388]="Discombobulator Ray",
+ [4389]="Gyrochronatom",
+ [4390]="Iron Grenade",
+ [4391]="Compact Harvest Reaper Kit",
+ [4392]="Advanced Target Dummy",
+ [4393]="Craftsman's Monocle",
+ [4394]="Big Iron Bomb",
+ [4395]="Goblin Land Mine",
+ [4396]="Mechanical Dragonling",
+ [4397]="Gnomish Cloaking Device",
+ [4398]="Large Seaforium Charge",
+ [4399]="Wooden Stock",
+ [4400]="Heavy Stock",
+ [4401]="Mechanical Squirrel Box",
+ [4402]="Small Flame Sac",
+ [4403]="Portable Bronze Mortar",
+ [4404]="Silver Contact",
+ [4405]="Crude Scope",
+ [4406]="Standard Scope",
+ [4407]="Accurate Scope",
+ [4408]="Schematic: Mechanical Squirrel",
+ [4409]="Schematic: Small Seaforium Charge",
+ [4410]="Schematic: Shadow Goggles",
+ [4411]="Schematic: Flame Deflector",
+ [4412]="Schematic: Moonsight Rifle",
+ [4413]="Schematic: Discombobulator Ray",
+ [4414]="Schematic: Portable Bronze Mortar",
+ [4415]="Schematic: Craftsman's Monocle",
+ [4416]="Schematic: Goblin Land Mine",
+ [4417]="Schematic: Large Seaforium Charge",
+ [4455]="Raptor Hide Harness",
+ [4456]="Raptor Hide Belt",
+ [4457]="Barbecued Buzzard Wing",
+ [4461]="Raptor Hide",
+ [4470]="Simple Wood",
+ [4536]="Shiny Red Apple",
+ [4589]="Long Elegant Feather",
+ [4592]="Longjaw Mud Snapper",
+ [4593]="Bristle Whisker Catfish",
+ [4594]="Rockscale Cod",
+ [4596]="Minor Discolored Healing Potion",
+ [4597]="Recipe: Minor Discolored Healing Potion",
+ [4603]="Raw Spotted Yellowtail",
+ [4605]="Red-speckled Mushroom",
+ [4609]="Recipe: Barbecued Buzzard Wing",
+ [4611]="Blue Pearl",
+ [4623]="Lesser Stoneshield Potion",
+ [4624]="Recipe: Lesser Stoneshield Potion",
+ [4625]="Firebloom",
+ [4655]="Giant Clam Meat",
+ [4852]="Flash Bomb",
+ [5051]="Dig Rat",
+ [5081]="Kodo Hide Bag",
+ [5082]="Thin Kodo Leather",
+ [5083]="Pattern: Kodo Hide Bag",
+ [5095]="Rainbow Fin Albacore",
+ [5116]="Long Tail Feather",
+ [5373]="Lucky Charm",
+ [5465]="Small Spider Leg",
+ [5466]="Scorpid Stinger",
+ [5467]="Kodo Meat",
+ [5468]="Soft Frenzy Flesh",
+ [5469]="Strider Meat",
+ [5470]="Thunder Lizard Tail",
+ [5471]="Stag Meat",
+ [5472]="Kaldorei Spider Kabob",
+ [5473]="Scorpid Surprise",
+ [5474]="Roasted Kodo Meat",
+ [5476]="Fillet of Frenzy",
+ [5477]="Strider Stew",
+ [5478]="Dig Rat Stew",
+ [5479]="Crispy Lizard Tail",
+ [5480]="Lean Venison",
+ [5482]="Recipe: Kaldorei Spider Kabob",
+ [5483]="Recipe: Scorpid Surprise",
+ [5484]="Recipe: Roasted Kodo Meat",
+ [5485]="Recipe: Fillet of Frenzy",
+ [5486]="Recipe: Strider Stew",
+ [5487]="Recipe: Dig Rat Stew",
+ [5488]="Recipe: Crispy Lizard Tail",
+ [5489]="Recipe: Lean Venison",
+ [5498]="Small Lustrous Pearl",
+ [5500]="Iridescent Pearl",
+ [5503]="Clam Meat",
+ [5504]="Tangy Clam Meat",
+ [5507]="Ornate Spyglass",
+ [5525]="Boiled Clams",
+ [5526]="Clam Chowder",
+ [5527]="Goblin Deviled Clams",
+ [5528]="Recipe: Clam Chowder",
+ [5540]="Pearl-handled Dagger",
+ [5541]="Iridescent Hammer",
+ [5542]="Pearl-clasped Cloak",
+ [5543]="Plans: Iridescent Hammer",
+ [5578]="Plans: Silvered Bronze Breastplate",
+ [5631]="Rage Potion",
+ [5633]="Great Rage Potion",
+ [5634]="Free Action Potion",
+ [5635]="Sharp Claw",
+ [5637]="Large Fang",
+ [5640]="Recipe: Rage Potion",
+ [5642]="Recipe: Free Action Potion",
+ [5643]="Recipe: Great Rage Potion",
+ [5739]="Barbaric Harness",
+ [5762]="Red Linen Bag",
+ [5763]="Red Woolen Bag",
+ [5764]="Green Silk Pack",
+ [5765]="Black Silk Pack",
+ [5766]="Lesser Wizard's Robe",
+ [5770]="Robes of Arcana",
+ [5771]="Pattern: Red Linen Bag",
+ [5772]="Pattern: Red Woolen Bag",
+ [5773]="Pattern: Robes of Arcana",
+ [5774]="Pattern: Green Silk Pack",
+ [5775]="Pattern: Black Silk Pack",
+ [5780]="Murloc Scale Belt",
+ [5781]="Murloc Scale Breastplate",
+ [5782]="Thick Murloc Armor",
+ [5783]="Murloc Scale Bracers",
+ [5784]="Slimy Murloc Scale",
+ [5785]="Thick Murloc Scale",
+ [5786]="Pattern: Murloc Scale Belt",
+ [5787]="Pattern: Murloc Scale Breastplate",
+ [5788]="Pattern: Thick Murloc Armor",
+ [5789]="Pattern: Murloc Scale Bracers",
+ [5957]="Handstitched Leather Vest",
+ [5958]="Fine Leather Pants",
+ [5961]="Dark Leather Pants",
+ [5962]="Guardian Pants",
+ [5963]="Barbaric Leggings",
+ [5964]="Barbaric Shoulders",
+ [5965]="Guardian Cloak",
+ [5966]="Guardian Gloves",
+ [5972]="Pattern: Fine Leather Pants",
+ [5973]="Pattern: Barbaric Leggings",
+ [5974]="Pattern: Guardian Cloak",
+ [5996]="Draught of Water Breathing",
+ [5997]="Elixir of Minor Defense",
+ [6037]="Truesilver Bar",
+ [6038]="Giant Clam Scorcho",
+ [6039]="Recipe: Giant Clam Scorcho",
+ [6040]="Golden Scale Bracers",
+ [6041]="Steel Weapon Chain",
+ [6042]="Iron Shield Spike",
+ [6043]="Iron Counterweight",
+ [6044]="Plans: Iron Shield Spike",
+ [6045]="Plans: Iron Counterweight",
+ [6046]="Plans: Steel Weapon Chain",
+ [6047]="Plans: Golden Scale Coif",
+ [6048]="Shadow Protection Potion",
+ [6049]="Fire Protection Potion",
+ [6050]="Frost Protection Potion",
+ [6051]="Holy Protection Potion",
+ [6052]="Nature Protection Potion",
+ [6053]="Recipe: Holy Protection Potion",
+ [6054]="Recipe: Shadow Protection Potion",
+ [6055]="Recipe: Fire Protection Potion",
+ [6056]="Recipe: Frost Protection Potion",
+ [6057]="Recipe: Nature Protection Potion",
+ [6068]="Recipe: Shadow Oil",
+ [6149]="Greater Mana Potion",
+ [6211]="Recipe: Elixir of Ogre's Strength",
+ [6214]="Heavy Copper Maul",
+ [6217]="Copper Rod",
+ [6218]="Runed Copper Rod",
+ [6219]="Arclight Spanner",
+ [6238]="Brown Linen Robe",
+ [6239]="Red Linen Vest",
+ [6240]="Blue Linen Vest",
+ [6241]="White Linen Robe",
+ [6242]="Blue Linen Robe",
+ [6260]="Blue Dye",
+ [6261]="Orange Dye",
+ [6263]="Blue Overalls",
+ [6264]="Greater Adept's Robe",
+ [6270]="Pattern: Blue Linen Vest",
+ [6271]="Pattern: Red Linen Vest",
+ [6272]="Pattern: Blue Linen Robe",
+ [6274]="Pattern: Blue Overalls",
+ [6275]="Pattern: Greater Adept's Robe",
+ [6289]="Raw Longjaw Mud Snapper",
+ [6290]="Brilliant Smallfish",
+ [6291]="Raw Brilliant Smallfish",
+ [6303]="Raw Slitherskin Mackerel",
+ [6308]="Raw Bristle Whisker Catfish",
+ [6316]="Loch Frenzy Delight",
+ [6317]="Raw Loch Frenzy",
+ [6325]="Recipe: Brilliant Smallfish",
+ [6326]="Recipe: Slitherskin Mackerel",
+ [6328]="Recipe: Longjaw Mud Snapper",
+ [6329]="Recipe: Loch Frenzy Delight",
+ [6330]="Recipe: Bristle Whisker Catfish",
+ [6338]="Silver Rod",
+ [6339]="Runed Silver Rod",
+ [6342]="Formula: Enchant Chest - Minor Intellect",
+ [6344]="Formula: Enchant Bracer - Minor Spirit",
+ [6345]="Formula: Imbue Cloak - Protection",
+ [6346]="Formula: Enchant Chest - Lesser Intellect",
+ [6347]="Formula: Enchant Bracer - Minor Strength",
+ [6348]="Formula: Enchant Weapon - Minor Beastslayer",
+ [6349]="Formula: Enchant 2H Weapon - Lesser Intellect",
+ [6350]="Rough Bronze Boots",
+ [6358]="Oily Blackmouth",
+ [6359]="Firefin Snapper",
+ [6361]="Raw Rainbow Fin Albacore",
+ [6362]="Raw Rockscale Cod",
+ [6368]="Recipe: Rainbow Fin Albacore",
+ [6369]="Recipe: Rockscale Cod",
+ [6370]="Blackmouth Oil",
+ [6371]="Fire Oil",
+ [6372]="Swim Speed Potion",
+ [6373]="Elixir of Fire Power",
+ [6375]="Formula: Enchant Bracer - Lesser Spirit",
+ [6376]="Formula: Enchant Boots - Minor Stamina",
+ [6377]="Formula: Enchant Boots - Minor Agility",
+ [6384]="Stylish Blue Shirt",
+ [6385]="Stylish Green Shirt",
+ [6390]="Pattern: Stylish Blue Shirt",
+ [6391]="Pattern: Stylish Green Shirt",
+ [6401]="Pattern: Dark Silk Shirt",
+ [6450]="Silk Bandage",
+ [6452]="Anti-Venom",
+ [6466]="Deviate Scale Cloak",
+ [6467]="Deviate Scale Gloves",
+ [6468]="Deviate Scale Belt",
+ [6470]="Deviate Scale",
+ [6471]="Perfect Deviate Scale",
+ [6474]="Pattern: Deviate Scale Cloak",
+ [6475]="Pattern: Deviate Scale Gloves",
+ [6476]="Pattern: Deviate Scale Belt",
+ [6522]="Deviate Fish",
+ [6530]="Nightcrawlers",
+ [6533]="Aquadynamic Fish Attractor",
+ [6657]="Savory Deviate Delight",
+ [6661]="Recipe: Savory Deviate Delight",
+ [6662]="Elixir of Giant Growth",
+ [6663]="Recipe: Elixir of Giant Growth",
+ [6672]="Schematic: Flash Bomb",
+ [6709]="Moonglow Vest",
+ [6710]="Pattern: Moonglow Vest",
+ [6712]="Practice Lock",
+ [6714]="Ez-Thro Dynamite",
+ [6716]="Schematic: EZ-Thro Dynamite",
+ [6731]="Ironforge Breastplate",
+ [6735]="Plans: Ironforge Breastplate",
+ [6786]="Simple Dress",
+ [6787]="White Woolen Dress",
+ [6795]="White Swashbuckler's Shirt",
+ [6796]="Red Swashbuckler's Shirt",
+ [6887]="Spotted Yellowtail",
+ [6888]="Herb Baked Egg",
+ [6889]="Small Egg",
+ [6890]="Smoked Bear Meat",
+ [6892]="Recipe: Smoked Bear Meat",
+ [7026]="Linen Belt",
+ [7046]="Azure Silk Pants",
+ [7047]="Hands of Darkness",
+ [7048]="Azure Silk Hood",
+ [7049]="Truefaith Gloves",
+ [7050]="Silk Headband",
+ [7051]="Earthen Vest",
+ [7052]="Azure Silk Belt",
+ [7053]="Azure Silk Cloak",
+ [7054]="Robe of Power",
+ [7055]="Crimson Silk Belt",
+ [7056]="Crimson Silk Cloak",
+ [7057]="Green Silken Shoulders",
+ [7058]="Crimson Silk Vest",
+ [7059]="Crimson Silk Shoulders",
+ [7060]="Azure Shoulders",
+ [7061]="Earthen Silk Belt",
+ [7062]="Crimson Silk Pantaloons",
+ [7063]="Crimson Silk Robe",
+ [7064]="Crimson Silk Gloves",
+ [7065]="Green Silk Armor",
+ [7067]="Elemental Earth",
+ [7068]="Elemental Fire",
+ [7069]="Elemental Air",
+ [7070]="Elemental Water",
+ [7071]="Iron Buckle",
+ [7072]="Naga Scale",
+ [7075]="Core of Earth",
+ [7076]="Essence of Earth",
+ [7077]="Heart of Fire",
+ [7078]="Essence of Fire",
+ [7079]="Globe of Water",
+ [7080]="Essence of Water",
+ [7081]="Breath of Wind",
+ [7082]="Essence of Air",
+ [7084]="Pattern: Crimson Silk Shoulders",
+ [7085]="Pattern: Azure Shoulders",
+ [7086]="Pattern: Earthen Silk Belt",
+ [7087]="Pattern: Crimson Silk Cloak",
+ [7088]="Pattern: Crimson Silk Robe",
+ [7089]="Pattern: Azure Silk Cloak",
+ [7090]="Pattern: Green Silk Armor",
+ [7091]="Pattern: Truefaith Gloves",
+ [7092]="Pattern: Hands of Darkness",
+ [7114]="Pattern: Azure Silk Gloves",
+ [7148]="Goblin Jumper Cables",
+ [7166]="Copper Dagger",
+ [7189]="Goblin Rocket Boots",
+ [7191]="Fused Wiring",
+ [7192]="Schematic: Goblin Rocket Boots",
+ [7276]="Handstitched Leather Cloak",
+ [7277]="Handstitched Leather Bracers",
+ [7278]="Light Leather Quiver",
+ [7279]="Small Leather Ammo Pouch",
+ [7280]="Rugged Leather Pants",
+ [7281]="Light Leather Bracers",
+ [7282]="Light Leather Pants",
+ [7283]="Black Whelp Cloak",
+ [7284]="Red Whelp Gloves",
+ [7285]="Nimble Leather Gloves",
+ [7286]="Black Whelp Scale",
+ [7287]="Red Whelp Scale",
+ [7288]="Pattern: Rugged Leather Pants",
+ [7289]="Pattern: Black Whelp Cloak",
+ [7290]="Pattern: Red Whelp Gloves",
+ [7348]="Fletcher's Gloves",
+ [7349]="Herbalist's Gloves",
+ [7352]="Earthen Leather Shoulders",
+ [7358]="Pilferer's Gloves",
+ [7359]="Heavy Earthen Gloves",
+ [7360]="Pattern: Dark Leather Gloves",
+ [7361]="Pattern: Herbalist's Gloves",
+ [7362]="Pattern: Earthen Leather Shoulders",
+ [7363]="Pattern: Pilferer's Gloves",
+ [7364]="Pattern: Heavy Earthen Gloves",
+ [7371]="Heavy Quiver",
+ [7372]="Heavy Leather Ammo Pouch",
+ [7373]="Dusky Leather Leggings",
+ [7374]="Dusky Leather Armor",
+ [7375]="Green Whelp Armor",
+ [7377]="Frost Leather Cloak",
+ [7378]="Dusky Bracers",
+ [7386]="Green Whelp Bracers",
+ [7387]="Dusky Belt",
+ [7390]="Dusky Boots",
+ [7391]="Swift Boots",
+ [7392]="Green Whelp Scale",
+ [7428]="Shadowcat Hide",
+ [7449]="Pattern: Dusky Leather Leggings",
+ [7450]="Pattern: Green Whelp Armor",
+ [7451]="Pattern: Green Whelp Bracers",
+ [7452]="Pattern: Dusky Boots",
+ [7453]="Pattern: Swift Boots",
+ [7506]="Gnomish Universal Remote",
+ [7560]="Schematic: Gnomish Universal Remote",
+ [7561]="Schematic: Goblin Jumper Cables",
+ [7613]="Pattern: Green Leather Armor",
+ [7676]="Thistle Tea",
+ [7678]="Recipe: Thistle Tea",
+ [7742]="Schematic: Gnomish Cloaking Device",
+ [7909]="Aquamarine",
+ [7910]="Star Ruby",
+ [7911]="Truesilver Ore",
+ [7912]="Solid Stone",
+ [7913]="Barbaric Iron Shoulders",
+ [7914]="Barbaric Iron Breastplate",
+ [7915]="Barbaric Iron Helm",
+ [7916]="Barbaric Iron Boots",
+ [7917]="Barbaric Iron Gloves",
+ [7918]="Heavy Mithril Shoulder",
+ [7919]="Heavy Mithril Gauntlet",
+ [7920]="Mithril Plate Pants",
+ [7921]="Heavy Mithril Pants",
+ [7922]="Steel Plate Helm",
+ [7924]="Mithril Plate Bracers",
+ [7926]="Ornate Mithril Pants",
+ [7927]="Ornate Mithril Gloves",
+ [7928]="Ornate Mithril Shoulders",
+ [7929]="Orcish War Leggings",
+ [7930]="Heavy Mithril Breastplate",
+ [7931]="Mithril Coif",
+ [7932]="Mithril Plate Shoulders",
+ [7933]="Heavy Mithril Boots",
+ [7934]="Heavy Mithril Helm",
+ [7935]="Ornate Mithril Breastplate",
+ [7936]="Ornate Mithril Boots",
+ [7937]="Ornate Mithril Helm",
+ [7938]="Truesilver Gauntlets",
+ [7939]="Truesilver Breastplate",
+ [7941]="Heavy Mithril Axe",
+ [7942]="Blue Glittering Axe",
+ [7943]="Wicked Mithril Blade",
+ [7944]="Dazzling Mithril Rapier",
+ [7945]="Big Black Mace",
+ [7946]="Runed Mithril Hammer",
+ [7947]="Ebon Shiv",
+ [7954]="The Shatterer",
+ [7955]="Copper Claymore",
+ [7956]="Bronze Warhammer",
+ [7957]="Bronze Greatsword",
+ [7958]="Bronze Battle Axe",
+ [7959]="Blight",
+ [7960]="Truesilver Champion",
+ [7961]="Phantom Blade",
+ [7963]="Steel Breastplate",
+ [7964]="Solid Sharpening Stone",
+ [7965]="Solid Weightstone",
+ [7966]="Solid Grinding Stone",
+ [7967]="Mithril Shield Spike",
+ [7969]="Mithril Spurs",
+ [7971]="Black Pearl",
+ [7972]="Ichor of Undeath",
+ [7974]="Zesty Clam Meat",
+ [7975]="Plans: Heavy Mithril Pants",
+ [7976]="Plans: Mithril Shield Spike",
+ [7978]="Plans: Barbaric Iron Shoulders",
+ [7979]="Plans: Barbaric Iron Breastplate",
+ [7980]="Plans: Barbaric Iron Helm",
+ [7981]="Plans: Barbaric Iron Boots",
+ [7982]="Plans: Barbaric Iron Gloves",
+ [7983]="Plans: Ornate Mithril Pants",
+ [7984]="Plans: Ornate Mithril Gloves",
+ [7985]="Plans: Ornate Mithril Shoulders",
+ [7989]="Plans: Mithril Spurs",
+ [7990]="Plans: Heavy Mithril Helm",
+ [7991]="Plans: Mithril Plate Shoulders",
+ [7992]="Plans: Blue Glittering Axe",
+ [7993]="Plans: Dazzling Mithril Rapier",
+ [7995]="Plans: Mithril Plate Bracers",
+ [8028]="Plans: Runed Mithril Hammer",
+ [8029]="Plans: Wicked Mithril Blade",
+ [8030]="Plans: Ebon Shiv",
+ [8067]="Crafted Light Shot",
+ [8068]="Crafted Heavy Shot",
+ [8069]="Crafted Solid Shot",
+ [8146]="Wicked Claw",
+ [8150]="Deeprock Salt",
+ [8151]="Flask of Mojo",
+ [8152]="Flask of Big Mojo",
+ [8153]="Wildvine",
+ [8154]="Scorpid Scale",
+ [8165]="Worn Dragonscale",
+ [8167]="Turtle Scale",
+ [8168]="Jet Black Feather",
+ [8169]="Thick Hide",
+ [8170]="Rugged Leather",
+ [8171]="Rugged Hide",
+ [8172]="Cured Thick Hide",
+ [8173]="Thick Armor Kit",
+ [8174]="Comfortable Leather Hat",
+ [8175]="Nightscape Tunic",
+ [8176]="Nightscape Headband",
+ [8185]="Turtle Scale Leggings",
+ [8187]="Turtle Scale Gloves",
+ [8189]="Turtle Scale Breastplate",
+ [8191]="Turtle Scale Helm",
+ [8192]="Nightscape Shoulders",
+ [8193]="Nightscape Pants",
+ [8197]="Nightscape Boots",
+ [8198]="Turtle Scale Bracers",
+ [8200]="Big Voodoo Robe",
+ [8201]="Big Voodoo Mask",
+ [8202]="Big Voodoo Pants",
+ [8203]="Tough Scorpid Breastplate",
+ [8204]="Tough Scorpid Gloves",
+ [8205]="Tough Scorpid Bracers",
+ [8206]="Tough Scorpid Leggings",
+ [8207]="Tough Scorpid Shoulders",
+ [8208]="Tough Scorpid Helm",
+ [8209]="Tough Scorpid Boots",
+ [8210]="Wild Leather Shoulders",
+ [8211]="Wild Leather Vest",
+ [8212]="Wild Leather Leggings",
+ [8213]="Wild Leather Boots",
+ [8214]="Wild Leather Helmet",
+ [8215]="Wild Leather Cloak",
+ [8216]="Big Voodoo Cloak",
+ [8217]="Quickdraw Quiver",
+ [8218]="Thick Leather Ammo Pouch",
+ [8343]="Heavy Silken Thread",
+ [8345]="Wolfshead Helm",
+ [8346]="Gauntlets of the Sea",
+ [8347]="Dragonscale Gauntlets",
+ [8348]="Helm of Fire",
+ [8349]="Feathered Breastplate",
+ [8364]="Mithril Head Trout",
+ [8365]="Raw Mithril Head Trout",
+ [8367]="Dragonscale Breastplate",
+ [8368]="Thick Wolfhide",
+ [8384]="Pattern: Comfortable Leather Hat",
+ [8385]="Pattern: Turtle Scale Gloves",
+ [8386]="Pattern: Big Voodoo Robe",
+ [8387]="Pattern: Big Voodoo Mask",
+ [8389]="Pattern: Big Voodoo Pants",
+ [8390]="Pattern: Big Voodoo Cloak",
+ [8395]="Pattern: Tough Scorpid Breastplate",
+ [8397]="Pattern: Tough Scorpid Bracers",
+ [8398]="Pattern: Tough Scorpid Gloves",
+ [8399]="Pattern: Tough Scorpid Boots",
+ [8400]="Pattern: Tough Scorpid Shoulders",
+ [8401]="Pattern: Tough Scorpid Leggings",
+ [8402]="Pattern: Tough Scorpid Helm",
+ [8403]="Pattern: Wild Leather Shoulders",
+ [8404]="Pattern: Wild Leather Vest",
+ [8405]="Pattern: Wild Leather Helmet",
+ [8406]="Pattern: Wild Leather Boots",
+ [8407]="Pattern: Wild Leather Leggings",
+ [8408]="Pattern: Wild Leather Cloak",
+ [8409]="Pattern: Nightscape Shoulders",
+ [8544]="Mageweave Bandage",
+ [8766]="Morning Glory Dew",
+ [8831]="Purple Lotus",
+ [8836]="Arthas' Tears",
+ [8838]="Sungrass",
+ [8839]="Blindweed",
+ [8845]="Ghost Mushroom",
+ [8846]="Gromsblood",
+ [8925]="Crystal Vial",
+ [8949]="Elixir of Agility",
+ [8951]="Elixir of Defense",
+ [8956]="Oil of Immolation",
+ [9030]="Restorative Potion",
+ [9036]="Magic Resistance Potion",
+ [9060]="Inlaid Mithril Cylinder",
+ [9061]="Goblin Rocket Fuel",
+ [9088]="Gift of Arthas",
+ [9144]="Wildvine Potion",
+ [9149]="Philosopher's Stone",
+ [9154]="Draught of Detect Undead",
+ [9155]="Arcane Elixir",
+ [9172]="Invisibility Potion",
+ [9179]="Elixir of Greater Intellect",
+ [9187]="Elixir of Greater Agility",
+ [9197]="Draught of Dream Vision",
+ [9206]="Elixir of Greater Strength",
+ [9210]="Ghost Dye",
+ [9224]="Potion of Demon Slaying",
+ [9233]="Draught of Detect Demon",
+ [9260]="Volatile Rum",
+ [9262]="Black Vitriol",
+ [9264]="Elixir of Shadow Power",
+ [9293]="Recipe: Magic Resistance Potion",
+ [9294]="Recipe: Wildvine Potion",
+ [9295]="Recipe: Invisibility Potion",
+ [9296]="Recipe: Gift of Arthas",
+ [9297]="Recipe: Draught of Dream Vision",
+ [9298]="Recipe: Elixir of Giants",
+ [9300]="Recipe: Potion of Demon Slaying",
+ [9301]="Recipe: Elixir of Shadow Power",
+ [9302]="Recipe: Ghost Dye",
+ [9303]="Recipe: Philosopher's Stone",
+ [9304]="Recipe: Transmute Iron to Gold",
+ [9305]="Recipe: Transmute Mithril to Truesilver",
+ [9312]="Blue Firework",
+ [9313]="Green Firework",
+ [9318]="Red Firework",
+ [9366]="Golden Scale Gauntlets",
+ [9367]="Plans: Golden Scale Gauntlets",
+ [9998]="Black Mageweave Vest",
+ [9999]="Black Mageweave Leggings",
+ [10001]="Black Mageweave Robe",
+ [10002]="Shadoweave Pants",
+ [10003]="Black Mageweave Gloves",
+ [10004]="Shadoweave Robe",
+ [10007]="Red Mageweave Vest",
+ [10008]="White Bandit Mask",
+ [10009]="Red Mageweave Pants",
+ [10011]="Stormcloth Gloves",
+ [10018]="Red Mageweave Gloves",
+ [10019]="Dreamweave Gloves",
+ [10021]="Dreamweave Vest",
+ [10023]="Shadoweave Gloves",
+ [10024]="Black Mageweave Headband",
+ [10025]="Shadoweave Mask",
+ [10026]="Black Mageweave Boots",
+ [10027]="Black Mageweave Shoulders",
+ [10028]="Shadoweave Shoulders",
+ [10029]="Red Mageweave Shoulders",
+ [10030]="Admiral's Hat",
+ [10031]="Shadoweave Boots",
+ [10033]="Red Mageweave Headband",
+ [10034]="Tuxedo Shirt",
+ [10035]="Tuxedo Pants",
+ [10036]="Tuxedo Jacket",
+ [10040]="White Wedding Dress",
+ [10041]="Dreamweave Circlet",
+ [10042]="Cindercloth Robe",
+ [10044]="Cindercloth Boots",
+ [10045]="Simple Linen Pants",
+ [10046]="Simple Linen Boots",
+ [10047]="Simple Kilt",
+ [10048]="Colorful Kilt",
+ [10050]="Mageweave Bag",
+ [10051]="Red Mageweave Bag",
+ [10052]="Orange Martial Shirt",
+ [10053]="Simple Black Dress",
+ [10054]="Lavender Mageweave Shirt",
+ [10055]="Pink Mageweave Shirt",
+ [10056]="Orange Mageweave Shirt",
+ [10284]="Simple Flour",
+ [10285]="Shadow Silk",
+ [10286]="Heart of the Wild",
+ [10290]="Pink Dye",
+ [10300]="Pattern: Red Mageweave Vest",
+ [10301]="Pattern: White Bandit Mask",
+ [10302]="Pattern: Red Mageweave Pants",
+ [10308]="Scroll of Intellect IV",
+ [10311]="Pattern: Orange Martial Shirt",
+ [10312]="Pattern: Red Mageweave Gloves",
+ [10314]="Pattern: Lavender Mageweave Shirt",
+ [10315]="Pattern: Red Mageweave Shoulders",
+ [10316]="Pattern: Colorful Kilt",
+ [10317]="Pattern: Pink Mageweave Shirt",
+ [10318]="Pattern: Admiral's Hat",
+ [10320]="Pattern: Red Mageweave Headband",
+ [10321]="Pattern: Tuxedo Shirt",
+ [10323]="Pattern: Tuxedo Pants",
+ [10325]="Pattern: White Wedding Dress",
+ [10326]="Pattern: Tuxedo Jacket",
+ [10421]="Rough Copper Vest",
+ [10423]="Silvered Bronze Leggings",
+ [10424]="Plans: Silvered Bronze Leggings",
+ [10463]="Pattern: Shadoweave Mask",
+ [10498]="Gyromatic Micro-Adjustor",
+ [10499]="Bright-Eye Goggles",
+ [10500]="Fire Goggles",
+ [10501]="Catseye Ultra Goggles",
+ [10502]="Spellpower Goggles Xtreme",
+ [10503]="Rose Colored Goggles",
+ [10504]="Green Lens",
+ [10505]="Solid Blasting Powder",
+ [10506]="Deepdive Helmet",
+ [10507]="Solid Dynamite",
+ [10508]="Mithril Blunderbuss",
+ [10510]="Mithril Heavy-bore Rifle",
+ [10512]="Hi-Impact Mithril Slugs",
+ [10513]="Mithril Gyro-Shot",
+ [10514]="Mithril Frag Bomb",
+ [10518]="Parachute Cloak",
+ [10542]="Goblin Mining Helmet",
+ [10543]="Goblin Construction Helmet",
+ [10545]="Gnomish Goggles",
+ [10546]="Deadly Scope",
+ [10548]="Sniper Scope",
+ [10558]="Gold Power Core",
+ [10559]="Mithril Tube",
+ [10560]="Unstable Trigger",
+ [10561]="Mithril Casing",
+ [10562]="Hi-Explosive Bomb",
+ [10576]="Mithril Mechanical Dragonling",
+ [10577]="Goblin Mortar",
+ [10586]="The Big One",
+ [10587]="Goblin Bomb Dispenser",
+ [10588]="Goblin Rocket Helmet",
+ [10592]="Catseye Draught",
+ [10601]="Schematic: Bright-Eye Goggles",
+ [10602]="Schematic: Deadly Scope",
+ [10603]="Schematic: Catseye Ultra Goggles",
+ [10604]="Schematic: Mithril Heavy-bore Rifle",
+ [10605]="Schematic: Spellpower Goggles Xtreme",
+ [10606]="Schematic: Parachute Cloak",
+ [10607]="Schematic: Deepdive Helmet",
+ [10608]="Schematic: Sniper Scope",
+ [10609]="Schematic: Mithril Mechanical Dragonling",
+ [10620]="Thorium Ore",
+ [10644]="Recipe: Goblin Rocket Fuel",
+ [10645]="Gnomish Death Ray",
+ [10646]="Goblin Sapper Charge",
+ [10647]="Engineer's Ink",
+ [10648]="Blank Parchment",
+ [10713]="Plans: Inlaid Mithril Cylinder",
+ [10716]="Gnomish Shrink Ray",
+ [10720]="Gnomish Net-o-Matic Projector",
+ [10721]="Gnomish Harm Prevention Belt",
+ [10724]="Gnomish Rocket Boots",
+ [10725]="Gnomish Battle Chicken",
+ [10726]="Gnomish Mind Control Cap",
+ [10727]="Goblin Dragon Gun",
+ [10728]="Pattern: Black Swashbuckler's Shirt",
+ [10841]="Goldthorn Tea",
+ [10858]="Plans: Solid Iron Maul",
+ [10938]="Lesser Magic Essence",
+ [10939]="Greater Magic Essence",
+ [10940]="Strange Dust",
+ [10978]="Small Glimmering Shard",
+ [10998]="Lesser Astral Essence",
+ [11038]="Formula: Enchant 2H Weapon - Lesser Spirit",
+ [11039]="Formula: Enchant Cloak - Minor Agility",
+ [11040]="Morrowgrain",
+ [11081]="Formula: Enchant Shield - Lesser Protection",
+ [11082]="Greater Astral Essence",
+ [11083]="Soul Dust",
+ [11084]="Large Glimmering Shard",
+ [11098]="Formula: Enchant Cloak - Lesser Shadow Resistance",
+ [11101]="Formula: Enchant Bracer - Lesser Strength",
+ [11128]="Golden Rod",
+ [11130]="Runed Golden Rod",
+ [11134]="Lesser Mystic Essence",
+ [11135]="Greater Mystic Essence",
+ [11137]="Vision Dust",
+ [11138]="Small Glowing Shard",
+ [11139]="Large Glowing Shard",
+ [11144]="Truesilver Rod",
+ [11145]="Runed Truesilver Rod",
+ [11150]="Formula: Enchant Gloves - Mining",
+ [11151]="Formula: Enchant Gloves - Herbalism",
+ [11152]="Formula: Enchant Gloves - Fishing",
+ [11163]="Formula: Enchant Bracer - Lesser Deflection",
+ [11164]="Formula: Enchant Weapon - Lesser Beastslayer",
+ [11165]="Formula: Enchant Weapon - Lesser Elemental Slayer",
+ [11166]="Formula: Enchant Gloves - Skinning",
+ [11167]="Formula: Enchant Boots - Lesser Spirit",
+ [11168]="Formula: Enchant Shield - Lesser Block",
+ [11174]="Lesser Nether Essence",
+ [11175]="Greater Nether Essence",
+ [11176]="Dream Dust",
+ [11177]="Small Radiant Shard",
+ [11178]="Large Radiant Shard",
+ [11184]="Blue Power Crystal",
+ [11185]="Green Power Crystal",
+ [11186]="Red Power Crystal",
+ [11188]="Yellow Power Crystal",
+ [11202]="Formula: Enchant Shield - Stamina",
+ [11203]="Formula: Enchant Gloves - Advanced Mining",
+ [11204]="Formula: Enchant Bracer - Greater Spirit",
+ [11205]="Formula: Enchant Gloves - Advanced Herbalism",
+ [11206]="Formula: Enchant Cloak - Lesser Agility",
+ [11207]="Formula: Enchant Weapon - Fiery Weapon",
+ [11208]="Formula: Enchant Weapon - Demonslaying",
+ [11223]="Formula: Enchant Bracer - Deflection",
+ [11224]="Formula: Enchant Shield - Frost Resistance",
+ [11225]="Formula: Enchant Bracer - Greater Stamina",
+ [11226]="Formula: Enchant Gloves - Riding Skill",
+ [11287]="Lesser Magic Wand",
+ [11288]="Greater Magic Wand",
+ [11289]="Lesser Mystic Wand",
+ [11291]="Star Wood",
+ [11370]="Dark Iron Ore",
+ [11371]="Dark Iron Bar",
+ [11382]="Blood of the Mountain",
+ [11590]="Mechanical Repair Kit",
+ [11604]="Dark Iron Plate",
+ [11605]="Dark Iron Shoulders",
+ [11606]="Dark Iron Mail",
+ [11607]="Dark Iron Sunderer",
+ [11608]="Dark Iron Pulverizer",
+ [11610]="Plans: Dark Iron Pulverizer",
+ [11611]="Plans: Dark Iron Sunderer",
+ [11612]="Plans: Dark Iron Plate",
+ [11614]="Plans: Dark Iron Mail",
+ [11615]="Plans: Dark Iron Shoulders",
+ [11754]="Black Diamond",
+ [11813]="Formula: Smoking Heart of the Mountain",
+ [11825]="Pet Bombling",
+ [11826]="Lil' Smoky",
+ [11827]="Schematic: Lil' Smoky",
+ [11828]="Schematic: Pet Bombling",
+ [12037]="Mystery Meat",
+ [12162]="Plans: Hardened Iron Shortsword",
+ [12163]="Plans: Moonsteel Broadsword",
+ [12164]="Plans: Massive Iron Axe",
+ [12184]="Raptor Flesh",
+ [12190]="Dreamless Sleep Potion",
+ [12202]="Tiger Meat",
+ [12203]="Red Wolf Meat",
+ [12204]="Heavy Kodo Meat",
+ [12205]="White Spider Meat",
+ [12206]="Tender Crab Meat",
+ [12207]="Giant Egg",
+ [12208]="Tender Wolf Meat",
+ [12209]="Lean Wolf Steak",
+ [12210]="Roast Raptor",
+ [12212]="Jungle Stew",
+ [12213]="Carrion Surprise",
+ [12214]="Mystery Stew",
+ [12215]="Heavy Kodo Stew",
+ [12216]="Spiced Chili Crab",
+ [12217]="Dragonbreath Chili",
+ [12218]="Monster Omelet",
+ [12223]="Meaty Bat Wing",
+ [12224]="Crispy Bat Wing",
+ [12226]="Recipe: Crispy Bat Wing",
+ [12227]="Recipe: Lean Wolf Steak",
+ [12228]="Recipe: Roast Raptor",
+ [12229]="Recipe: Hot Wolf Ribs",
+ [12231]="Recipe: Jungle Stew",
+ [12232]="Recipe: Carrion Surprise",
+ [12233]="Recipe: Mystery Stew",
+ [12239]="Recipe: Dragonbreath Chili",
+ [12240]="Recipe: Heavy Kodo Stew",
+ [12259]="Glinting Steel Dagger",
+ [12260]="Searing Golden Blade",
+ [12261]="Plans: Searing Golden Blade",
+ [12359]="Thorium Bar",
+ [12360]="Arcanite Bar",
+ [12361]="Blue Sapphire",
+ [12363]="Arcane Crystal",
+ [12364]="Huge Emerald",
+ [12365]="Dense Stone",
+ [12404]="Dense Sharpening Stone",
+ [12405]="Thorium Armor",
+ [12406]="Thorium Belt",
+ [12408]="Thorium Bracers",
+ [12409]="Thorium Boots",
+ [12410]="Thorium Helm",
+ [12414]="Thorium Leggings",
+ [12415]="Radiant Breastplate",
+ [12416]="Radiant Belt",
+ [12417]="Radiant Circlet",
+ [12418]="Radiant Gloves",
+ [12419]="Radiant Boots",
+ [12420]="Radiant Leggings",
+ [12422]="Imperial Plate Chest",
+ [12424]="Imperial Plate Belt",
+ [12425]="Imperial Plate Bracers",
+ [12426]="Imperial Plate Boots",
+ [12427]="Imperial Plate Helm",
+ [12428]="Imperial Plate Shoulders",
+ [12429]="Imperial Plate Leggings",
+ [12607]="Brilliant Chromatic Scale",
+ [12610]="Runic Plate Shoulders",
+ [12611]="Runic Plate Boots",
+ [12612]="Runic Plate Helm",
+ [12613]="Runic Breastplate",
+ [12614]="Runic Plate Leggings",
+ [12618]="Enchanted Thorium Breastplate",
+ [12619]="Enchanted Thorium Leggings",
+ [12620]="Enchanted Thorium Helm",
+ [12624]="Wildthorn Mail",
+ [12625]="Dawnbringer Shoulders",
+ [12631]="Fiery Plate Gauntlets",
+ [12632]="Storm Gauntlets",
+ [12633]="Whitesoul Helm",
+ [12636]="Helm of the Great Chief",
+ [12639]="Stronghold Gauntlets",
+ [12640]="Lionheart Helm",
+ [12641]="Invulnerable Mail",
+ [12643]="Dense Weightstone",
+ [12644]="Dense Grinding Stone",
+ [12645]="Thorium Shield Spike",
+ [12655]="Enchanted Thorium Bar",
+ [12662]="Demonic Rune",
+ [12682]="Plans: Thorium Armor",
+ [12683]="Plans: Thorium Belt",
+ [12684]="Plans: Thorium Bracers",
+ [12685]="Plans: Radiant Belt",
+ [12687]="Plans: Imperial Plate Shoulders",
+ [12688]="Plans: Imperial Plate Belt",
+ [12689]="Plans: Radiant Breastplate",
+ [12690]="Plans: Imperial Plate Bracers",
+ [12691]="Pattern: Wildthorn Mail",
+ [12692]="Plans: Thorium Shield Spike",
+ [12693]="Plans: Thorium Boots",
+ [12694]="Plans: Thorium Helm",
+ [12695]="Plans: Radiant Gloves",
+ [12696]="Plans: Demon Forged Breastplate",
+ [12697]="Plans: Radiant Boots",
+ [12698]="Plans: Dawnbringer Shoulders",
+ [12699]="Plans: Fiery Plate Gauntlets",
+ [12700]="Plans: Imperial Plate Boots",
+ [12701]="Plans: Imperial Plate Helm",
+ [12702]="Plans: Radiant Circlet",
+ [12703]="Pattern: Storm Gauntlets",
+ [12704]="Plans: Thorium Leggings",
+ [12705]="Plans: Imperial Plate Chest",
+ [12706]="Plans: Runic Plate Shoulders",
+ [12707]="Plans: Runic Plate Boots",
+ [12711]="Plans: Whitesoul Helm",
+ [12713]="Plans: Radiant Leggings",
+ [12714]="Plans: Runic Plate Helm",
+ [12715]="Plans: Imperial Plate Leggings",
+ [12716]="Pattern: Helm of the Great Chief",
+ [12717]="Plans: Lionheart Helm",
+ [12718]="Plans: Runic Breastplate",
+ [12719]="Plans: Runic Plate Leggings",
+ [12720]="Plans: Stronghold Gauntlets",
+ [12725]="Plans: Enchanted Thorium Helm",
+ [12726]="Plans: Enchanted Thorium Leggings",
+ [12727]="Plans: Enchanted Thorium Breastplate",
+ [12728]="Pattern: Invulnerable Mail",
+ [12735]="Frayed Abomination Stitching",
+ [12753]="Skin of Shadow",
+ [12773]="Ornate Thorium Handaxe",
+ [12774]="Dawn's Edge",
+ [12775]="Huge Thorium Battleaxe",
+ [12776]="Enchanted Battlehammer",
+ [12777]="Blazing Rapier",
+ [12781]="Serenity",
+ [12782]="Corruption",
+ [12783]="Heartseeker",
+ [12784]="Arcanite Reaper",
+ [12790]="Arcanite Champion",
+ [12792]="Volcanic Hammer",
+ [12794]="Masterwork Stormhammer",
+ [12796]="Hammer of the Titans",
+ [12797]="Frostguard",
+ [12798]="Annihilator",
+ [12799]="Large Opal",
+ [12800]="Azerothian Diamond",
+ [12803]="Living Essence",
+ [12804]="Powerful Mojo",
+ [12808]="Essence of Undeath",
+ [12809]="Guardian Stone",
+ [12810]="Enchanted Leather",
+ [12811]="Righteous Orb",
+ [12819]="Plans: Ornate Thorium Handaxe",
+ [12821]="Plans: Dawn's Edge",
+ [12823]="Plans: Huge Thorium Battleaxe",
+ [12824]="Plans: Enchanted Battlehammer",
+ [12825]="Plans: Blazing Rapier",
+ [12827]="Plans: Serenity",
+ [12828]="Plans: Volcanic Hammer",
+ [12830]="Plans: Corruption",
+ [12833]="Plans: Hammer of the Titans",
+ [12834]="Plans: Arcanite Champion",
+ [12835]="Plans: Annihilator",
+ [12836]="Plans: Frostguard",
+ [12837]="Plans: Masterwork Stormhammer",
+ [12838]="Plans: Arcanite Reaper",
+ [12839]="Plans: Heartseeker",
+ [12938]="Blood of Heroes",
+ [12958]="Recipe: Transmute Arcanite",
+ [13180]="Stratholme Holy Water",
+ [13287]="Pattern: Raptor Hide Harness",
+ [13288]="Pattern: Raptor Hide Belt",
+ [13308]="Schematic: Ice Deflector",
+ [13309]="Schematic: Lovingly Crafted Boomstick",
+ [13310]="Schematic: Accurate Scope",
+ [13311]="Schematic: Mechanical Dragonling",
+ [13422]="Stonescale Eel",
+ [13423]="Stonescale Oil",
+ [13442]="Mighty Rage Potion",
+ [13443]="Superior Mana Potion",
+ [13444]="Major Mana Potion",
+ [13445]="Elixir of Greater Defense",
+ [13447]="Elixir of the Sages",
+ [13452]="Elixir of the Mongoose",
+ [13453]="Elixir of Brute Force",
+ [13454]="Greater Arcane Elixir",
+ [13455]="Greater Stoneshield Potion",
+ [13456]="Greater Frost Protection Potion",
+ [13457]="Greater Fire Protection Potion",
+ [13458]="Greater Nature Protection Potion",
+ [13459]="Greater Shadow Protection Potion",
+ [13461]="Greater Arcane Protection Potion",
+ [13462]="Purification Potion",
+ [13463]="Dreamfoil",
+ [13464]="Golden Sansam",
+ [13465]="Mountain Silversage",
+ [13466]="Plaguebloom",
+ [13467]="Icecap",
+ [13468]="Black Lotus",
+ [13476]="Recipe: Mighty Rage Potion",
+ [13477]="Recipe: Superior Mana Potion",
+ [13478]="Recipe: Elixir of Superior Defense",
+ [13479]="Recipe: Elixir of the Sages",
+ [13481]="Recipe: Elixir of Brute Force",
+ [13482]="Recipe: Transmute Air to Fire",
+ [13483]="Recipe: Transmute Fire to Earth",
+ [13484]="Recipe: Transmute Earth to Water",
+ [13485]="Recipe: Transmute Water to Air",
+ [13486]="Recipe: Transmute Undeath to Water",
+ [13487]="Recipe: Transmute Water to Undeath",
+ [13488]="Recipe: Transmute Life to Earth",
+ [13489]="Recipe: Transmute Earth to Life",
+ [13490]="Recipe: Greater Stoneshield Potion",
+ [13491]="Recipe: Elixir of the Mongoose",
+ [13492]="Recipe: Purification Potion",
+ [13493]="Recipe: Greater Arcane Elixir",
+ [13494]="Recipe: Greater Fire Protection Potion",
+ [13495]="Recipe: Greater Frost Protection Potion",
+ [13496]="Recipe: Greater Nature Protection Potion",
+ [13497]="Recipe: Greater Arcane Protection Potion",
+ [13499]="Recipe: Greater Shadow Protection Potion",
+ [13501]="Recipe: Major Mana Potion",
+ [13506]="Flask of Petrification",
+ [13510]="Flask of the Titans",
+ [13511]="Flask of Distilled Wisdom",
+ [13512]="Flask of Supreme Power",
+ [13513]="Flask of Chromatic Resistance",
+ [13518]="Recipe: Flask of Petrification",
+ [13519]="Recipe: Flask of the Titans",
+ [13520]="Recipe: Flask of Distilled Wisdom",
+ [13521]="Recipe: Flask of Supreme Power",
+ [13522]="Recipe: Flask of Chromatic Resistance",
+ [13754]="Raw Glossy Mightfish",
+ [13755]="Raw Winter Squid",
+ [13756]="Raw Summer Bass",
+ [13758]="Raw Redgill",
+ [13759]="Raw Nightfin Snapper",
+ [13760]="Raw Sunscale Salmon",
+ [13851]="Hot Wolf Ribs",
+ [13856]="Runecloth Belt",
+ [13857]="Runecloth Tunic",
+ [13858]="Runecloth Robe",
+ [13860]="Runecloth Cloak",
+ [13863]="Runecloth Gloves",
+ [13864]="Runecloth Boots",
+ [13865]="Runecloth Pants",
+ [13866]="Runecloth Headband",
+ [13867]="Runecloth Shoulders",
+ [13868]="Frostweave Robe",
+ [13869]="Frostweave Tunic",
+ [13870]="Frostweave Gloves",
+ [13871]="Frostweave Pants",
+ [13888]="Darkclaw Lobster",
+ [13889]="Raw Whitescale Salmon",
+ [13893]="Large Raw Mightfish",
+ [13926]="Golden Pearl",
+ [13927]="Cooked Glossy Mightfish",
+ [13928]="Grilled Squid",
+ [13929]="Hot Smoked Bass",
+ [13930]="Filet of Redgill",
+ [13931]="Nightfin Soup",
+ [13932]="Poached Sunscale Salmon",
+ [13933]="Lobster Stew",
+ [13934]="Mightfish Steak",
+ [13935]="Baked Salmon",
+ [13939]="Recipe: Spotted Yellowtail",
+ [13940]="Recipe: Cooked Glossy Mightfish",
+ [13941]="Recipe: Filet of Redgill",
+ [13942]="Recipe: Grilled Squid",
+ [13943]="Recipe: Hot Smoked Bass",
+ [13945]="Recipe: Nightfin Soup",
+ [13946]="Recipe: Poached Sunscale Salmon",
+ [13947]="Recipe: Lobster Stew",
+ [13948]="Recipe: Mightfish Steak",
+ [13949]="Recipe: Baked Salmon",
+ [14042]="Cindercloth Vest",
+ [14043]="Cindercloth Gloves",
+ [14044]="Cindercloth Cloak",
+ [14045]="Cindercloth Pants",
+ [14046]="Runecloth Bag",
+ [14047]="Runecloth",
+ [14048]="Bolt of Runecloth",
+ [14100]="Brightcloth Robe",
+ [14101]="Brightcloth Gloves",
+ [14103]="Brightcloth Cloak",
+ [14104]="Brightcloth Pants",
+ [14106]="Felcloth Robe",
+ [14107]="Felcloth Pants",
+ [14108]="Felcloth Boots",
+ [14111]="Felcloth Hood",
+ [14112]="Felcloth Shoulders",
+ [14128]="Wizardweave Robe",
+ [14130]="Wizardweave Turban",
+ [14132]="Wizardweave Leggings",
+ [14134]="Cloak of Fire",
+ [14136]="Robe of Winter Night",
+ [14137]="Mooncloth Leggings",
+ [14138]="Mooncloth Vest",
+ [14139]="Mooncloth Shoulders",
+ [14140]="Mooncloth Circlet",
+ [14141]="Ghostweave Vest",
+ [14142]="Ghostweave Gloves",
+ [14143]="Ghostweave Belt",
+ [14144]="Ghostweave Pants",
+ [14146]="Gloves of Spell Mastery",
+ [14152]="Robe of the Archmage",
+ [14153]="Robe of the Void",
+ [14154]="Truefaith Vestments",
+ [14155]="Mooncloth Bag",
+ [14156]="Bottomless Bag",
+ [14227]="Ironweb Spider Silk",
+ [14256]="Felcloth",
+ [14341]="Rune Thread",
+ [14342]="Mooncloth",
+ [14343]="Small Brilliant Shard",
+ [14344]="Large Brilliant Shard",
+ [14466]="Pattern: Frostweave Tunic",
+ [14467]="Pattern: Frostweave Robe",
+ [14468]="Pattern: Runecloth Bag",
+ [14469]="Pattern: Runecloth Robe",
+ [14470]="Pattern: Runecloth Tunic",
+ [14471]="Pattern: Cindercloth Vest",
+ [14472]="Pattern: Runecloth Cloak",
+ [14473]="Pattern: Ghostweave Belt",
+ [14474]="Pattern: Frostweave Gloves",
+ [14476]="Pattern: Cindercloth Gloves",
+ [14477]="Pattern: Ghostweave Gloves",
+ [14478]="Pattern: Brightcloth Robe",
+ [14479]="Pattern: Brightcloth Gloves",
+ [14480]="Pattern: Ghostweave Vest",
+ [14481]="Pattern: Runecloth Gloves",
+ [14482]="Pattern: Cindercloth Cloak",
+ [14483]="Pattern: Felcloth Pants",
+ [14484]="Pattern: Brightcloth Cloak",
+ [14485]="Pattern: Wizardweave Leggings",
+ [14486]="Pattern: Cloak of Fire",
+ [14488]="Pattern: Runecloth Boots",
+ [14489]="Pattern: Frostweave Pants",
+ [14490]="Pattern: Cindercloth Pants",
+ [14491]="Pattern: Runecloth Pants",
+ [14492]="Pattern: Felcloth Boots",
+ [14493]="Pattern: Robe of Winter Night",
+ [14494]="Pattern: Brightcloth Pants",
+ [14495]="Pattern: Ghostweave Pants",
+ [14496]="Pattern: Felcloth Hood",
+ [14497]="Pattern: Mooncloth Leggings",
+ [14498]="Pattern: Runecloth Headband",
+ [14499]="Pattern: Mooncloth Bag",
+ [14500]="Pattern: Wizardweave Robe",
+ [14501]="Pattern: Mooncloth Vest",
+ [14504]="Pattern: Runecloth Shoulders",
+ [14505]="Pattern: Wizardweave Turban",
+ [14506]="Pattern: Felcloth Robe",
+ [14507]="Pattern: Mooncloth Shoulders",
+ [14508]="Pattern: Felcloth Shoulders",
+ [14509]="Pattern: Mooncloth Circlet",
+ [14510]="Pattern: Bottomless Bag",
+ [14511]="Pattern: Gloves of Spell Mastery",
+ [14512]="Pattern: Truefaith Vestments",
+ [14513]="Pattern: Robe of the Archmage",
+ [14514]="Pattern: Robe of the Void",
+ [14526]="Pattern: Mooncloth",
+ [14627]="Pattern: Bright Yellow Shirt",
+ [14630]="Pattern: Enchanter's Cowl",
+ [14634]="Recipe: Frost Oil",
+ [14635]="Pattern: Gem-studded Leather Belt",
+ [14639]="Schematic: Minor Recombobulator",
+ [15045]="Green Dragonscale Breastplate",
+ [15046]="Green Dragonscale Leggings",
+ [15047]="Red Dragonscale Breastplate",
+ [15048]="Blue Dragonscale Breastplate",
+ [15049]="Blue Dragonscale Shoulders",
+ [15050]="Black Dragonscale Breastplate",
+ [15051]="Black Dragonscale Shoulders",
+ [15052]="Black Dragonscale Leggings",
+ [15053]="Volcanic Breastplate",
+ [15054]="Volcanic Leggings",
+ [15055]="Volcanic Shoulders",
+ [15056]="Stormshroud Armor",
+ [15057]="Stormshroud Pants",
+ [15058]="Stormshroud Shoulders",
+ [15059]="Living Breastplate",
+ [15060]="Living Leggings",
+ [15061]="Living Shoulders",
+ [15062]="Devilsaur Leggings",
+ [15063]="Devilsaur Gauntlets",
+ [15064]="Warbear Harness",
+ [15065]="Warbear Woolies",
+ [15066]="Ironfeather Breastplate",
+ [15067]="Ironfeather Shoulders",
+ [15068]="Frostsaber Tunic",
+ [15069]="Frostsaber Leggings",
+ [15070]="Frostsaber Gloves",
+ [15071]="Frostsaber Boots",
+ [15072]="Chimeric Leggings",
+ [15073]="Chimeric Boots",
+ [15074]="Chimeric Gloves",
+ [15075]="Chimeric Vest",
+ [15076]="Heavy Scorpid Vest",
+ [15077]="Heavy Scorpid Bracers",
+ [15078]="Heavy Scorpid Gauntlet",
+ [15079]="Heavy Scorpid Leggings",
+ [15080]="Heavy Scorpid Helm",
+ [15081]="Heavy Scorpid Shoulders",
+ [15082]="Heavy Scorpid Belt",
+ [15083]="Wicked Leather Gauntlets",
+ [15084]="Wicked Leather Bracers",
+ [15085]="Wicked Leather Armor",
+ [15086]="Wicked Leather Headband",
+ [15087]="Wicked Leather Pants",
+ [15088]="Wicked Leather Belt",
+ [15090]="Runic Leather Armor",
+ [15091]="Runic Leather Gauntlets",
+ [15092]="Runic Leather Bracers",
+ [15093]="Runic Leather Belt",
+ [15094]="Runic Leather Headband",
+ [15095]="Runic Leather Pants",
+ [15096]="Runic Leather Shoulders",
+ [15138]="Onyxia Scale Cloak",
+ [15407]="Cured Rugged Hide",
+ [15408]="Heavy Scorpid Scale",
+ [15409]="Refined Deeprock Salt",
+ [15410]="Scale of Onyxia",
+ [15412]="Green Dragonscale",
+ [15414]="Red Dragonscale",
+ [15415]="Blue Dragonscale",
+ [15416]="Black Dragonscale",
+ [15417]="Devilsaur Leather",
+ [15419]="Warbear Leather",
+ [15420]="Ironfeather",
+ [15422]="Frostsaber Leather",
+ [15423]="Chimera Leather",
+ [15564]="Rugged Armor Kit",
+ [15724]="Pattern: Heavy Scorpid Bracers",
+ [15725]="Pattern: Wicked Leather Gauntlets",
+ [15726]="Pattern: Green Dragonscale Breastplate",
+ [15727]="Pattern: Heavy Scorpid Vest",
+ [15728]="Pattern: Wicked Leather Bracers",
+ [15729]="Pattern: Chimeric Gloves",
+ [15730]="Pattern: Red Dragonscale Breastplate",
+ [15731]="Pattern: Runic Leather Gauntlets",
+ [15732]="Pattern: Volcanic Leggings",
+ [15733]="Pattern: Green Dragonscale Leggings",
+ [15734]="Pattern: Living Shoulders",
+ [15735]="Pattern: Ironfeather Shoulders",
+ [15737]="Pattern: Chimeric Boots",
+ [15738]="Pattern: Heavy Scorpid Gauntlets",
+ [15739]="Pattern: Runic Leather Bracers",
+ [15740]="Pattern: Frostsaber Boots",
+ [15741]="Pattern: Stormshroud Pants",
+ [15743]="Pattern: Heavy Scorpid Belt",
+ [15744]="Pattern: Wicked Leather Headband",
+ [15745]="Pattern: Runic Leather Belt",
+ [15746]="Pattern: Chimeric Leggings",
+ [15747]="Pattern: Frostsaber Leggings",
+ [15748]="Pattern: Heavy Scorpid Leggings",
+ [15749]="Pattern: Volcanic Breastplate",
+ [15751]="Pattern: Blue Dragonscale Breastplate",
+ [15752]="Pattern: Living Leggings",
+ [15753]="Pattern: Stormshroud Armor",
+ [15755]="Pattern: Chimeric Vest",
+ [15756]="Pattern: Runic Leather Headband",
+ [15757]="Pattern: Wicked Leather Pants",
+ [15758]="Pattern: Devilsaur Gauntlets",
+ [15759]="Pattern: Black Dragonscale Breastplate",
+ [15760]="Pattern: Ironfeather Breastplate",
+ [15761]="Pattern: Frostsaber Gloves",
+ [15762]="Pattern: Heavy Scorpid Helm",
+ [15763]="Pattern: Blue Dragonscale Shoulders",
+ [15764]="Pattern: Stormshroud Shoulders",
+ [15765]="Pattern: Runic Leather Pants",
+ [15768]="Pattern: Wicked Leather Belt",
+ [15770]="Pattern: Black Dragonscale Shoulders",
+ [15771]="Pattern: Living Breastplate",
+ [15772]="Pattern: Devilsaur Leggings",
+ [15773]="Pattern: Wicked Leather Armor",
+ [15774]="Pattern: Heavy Scorpid Shoulders",
+ [15775]="Pattern: Volcanic Shoulders",
+ [15776]="Pattern: Runic Leather Armor",
+ [15777]="Pattern: Runic Leather Shoulders",
+ [15779]="Pattern: Frostsaber Tunic",
+ [15781]="Pattern: Black Dragonscale Leggings",
+ [15802]="Mooncloth Boots",
+ [15846]="Salt Shaker",
+ [15869]="Silver Skeleton Key",
+ [15870]="Golden Skeleton Key",
+ [15871]="Truesilver Skeleton Key",
+ [15872]="Arcanite Skeleton Key",
+ [15992]="Dense Blasting Powder",
+ [15993]="Thorium Grenade",
+ [15994]="Thorium Widget",
+ [15995]="Thorium Rifle",
+ [15996]="Lifelike Mechanical Toad",
+ [15997]="Thorium Shells",
+ [15999]="Spellpower Goggles Xtreme Plus",
+ [16000]="Thorium Tube",
+ [16004]="Dark Iron Rifle",
+ [16005]="Dark Iron Bomb",
+ [16006]="Delicate Arcanite Converter",
+ [16007]="Flawless Arcanite Rifle",
+ [16008]="Master Engineer's Goggles",
+ [16009]="Voice Amplification Modulator",
+ [16022]="Arcanite Dragonling",
+ [16023]="Masterwork Target Dummy",
+ [16040]="Arcane Bomb",
+ [16041]="Schematic: Thorium Grenade",
+ [16042]="Schematic: Thorium Widget",
+ [16043]="Schematic: Thorium Rifle",
+ [16044]="Schematic: Lifelike Mechanical Toad",
+ [16045]="Schematic: Spellpower Goggles Xtreme Plus",
+ [16046]="Schematic: Masterwork Target Dummy",
+ [16047]="Schematic: Thorium Tube",
+ [16048]="Schematic: Dark Iron Rifle",
+ [16049]="Schematic: Dark Iron Bomb",
+ [16050]="Schematic: Delicate Arcanite Converter",
+ [16051]="Schematic: Thorium Shells",
+ [16052]="Schematic: Voice Amplification Modulator",
+ [16053]="Schematic: Master Engineer's Goggles",
+ [16054]="Schematic: Arcanite Dragonling",
+ [16055]="Schematic: Arcane Bomb",
+ [16056]="Schematic: Flawless Arcanite Rifle",
+ [16072]="Expert Cookbook",
+ [16083]="Expert Fishing - The Bass and You",
+ [16084]="Expert First Aid - Under Wraps",
+ [16110]="Recipe: Monster Omelet",
+ [16111]="Recipe: Spiced Chili Crab",
+ [16202]="Lesser Eternal Essence",
+ [16203]="Greater Eternal Essence",
+ [16204]="Illusion Dust",
+ [16206]="Arcanite Rod",
+ [16207]="Runed Arcanite Rod",
+ [16214]="Formula: Enchant Bracer - Greater Intellect",
+ [16215]="Formula: Enchant Boots - Greater Stamina",
+ [16216]="Formula: Enchant Cloak - Greater Resistance",
+ [16217]="Formula: Enchant Shield - Greater Stamina",
+ [16218]="Formula: Enchant Bracer - Superior Spirit",
+ [16219]="Formula: Enchant Gloves - Greater Agility",
+ [16220]="Formula: Enchant Boots - Spirit",
+ [16221]="Formula: Enchant Chest - Major Stamina",
+ [16222]="Formula: Enchant Shield - Superior Spirit",
+ [16223]="Formula: Enchant Weapon - Icy Chill",
+ [16224]="Formula: Enchant Cloak - Superior Defense",
+ [16242]="Formula: Enchant Chest - Major Intellect",
+ [16243]="Formula: Runed Arcanite Rod",
+ [16244]="Formula: Enchant Gloves - Greater Strength",
+ [16245]="Formula: Enchant Boots - Greater Agility",
+ [16246]="Formula: Enchant Bracer - Superior Strength",
+ [16247]="Formula: Enchant 2H Weapon - Superior Impact",
+ [16248]="Formula: Enchant Weapon - Unholy Weapon",
+ [16249]="Formula: Enchant 2H Weapon - Major Intellect",
+ [16250]="Formula: Enchant Weapon - Superior Striking",
+ [16251]="Formula: Enchant Bracer - Superior Stamina",
+ [16252]="Formula: Enchant Weapon - Crusader",
+ [16253]="Formula: Enchant Chest - Greater Stats",
+ [16254]="Formula: Enchant Weapon - Lifestealing",
+ [16255]="Formula: Enchant 2H Weapon - Major Spirit",
+ [16583]="Demonic Figurine",
+ [16766]="Undermine Clam Chowder",
+ [16767]="Recipe: Undermine Clam Chowder",
+ [16979]="Flarecore Gloves",
+ [16980]="Flarecore Mantle",
+ [16982]="Corehound Boots",
+ [16983]="Molten Helm",
+ [16984]="Black Dragonscale Boots",
+ [16988]="Fiery Chain Shoulders",
+ [16989]="Fiery Chain Girdle",
+ [17010]="Fiery Core",
+ [17011]="Lava Core",
+ [17012]="Core Leather",
+ [17013]="Dark Iron Leggings",
+ [17014]="Dark Iron Bracers",
+ [17015]="Dark Iron Reaver",
+ [17016]="Dark Iron Destroyer",
+ [17017]="Pattern: Flarecore Mantle",
+ [17018]="Pattern: Flarecore Gloves",
+ [17022]="Pattern: Corehound Boots",
+ [17023]="Pattern: Molten Helm",
+ [17025]="Pattern: Black Dragonscale Boots",
+ [17034]="Maple Seed",
+ [17035]="Stranglethorn Seed",
+ [17049]="Plans: Fiery Chain Girdle",
+ [17051]="Plans: Dark Iron Bracers",
+ [17052]="Plans: Dark Iron Leggings",
+ [17053]="Plans: Fiery Chain Shoulders",
+ [17059]="Plans: Dark Iron Reaver",
+ [17060]="Plans: Dark Iron Destroyer",
+ [17062]="Recipe: Mithril Head Trout",
+ [17193]="Sulfuron Hammer",
+ [17194]="Holiday Spices",
+ [17196]="Holiday Spirits",
+ [17197]="Gingerbread Cookie",
+ [17198]="Egg Nog",
+ [17200]="Recipe: Gingerbread Cookie",
+ [17201]="Recipe: Egg Nog",
+ [17203]="Sulfuron Ingot",
+ [17222]="Spider Sausage",
+ [17704]="Edge of Winter",
+ [17706]="Plans: Edge of Winter",
+ [17708]="Elixir of Frost Power",
+ [17709]="Recipe: Elixir of Frost Power",
+ [17721]="Gloves of the Greatfather",
+ [17722]="Pattern: Gloves of the Greatfather",
+ [17723]="Green Holiday Shirt",
+ [17724]="Pattern: Green Holiday Shirt",
+ [17725]="Formula: Enchant Weapon - Winter's Might",
+ [17771]="Elementium Bar",
+ [18045]="Tender Wolf Steak",
+ [18046]="Recipe: Tender Wolf Steak",
+ [18160]="Recipe: Thistle Tea",
+ [18168]="Force Reactive Disk",
+ [18232]="Field Repair Bot 74A",
+ [18235]="Schematic: Field Repair Bot 74A",
+ [18238]="Shadowskin Gloves",
+ [18239]="Pattern: Shadowskin Gloves",
+ [18240]="Ogre Tannin",
+ [18251]="Core Armor Kit",
+ [18252]="Pattern: Core Armor Kit",
+ [18253]="Major Rejuvenation Potion",
+ [18254]="Runn Tum Tuber Surprise",
+ [18255]="Runn Tum Tuber",
+ [18256]="Imbued Vial",
+ [18257]="Recipe: Major Rejuvenation Potion",
+ [18258]="Gordok Ogre Suit",
+ [18259]="Formula: Enchant Weapon - Spell Power",
+ [18260]="Formula: Enchant Weapon - Healing Power",
+ [18262]="Elemental Sharpening Stone",
+ [18263]="Flarecore Wraps",
+ [18264]="Plans: Elemental Sharpening Stone",
+ [18265]="Pattern: Flarecore Wraps",
+ [18267]="Recipe: Runn Tum Tuber Surprise",
+ [18282]="Core Marksman Rifle",
+ [18283]="Biznicks 247x128 Accurascope",
+ [18290]="Schematic: Biznicks 247x128 Accurascope",
+ [18291]="Schematic: Force Reactive Disk",
+ [18292]="Schematic: Core Marksman Rifle",
+ [18294]="Draught of Greater Water Breathing",
+ [18405]="Belt of the Archmage",
+ [18407]="Felcloth Gloves",
+ [18408]="Inferno Gloves",
+ [18409]="Mooncloth Gloves",
+ [18413]="Cloak of Warding",
+ [18414]="Pattern: Belt of the Archmage",
+ [18415]="Pattern: Felcloth Gloves",
+ [18416]="Pattern: Inferno Gloves",
+ [18417]="Pattern: Mooncloth Gloves",
+ [18418]="Pattern: Cloak of Warding",
+ [18486]="Mooncloth Robe",
+ [18487]="Pattern: Mooncloth Robe",
+ [18504]="Girdle of Insight",
+ [18506]="Mongoose Boots",
+ [18508]="Swift Flight Bracers",
+ [18509]="Chromatic Cloak",
+ [18510]="Hide of the Wild",
+ [18511]="Shifting Cloak",
+ [18512]="Larval Acid",
+ [18514]="Pattern: Girdle of Insight",
+ [18515]="Pattern: Mongoose Boots",
+ [18516]="Pattern: Swift Flight Bracers",
+ [18517]="Pattern: Chromatic Cloak",
+ [18518]="Pattern: Hide of the Wild",
+ [18519]="Pattern: Shifting Cloak",
+ [18562]="Elementium Ore",
+ [18567]="Elemental Flux",
+ [18587]="Goblin Jumper Cables XL",
+ [18588]="Ez-Thro Dynamite II",
+ [18592]="Plans: Sulfuron Hammer",
+ [18594]="Powerful Seaforium Charge",
+ [18631]="Truesilver Transformer",
+ [18634]="Gyrofreeze Ice Reflector",
+ [18637]="Major Recombobulator",
+ [18638]="Hyper-Radiant Flame Reflector",
+ [18639]="Ultra-Flash Shadow Reflector",
+ [18641]="Dense Dynamite",
+ [18645]="Gnomish Alarm-O-Bot",
+ [18647]="Schematic: Red Firework",
+ [18648]="Schematic: Green Firework",
+ [18649]="Schematic: Blue Firework",
+ [18650]="Schematic: EZ-Thro Dynamite II",
+ [18651]="Schematic: Truesilver Transformer",
+ [18652]="Schematic: Gyrofreeze Ice Reflector",
+ [18653]="Schematic: Goblin Jumper Cables XL",
+ [18654]="Schematic: Gnomish Alarm-O-Bot",
+ [18655]="Schematic: Major Recombobulator",
+ [18656]="Schematic: Powerful Seaforium Charge",
+ [18657]="Schematic: Hyper-Radiant Flame Reflector",
+ [18658]="Schematic: Ultra-Flash Shadow Reflector",
+ [18660]="World Enlarger",
+ [18661]="Schematic: World Enlarger",
+ [18662]="Heavy Leather Ball",
+ [18731]="Pattern: Heavy Leather Ball",
+ [18948]="Barbaric Bracers",
+ [18949]="Pattern: Barbaric Bracers",
+ [18984]="Dimensional Ripper - Everlook",
+ [18986]="Ultrasafe Transporter: Gadgetzan",
+ [19026]="Snake Burst Firework",
+ [19027]="Schematic: Snake Burst Firework",
+ [19043]="Heavy Timbermaw Belt",
+ [19044]="Might of the Timbermaw",
+ [19047]="Wisdom of the Timbermaw",
+ [19048]="Heavy Timbermaw Boots",
+ [19049]="Timbermaw Brawlers",
+ [19050]="Mantle of the Timbermaw",
+ [19051]="Girdle of the Dawn",
+ [19052]="Dawn Treaders",
+ [19056]="Argent Boots",
+ [19057]="Gloves of the Dawn",
+ [19058]="Golden Mantle of the Dawn",
+ [19059]="Argent Shoulders",
+ [19148]="Dark Iron Helm",
+ [19149]="Lava Belt",
+ [19156]="Flarecore Robe",
+ [19157]="Chromatic Gauntlets",
+ [19162]="Corehound Belt",
+ [19163]="Molten Belt",
+ [19164]="Dark Iron Gauntlets",
+ [19165]="Flarecore Leggings",
+ [19166]="Black Amnesty",
+ [19167]="Blackfury",
+ [19168]="Blackguard",
+ [19169]="Nightfall",
+ [19170]="Ebon Hand",
+ [19202]="Pattern: Heavy Timbermaw Belt",
+ [19203]="Plans: Girdle of the Dawn",
+ [19204]="Pattern: Heavy Timbermaw Boots",
+ [19205]="Plans: Gloves of the Dawn",
+ [19206]="Plans: Dark Iron Helm",
+ [19207]="Plans: Dark Iron Gauntlets",
+ [19208]="Plans: Black Amnesty",
+ [19209]="Plans: Blackfury",
+ [19210]="Plans: Ebon Hand",
+ [19211]="Plans: Blackguard",
+ [19212]="Plans: Nightfall",
+ [19215]="Pattern: Wisdom of the Timbermaw",
+ [19216]="Pattern: Argent Boots",
+ [19217]="Pattern: Argent Shoulders",
+ [19218]="Pattern: Mantle of the Timbermaw",
+ [19219]="Pattern: Flarecore Robe",
+ [19220]="Pattern: Flarecore Leggings",
+ [19326]="Pattern: Might of the Timbermaw",
+ [19327]="Pattern: Timbermaw Brawlers",
+ [19328]="Pattern: Dawn Treaders",
+ [19329]="Pattern: Golden Mantle of the Dawn",
+ [19330]="Pattern: Lava Belt",
+ [19331]="Pattern: Chromatic Gauntlets",
+ [19332]="Pattern: Corehound Belt",
+ [19333]="Pattern: Molten Belt",
+ [19444]="Formula: Enchant Weapon - Strength",
+ [19445]="Formula: Enchant Weapon - Agility",
+ [19446]="Formula: Enchant Bracer - Mana Regeneration",
+ [19447]="Formula: Enchant Bracer - Healing",
+ [19448]="Formula: Enchant Weapon - Mighty Spirit",
+ [19449]="Formula: Enchant Weapon - Mighty Intellect",
+ [19682]="Bloodvine Vest",
+ [19683]="Bloodvine Leggings",
+ [19684]="Bloodvine Boots",
+ [19685]="Primal Batskin Jerkin",
+ [19686]="Primal Batskin Gloves",
+ [19687]="Primal Batskin Bracers",
+ [19688]="Blood Tiger Breastplate",
+ [19689]="Blood Tiger Shoulders",
+ [19690]="Bloodsoul Breastplate",
+ [19691]="Bloodsoul Shoulders",
+ [19692]="Bloodsoul Gauntlets",
+ [19693]="Darksoul Breastplate",
+ [19694]="Darksoul Leggings",
+ [19695]="Darksoul Shoulders",
+ [19726]="Bloodvine",
+ [19764]="Pattern: Bloodvine Vest",
+ [19765]="Pattern: Bloodvine Leggings",
+ [19766]="Pattern: Bloodvine Boots",
+ [19767]="Primal Bat Leather",
+ [19768]="Primal Tiger Leather",
+ [19769]="Pattern: Primal Batskin Jerkin",
+ [19770]="Pattern: Primal Batskin Gloves",
+ [19771]="Pattern: Primal Batskin Bracers",
+ [19772]="Pattern: Blood Tiger Breastplate",
+ [19773]="Pattern: Blood Tiger Shoulders",
+ [19774]="Souldarite",
+ [19776]="Plans: Bloodsoul Breastplate",
+ [19777]="Plans: Bloodsoul Shoulders",
+ [19778]="Plans: Bloodsoul Gauntlets",
+ [19779]="Plans: Darksoul Breastplate",
+ [19780]="Plans: Darksoul Leggings",
+ [19781]="Plans: Darksoul Shoulders",
+ [19931]="Gurubashi Mojo Madness",
+ [19943]="Massive Mojo",
+ [19998]="Bloodvine Lens",
+ [19999]="Bloodvine Goggles",
+ [20000]="Schematic: Bloodvine Goggles",
+ [20001]="Schematic: Bloodvine Lens",
+ [20002]="Greater Dreamless Sleep Potion",
+ [20004]="Major Troll's Blood Elixir",
+ [20007]="Mageblood Elixir",
+ [20008]="Living Action Potion",
+ [20011]="Recipe: Mageblood Elixir",
+ [20012]="Recipe: Greater Dreamless Sleep",
+ [20013]="Recipe: Living Action Potion",
+ [20014]="Recipe: Major Troll's Blood Elixir",
+ [20039]="Dark Iron Boots",
+ [20040]="Plans: Dark Iron Boots",
+ [20074]="Heavy Crocolisk Stew",
+ [20075]="Recipe: Heavy Crocolisk Stew",
+ [20253]="Pattern: Warbear Harness",
+ [20254]="Pattern: Warbear Woolies",
+ [20295]="Blue Dragonscale Leggings",
+ [20296]="Green Dragonscale Gauntlets",
+ [20380]="Dreamscale Breastplate",
+ [20381]="Dreamscale",
+ [20424]="Sandworm Meat",
+ [20452]="Smoked Desert Dumplings",
+ [20476]="Sandstalker Bracers",
+ [20477]="Sandstalker Gauntlets",
+ [20478]="Sandstalker Breastplate",
+ [20479]="Spitfire Breastplate",
+ [20480]="Spitfire Gauntlets",
+ [20481]="Spitfire Bracers",
+ [20498]="Silithid Chitin",
+ [20500]="Light Silithid Carapace",
+ [20501]="Heavy Silithid Carapace",
+ [20520]="Dark Rune",
+ [20537]="Runed Stygian Boots",
+ [20538]="Runed Stygian Leggings",
+ [20539]="Runed Stygian Belt",
+ [20546]="Pattern: Runed Stygian Leggings",
+ [20547]="Pattern: Runed Stygian Boots",
+ [20548]="Pattern: Runed Stygian Belt",
+ [20549]="Darkrune Gauntlets",
+ [20550]="Darkrune Breastplate",
+ [20551]="Darkrune Helm",
+ [20553]="Plans: Darkrune Gauntlets",
+ [20554]="Plans: Darkrune Breastplate",
+ [20555]="Plans: Darkrune Helm",
+ [20575]="Black Whelp Tunic",
+ [20576]="Pattern: Black Whelp Tunic",
+ [20725]="Nexus Crystal",
+ [20726]="Formula: Enchant Gloves - Threat",
+ [20727]="Formula: Enchant Gloves - Shadow Power",
+ [20728]="Formula: Enchant Gloves - Frost Power",
+ [20729]="Formula: Enchant Gloves - Fire Power",
+ [20730]="Formula: Enchant Gloves - Healing Power",
+ [20731]="Formula: Enchant Gloves - Superior Agility",
+ [20732]="Formula: Enchant Cloak - Greater Fire Resistance",
+ [20733]="Formula: Enchant Cloak - Greater Nature Resistance",
+ [20734]="Formula: Enchant Cloak - Stealth",
+ [20735]="Formula: Enchant Cloak - Subtlety",
+ [20736]="Formula: Enchant Cloak - Dodge",
+ [20744]="Minor Wizard Oil",
+ [20745]="Minor Mana Oil",
+ [20746]="Lesser Wizard Oil",
+ [20747]="Lesser Mana Oil",
+ [20748]="Brilliant Mana Oil",
+ [20749]="Brilliant Wizard Oil",
+ [20750]="Wizard Oil",
+ [20752]="Formula: Minor Mana Oil",
+ [20753]="Formula: Lesser Wizard Oil",
+ [20754]="Formula: Lesser Mana Oil",
+ [20755]="Formula: Wizard Oil",
+ [20756]="Formula: Brilliant Wizard Oil",
+ [20757]="Formula: Brilliant Mana Oil",
+ [20758]="Formula: Minor Wizard Oil",
+ [20761]="Recipe: Transmute Elemental Fire",
+ [21023]="Dirge's Kickin' Chimaerok Chops",
+ [21024]="Chimaerok Tenderloin",
+ [21025]="Recipe: Dirge's Kickin' Chimaerok Chops",
+ [21071]="Raw Sagefish",
+ [21072]="Smoked Sagefish",
+ [21099]="Recipe: Smoked Sagefish",
+ [21153]="Raw Greater Sagefish",
+ [21154]="Festival Dress",
+ [21217]="Sagefish Delight",
+ [21219]="Recipe: Sagefish Delight",
+ [21277]="Tranquil Mechanical Yeti",
+ [21278]="Stormshroud Gloves",
+ [21340]="Soul Pouch",
+ [21341]="Felcloth Bag",
+ [21342]="Core Felcloth Bag",
+ [21358]="Pattern: Soul Pouch",
+ [21371]="Pattern: Core Felcloth Bag",
+ [21542]="Festival Suit",
+ [21546]="Elixir of Holy Power",
+ [21547]="Recipe: Elixir of Holy Power",
+ [21548]="Pattern: Stormshroud Gloves",
+ [21557]="Small Red Rocket",
+ [21558]="Small Blue Rocket",
+ [21559]="Small Green Rocket",
+ [21569]="Firework Launcher",
+ [21570]="Cluster Launcher",
+ [21571]="Blue Rocket Cluster",
+ [21574]="Green Rocket Cluster",
+ [21576]="Red Rocket Cluster",
+ [21589]="Large Blue Rocket",
+ [21590]="Large Green Rocket",
+ [21592]="Large Red Rocket",
+ [21714]="Large Blue Rocket Cluster",
+ [21716]="Large Green Rocket Cluster",
+ [21718]="Large Red Rocket Cluster",
+ [21722]="Pattern: Festival Dress",
+ [21723]="Pattern: Festival Suit",
+ [21724]="Schematic: Small Blue Rocket",
+ [21725]="Schematic: Small Green Rocket",
+ [21726]="Schematic: Small Red Rocket",
+ [21727]="Schematic: Large Blue Rocket",
+ [21728]="Schematic: Large Green Rocket",
+ [21729]="Schematic: Large Red Rocket",
+ [21730]="Schematic: Blue Rocket Cluster",
+ [21731]="Schematic: Green Rocket Cluster",
+ [21732]="Schematic: Red Rocket Cluster",
+ [21733]="Schematic: Large Blue Rocket Cluster",
+ [21734]="Schematic: Large Green Rocket Cluster",
+ [21735]="Schematic: Large Red Rocket Cluster",
+ [21737]="Schematic: Cluster Launcher",
+ [21738]="Schematic: Firework Launcher",
+ [22191]="Obsidian Mail Tunic",
+ [22194]="Black Grasp of the Destroyer",
+ [22195]="Light Obsidian Belt",
+ [22196]="Thick Obsidian Breastplate",
+ [22197]="Heavy Obsidian Belt",
+ [22198]="Jagged Obsidian Shield",
+ [22202]="Small Obsidian Shard",
+ [22203]="Large Obsidian Shard",
+ [22219]="Plans: Jagged Obsidian Shield",
+ [22220]="Plans: Black Grasp of the Destroyer",
+ [22221]="Plans: Obsidian Mail Tunic",
+ [22222]="Plans: Thick Obsidian Breastplate",
+ [22246]="Enchanted Mageweave Pouch",
+ [22248]="Enchanted Runecloth Bag",
+ [22249]="Big Bag of Enchantment",
+ [22251]="Cenarion Herb Bag",
+ [22252]="Satchel of Cenarius",
+ [22307]="Pattern: Enchanted Mageweave Pouch",
+ [22308]="Pattern: Enchanted Runecloth Bag",
+ [22309]="Pattern: Big Bag of Enchantment",
+ [22310]="Pattern: Cenarion Herb Bag",
+ [22312]="Pattern: Satchel of Cenarius",
+ [22383]="Sageblade",
+ [22384]="Persuader",
+ [22385]="Titanic Leggings",
+ [22388]="Plans: Titanic Leggings",
+ [22389]="Plans: Sageblade",
+ [22390]="Plans: Persuader",
+ [22392]="Formula: Enchant 2H Weapon - Agility",
+ [22652]="Glacial Vest",
+ [22654]="Glacial Gloves",
+ [22655]="Glacial Wrists",
+ [22658]="Glacial Cloak",
+ [22660]="Gaea's Embrace",
+ [22661]="Polar Tunic",
+ [22662]="Polar Gloves",
+ [22663]="Polar Bracers",
+ [22664]="Icy Scale Breastplate",
+ [22665]="Icy Scale Bracers",
+ [22666]="Icy Scale Gauntlets",
+ [22669]="Icebane Breastplate",
+ [22670]="Icebane Gauntlets",
+ [22671]="Icebane Bracers",
+ [22682]="Frozen Rune",
+ [22683]="Pattern: Gaea's Embrace",
+ [22703]="Plans: Icebane Breastplate",
+ [22704]="Plans: Icebane Gauntlets",
+ [22705]="Plans: Icebane Bracers",
+ [22728]="Steam Tonk Controller",
+ [22729]="Schematic: Steam Tonk Controller",
+ [22756]="Sylvan Vest",
+ [22757]="Sylvan Crown",
+ [22758]="Sylvan Shoulders",
+ [22759]="Bramblewood Helm",
+ [22760]="Bramblewood Boots",
+ [22761]="Bramblewood Belt",
+ [22772]="Pattern: Sylvan Shoulders",
+ [22773]="Pattern: Sylvan Crown",
+ [22774]="Pattern: Sylvan Vest",
+ [210147]="Shredder Autosalvage Unit",
+ [210178]="Schematic: Shredder Autosalvage Unit",
+ [210708]="Elixir of Coalesced Regret",
+ [210709]="Recipe: Elixir of Coalesced Regret",
+ [210781]="Phoenix Bindings",
+ [211247]="Pattern: Phoenix Bindings",
+ [211427]="Soul Vessel",
+ [212230]="Schematic: Soul Vessel",
+ [213369]="Faintly Glowing Leather",
+ [213370]="Irradiated Leather Scraps",
+ [213373]="Reflective Scrapmetal",
+ [213376]="Low-Background Truesilver Plates",
+ [213378]="Unstable Microfilament",
+ [213379]="Hyperconductive Arcano-Filament",
+ [213381]="Pile of Tarnished Gears",
+ [213383]="Polished Truesilver Gears",
+ [215141]="Enchanted Sigil: Innovation",
+ [215365]="Invoker's Mantle",
+ [215366]="Invoker's Cord",
+ [215367]="Pattern: Faintly Glowing Leather",
+ [215368]="Pattern: Hyperconductive Arcano-Filament",
+ [215369]="Pattern: Invoker's Cord",
+ [215370]="Pattern: Invoker's Mantle",
+ [215384]="Plans: Low-Background Truesilver Plates",
+ [215429]="Schematic: Polished Truesilver Gears",
+ [215430]="Gnomeregan Fallout",
+ [215431]="Schematic: High-Yield Radiation Bomb",
+ [215432]="Schematic: Ez-Thro Radiation Bomb",
+ [217270]="Turtle Scale Gloves",
+ [217271]="Pattern: Turtle Scale Gloves",
+ [217287]="Greater Mystic Wand",
+ [217308]="Enchanted Sigil: Innovation",
+ [220606]="Idol of the Dream",
+ [220792]="Scroll of Spatial Mending",
+ [221336]="Schematic: Goblin Mining Helmet",
+ [223163]="Formula: Scroll of Spatial Mending",
+ [227844]="Leather-Reinforced Runecloth Bag",
+ [228121]="Pattern: Leather-Reinforced Runecloth Bag",
+ [228175]="Libram of Holy Alacrity",
+ [228176]="Totem of Thunder",
+ [228978]="Enchanted Sigil: Flowing Waters",
+ [228979]="Enchanted Sigil: Flowing Waters",
+ [228980]="Conductive Shield Coating",
+ [228981]="Formula: Conductive Shield Coating",
+ [228982]="Formula: Enchant Shield - Law of Nature",
+ [232436]="Darkclaw Bisque",
+ [232437]="Recipe: Darkclaw Bisque",
+ [232438]="Smoked Redgill",
+ [232443]="Recipe: Smoked Redgill",
+ [232610]="Formula: Magnificent Trollshine",
+ [232611]="Magnificent Trollshine",
+ [234012]="Hive Thistle",
+ [241650]="Major Discolored Healing Potion",
+ [241651]="Recipe: Major Discolored Healing Potion",
+ [247239]="Lesser Discolored Healing Potion",
+ [247240]="Discolored Healing Potion",
+ [247241]="Greater Discolored Healing Potion",
+ [247242]="Superior Discolored Healing Potion",
+ [247754]="Minor Arcane Elixir",
+ [247755]="Elixir of Minor Force",
+ [247786]="Mote of Magic",
+ [247789]="Novice's Practice Wand",
+ [248815]="Heavy Thorium Ore",
+ [248819]="Fel Crystal",
+ [248820]="Torbernite",
+ [248822]="Death Lotus",
+ [248823]="Marefoil",
+ [248824]="Fel Hide",
+ [248825]="Fel Leather",
+ [249274]="Stranglevine",
+ [249385]="Brilliant Wand",
+ [249391]="Pyrite",
+ [249392]="Glimmering Staff",
+ [249393]="Soulstaff",
+ [249394]="Orb of Mystic Insight",
+ [249395]="Orb of Souls",
+ [249396]="Mystic Mushroom",
+ [249397]="Tenets of the Silver Hand",
+ [249398]="Polished Driftwood Icon",
+ [249399]="Frilled Lichen",
+ [249409]="Cerulean Dye",
+ [249410]="Sulfuric Acid",
+ [249424]="Rosecap",
+ [249425]="Bauxite",
+ [249426]="Pitchblende",
+ [249427]="Pristine Leather",
+ [249428]="Pristine Hide",
+ [249429]="Pristine Scale",
+ [249430]="Magenta Dye",
+ [249431]="Viridian Dye",
+ [249432]="Sandpaper",
+ [249441]="Talons of Wrath",
+ [249442]="Libram of Invocation",
+ [249443]="Totem of Ancestral Protection",
+ [249453]="Radiant Staff",
+ [249454]="Dreamstaff",
+ [249455]="Truesilver Conduit",
+ [249456]="Twisting Essence Jar",
+ [249474]="Formula: Enchant Bracer - Minor Intellect",
+ [249475]="Formula: Enchant Bracer - Minor Healing Power",
+ [249476]="Formula: Mystic Mushroom",
+ [249477]="Formula: Tenets of the Silver Hand",
+ [249478]="Formula: Polished Driftwood Icon",
+ [249479]="Formula: Enchant Weapon - Insight",
+ [249480]="Formula: Enchant Weapon - Recovery",
+ [249481]="Formula: Enchant Weapon - Revelation",
+ [249482]="Formula: Glimmering Staff",
+ [249483]="Formula: Soulstaff",
+ [249484]="Formula: Orb of Mystic Insight",
+ [249485]="Formula: Orb of Souls",
+ [249486]="Formula: Enchant Bracer - Lesser Agility",
+ [249489]="Formula: Enchant Bracer - Lesser Healing Power",
+ [249493]="Formula: Talons of Wrath",
+ [249494]="Formula: Libram of Invocation",
+ [249495]="Formula: Totem of Ancestral Protection",
+ [249496]="Formula: Enchant Necklace - Strength",
+ [249502]="Formula: Enchant Necklace - Spell Power",
+ [249503]="Formula: Enchant Necklace - Healing Power",
+ [249504]="Formula: Enchant Necklace - Agility",
+ [249505]="Formula: Enchant Necklace - Deflection",
+ [249506]="Formula: Radiant Staff",
+ [249507]="Formula: Dreamstaff",
+ [249508]="Formula: Truesilver Conduit",
+ [249509]="Formula: Twisting Essence Jar",
+ [249510]="Formula: Enchant Chest - Absorption",
+ [249525]="Formula: Enchant 2H Weapon - Mighty Spell Power",
+ [249526]="Formula: Enchant 2H Weapon - Mighty Healing Power",
+ [249529]="Formula: Idol of the Dream",
+ [249530]="Formula: Libram of Holy Alacrity",
+ [249532]="Formula: Totem of Thunder",
+ [249534]="Formula: Enchant Gloves - Arcane Power",
+ [249535]="Formula: Enchant Gloves - Natural Power",
+ [249536]="Formula: Enchant Gloves - Holy Power",
+ [249537]="Formula: Brilliant Wand",
+ [249538]="Formula: Enchant Bracer - Superior Intellect",
+ [249539]="Formula: Enchant Bracer - Superior Deflection",
+ [249726]="Azerothium Bar",
+ [249865]="Peace Tea",
+ [249866]="Royal Tea",
+ [249867]="Root Tea",
+ [249871]="Venomous Smoothie",
+ [249872]="Slimy Smoothie",
+ [249873]="Mrrggl Smrrthle",
+ [249874]="Calcified Smoothie",
+ [249875]="Spicy Smoothie",
+ [249876]="Wicked Smoothie",
+ [249879]="Recipe: Peace Tea",
+ [249880]="Recipe: Royal Tea",
+ [249881]="Recipe: Root Tea",
+ [249885]="Recipe: Venomous Smoothie",
+ [249886]="Recipe: Slimy Smoothie",
+ [249887]="Recipe: Mrrggl Smrrthle",
+ [249888]="Recipe: Calcified Smoothie",
+ [249889]="Recipe: Spicy Smoothie",
+ [249890]="Recipe: Wicked Smoothie",
+ [250067]="Bat Hachee",
+ [250070]="Bear Bruscitti",
+ [250074]="Bear Brisket",
+ [250077]="Twice-Spiced Raptor Slice",
+ [250079]="Tasty Raptor Bites",
+ [250080]="Breakfast Omelette",
+ [250175]="Recipe: Bat Hachee",
+ [250178]="Recipe: Bear Bruscitti",
+ [250182]="Recipe: Bear Brisket",
+ [250185]="Recipe: Twice-Spiced Raptor Slice",
+ [250187]="Recipe: Tasty Raptor Bites",
+ [250188]="Recipe: Breakfast Omelette",
+ [250327]="Potion of Predatory Senses",
+ [250328]="Elixir of Cunning",
+ [250329]="Elixir of the Phalanx",
+ [250330]="Minor Cleric's Elixir",
+ [250331]="Lesser Cleric's Elixir",
+ [250332]="Cleric's Elixir",
+ [250333]="Greater Cleric's Elixir",
+ [250335]="Elixir of Greater Fortitude",
+ [250336]="Elixir of Wicked Regeneration",
+ [250337]="Elixir of the Owl",
+ [250338]="Elixir of Sages",
+ [250339]="Minor Mageblood Elixir",
+ [250340]="Lesser Mageblood Elixir",
+ [250341]="Greater Mageblood Elixir",
+ [250342]="Lesser Arcane Elixir",
+ [250343]="Elixir of Nature Power",
+ [250344]="Elixir of Minor Spirit",
+ [250345]="Elixir of Lesser Spirit",
+ [250346]="Elixir of Spirit",
+ [250347]="Elixir of Greater Spirit",
+ [250348]="Elixir of the Whale",
+ [250350]="Elixir of Ferocity",
+ [250351]="Elixir of the Grizzly",
+ [250353]="Elixir of Lesser Intellect",
+ [250354]="Elixir of Intellect",
+ [250363]="Recipe: Potion of Predatory Senses",
+ [250364]="Recipe: Elixir of Cunning",
+ [250365]="Recipe: Elixir of the Phalanx",
+ [250366]="Recipe: Minor Cleric's Elixir",
+ [250367]="Recipe: Lesser Cleric's Elixir",
+ [250368]="Recipe: Cleric's Elixir",
+ [250369]="Recipe: Greater Cleric's Elixir",
+ [250371]="Recipe: Elixir of Greater Fortitude",
+ [250372]="Recipe: Elixir of Wicked Regeneration",
+ [250373]="Recipe: Elixir of the Owl",
+ [250374]="Recipe: Elixir of Sages",
+ [250375]="Recipe: Minor Mageblood Elixir",
+ [250376]="Recipe: Lesser Mageblood Elixir",
+ [250377]="Recipe: Greater Mageblood Elixir",
+ [250378]="Recipe: Lesser Arcane Elixir",
+ [250379]="Recipe: Elixir of Nature Power",
+ [250380]="Recipe: Elixir of Minor Spirit",
+ [250381]="Recipe: Elixir of Lesser Spirit",
+ [250382]="Recipe: Elixir of Spirit",
+ [250383]="Recipe: Elixir of Greater Spirit",
+ [250384]="Recipe: Elixir of the Whale",
+ [250386]="Recipe: Elixir of Ferocity",
+ [250387]="Recipe: Elixir of the Grizzly",
+ [250388]="Recipe: Elixir of Lesser Intellect",
+ [250389]="Recipe: Elixir of Intellect",
+ [250482]="Glowing Copper Boots",
+ [250483]="Sterling Silver Boots",
+ [250484]="Sterling Silver Leggings",
+ [250485]="Sterling Silver Gauntlet",
+ [250486]="Sterling Silver Shoulders",
+ [250487]="Sterling Silver Breastplate",
+ [250488]="Veteran's Chain Shirt",
+ [250489]="Guard's Chain Shirt",
+ [250490]="Protector's Chain Shirt",
+ [250491]="Acolyte's Chain Shirt",
+ [250492]="Crusader's Chain Shirt",
+ [250493]="Veteran's Chain Leggings",
+ [250494]="Guard's Chain Leggings",
+ [250495]="Protector's Chain Leggings",
+ [250496]="Acolyte's Chain Leggings",
+ [250497]="Crusader's Chain Leggings",
+ [250503]="Veteran's Boots",
+ [250504]="Guard's Boots",
+ [250505]="Protector's Boots",
+ [250506]="Acolyte's Boots",
+ [250507]="Crusader's Boots",
+ [250508]="Veteran's Gloves",
+ [250509]="Guard's Gloves",
+ [250510]="Protector's Gloves",
+ [250511]="Acolyte's Gloves",
+ [250512]="Crusader's Gloves",
+ [250513]="Veteran's Chain Belt",
+ [250514]="Guard's Chain Belt",
+ [250515]="Protector's Chain Belt",
+ [250516]="Acolyte's Chain Belt",
+ [250517]="Crusader's Chain Belt",
+ [250518]="Veteran's Silvered Chain Shirt",
+ [250519]="Guard's Silvered Chain Shirt",
+ [250520]="Protector's Silvered Chain Shirt",
+ [250521]="Acolyte's Silvered Chain Shirt",
+ [250522]="Crusader's Silvered Chain Shirt",
+ [250523]="Veteran's Silvered Chain Leggings",
+ [250524]="Guard's Silvered Chain Leggings",
+ [250525]="Protector's Silvered Chain Leggings",
+ [250526]="Acolyte's Silvered Chain Leggings",
+ [250527]="Crusader's Silvered Chain Leggings",
+ [250528]="Veteran's Silvered Chain Helm",
+ [250529]="Guard's Silvered Chain Helm",
+ [250530]="Protector's Silvered Chain Helm",
+ [250531]="Acolyte's Silvered Chain Helm",
+ [250532]="Crusader's Silvered Chain Helm",
+ [250533]="Hard Gold Cuirass",
+ [250534]="Hard Gold Boots",
+ [250537]="Hard Gold Coif",
+ [250538]="Hard Gold Gauntlet",
+ [250539]="Hard Gold Pauldrons",
+ [250542]="Shining Mithril Boots",
+ [250556]="Officer's Belt",
+ [250557]="Sentinel's Belt",
+ [250558]="Warder's Belt",
+ [250559]="Prefect's Belt",
+ [250560]="Justicar's Belt",
+ [250561]="Officer's Sabatons",
+ [250562]="Sentinel's Sabatons",
+ [250563]="Warder's Sabatons",
+ [250564]="Prefect's Sabatons",
+ [250565]="Justicar's Sabatons",
+ [250566]="Officer's Gauntlet",
+ [250567]="Sentinel's Gauntlet",
+ [250568]="Warder's Gauntlet",
+ [250569]="Prefect's Gauntlet",
+ [250570]="Justicar's Gauntlet",
+ [250571]="Officer's Waistguard",
+ [250572]="Sentinel's Waistguard",
+ [250573]="Warder's Waistguard",
+ [250574]="Prefect's Waistguard",
+ [250575]="Justicar's Waistguard",
+ [250576]="Officer's Pauldrons",
+ [250577]="Sentinel's Pauldrons",
+ [250578]="Warder's Pauldrons",
+ [250579]="Prefect's Pauldrons",
+ [250580]="Justicar's Pauldrons",
+ [250581]="Officer's Wristguards",
+ [250582]="Sentinel's Wristguards",
+ [250583]="Warder's Wristguards",
+ [250584]="Prefect's Wristguards",
+ [250585]="Justicar's Wristguards",
+ [250595]="Enriched Thorium Breastplate",
+ [250596]="Enriched Thorium Leggings",
+ [250597]="Enriched Thorium Helm",
+ [250602]="Brass Knuckles",
+ [250603]="Bronze Dory",
+ [250604]="Iron Fists",
+ [250605]="Steel Spear",
+ [250606]="Iron Morningstar",
+ [250607]="Mithril Shortsword",
+ [250608]="Mithril Warhammer",
+ [250609]="Mithril Claws",
+ [250611]="Mithril Stiletto",
+ [250613]="Thorium Greatmace",
+ [250614]="Thorium Cestus",
+ [250619]="Legionite Glaive",
+ [250620]="Gemmed Copper Boots",
+ [250621]="Strange Copper Boots",
+ [250932]="Minor Spellblasting Potion",
+ [250933]="Lesser Spellblasting Potion",
+ [250934]="Spellblasting Potion",
+ [250935]="Greater Spellblasting Potion",
+ [250937]="Major Spellblasting Potion",
+ [250938]="Minor Frenzy Potion",
+ [250939]="Lesser Frenzy Potion",
+ [250940]="Frenzy Potion",
+ [250941]="Greater Frenzy Potion",
+ [250943]="Major Frenzy Potion",
+ [250944]="Minor Mender's Potion",
+ [250945]="Lesser Mender's Potion",
+ [250946]="Mender's Potion",
+ [250949]="Major Mender's Potion",
+ [250950]="Potion of Venomous Blood",
+ [250951]="Caustic Smog Potion",
+ [250953]="Dragonfire Potion",
+ [250954]="Potion of Elemental Purging",
+ [250976]="Recipe: Minor Spellblasting Potion",
+ [250977]="Recipe: Lesser Spellblasting Potion",
+ [250978]="Recipe: Spellblasting Potion",
+ [250979]="Recipe: Greater Spellblasting Potion",
+ [250981]="Recipe: Major Spellblasting Potion",
+ [250982]="Recipe: Minor Frenzy Potion",
+ [250983]="Recipe: Lesser Frenzy Potion",
+ [250984]="Recipe: Frenzy Potion",
+ [250985]="Recipe: Greater Frenzy Potion",
+ [250987]="Recipe: Major Frenzy Potion",
+ [250988]="Recipe: Minor Mender's Potion",
+ [250989]="Recipe: Lesser Mender's Potion",
+ [250990]="Recipe: Mender's Potion",
+ [250993]="Recipe: Major Mender's Potion",
+ [250994]="Recipe: Potion of Venomous Blood",
+ [250995]="Recipe: Caustic Smog Potion",
+ [250997]="Recipe: Dragonfire Potion",
+ [250998]="Recipe: Potion of Elemental Purging",
+ [251290]="Legionite Bar",
+ [251291]="Heavy Thorium Bar",
+ [251332]="Plans: Gemmed Copper Boots",
+ [251333]="Plans: Strange Copper Boots",
+ [251334]="Plans: Glowing Copper Boots",
+ [251335]="Plans: Sterling Silver Boots",
+ [251336]="Plans: Sterling Silver Leggings",
+ [251337]="Plans: Sterling Silver Gauntlet",
+ [251338]="Plans: Sterling Silver Shoulders",
+ [251339]="Plans: Sterling Silver Breastplate",
+ [251340]="Plans: Veteran's Chain Shirt",
+ [251341]="Plans: Guard's Chain Shirt",
+ [251342]="Plans: Protector's Chain Shirt",
+ [251343]="Plans: Acolyte's Chain Shirt",
+ [251344]="Plans: Crusader's Chain Shirt",
+ [251345]="Plans: Veteran's Chain Leggings",
+ [251346]="Plans: Guard's Chain Leggings",
+ [251347]="Plans: Protector's Chain Leggings",
+ [251348]="Plans: Acolyte's Chain Leggings",
+ [251349]="Plans: Crusader's Chain Leggings",
+ [251355]="Plans: Veteran's Boots",
+ [251356]="Plans: Guard's Boots",
+ [251357]="Plans: Protector's Boots",
+ [251358]="Plans: Acolyte's Boots",
+ [251359]="Plans: Crusader's Boots",
+ [251360]="Plans: Veteran's Gloves",
+ [251361]="Plans: Guard's Gloves",
+ [251362]="Plans: Protector's Gloves",
+ [251363]="Plans: Acolyte's Gloves",
+ [251364]="Plans: Crusader's Gloves",
+ [251365]="Plans: Veteran's Chain Belt",
+ [251366]="Plans: Guard's Chain Belt",
+ [251367]="Plans: Protector's Chain Belt",
+ [251368]="Plans: Acolyte's Chain Belt",
+ [251369]="Plans: Crusader's Chain Belt",
+ [251370]="Plans: Veteran's Silvered Chain Shirt",
+ [251371]="Plans: Guard's Silvered Chain Shirt",
+ [251372]="Plans: Protector's Silvered Chain Shirt",
+ [251373]="Plans: Acolyte's Silvered Chain Shirt",
+ [251374]="Plans: Crusader's Silvered Chain Shirt",
+ [251375]="Plans: Veteran's Silvered Chain Leggings",
+ [251376]="Plans: Guard's Silvered Chain Leggings",
+ [251377]="Plans: Protector's Silvered Chain Leggings",
+ [251378]="Plans: Acolyte's Silvered Chain Leggings",
+ [251379]="Plans: Crusader's Silvered Chain Leggings",
+ [251380]="Plans: Veteran's Silvered Chain Helm",
+ [251381]="Plans: Guard's Silvered Chain Helm",
+ [251382]="Plans: Protector's Silvered Chain Helm",
+ [251383]="Plans: Acolyte's Silvered Chain Helm",
+ [251384]="Plans: Crusader's Silvered Chain Helm",
+ [251385]="Plans: Hard Gold Cuirass",
+ [251386]="Plans: Hard Gold Boots",
+ [251389]="Plans: Hard Gold Coif",
+ [251390]="Plans: Hard Gold Gauntlet",
+ [251391]="Plans: Hard Gold Pauldrons",
+ [251394]="Plans: Shining Mithril Boots",
+ [251408]="Plans: Officer's Belt",
+ [251409]="Plans: Sentinel's Belt",
+ [251410]="Plans: Warder's Belt",
+ [251411]="Plans: Prefect's Belt",
+ [251412]="Plans: Justicar's Belt",
+ [251413]="Plans: Officer's Sabatons",
+ [251414]="Plans: Sentinel's Sabatons",
+ [251415]="Plans: Warder's Sabatons",
+ [251416]="Plans: Prefect's Sabatons",
+ [251417]="Plans: Justicar's Sabatons",
+ [251418]="Plans: Officer's Gauntlet",
+ [251419]="Plans: Sentinel's Gauntlet",
+ [251420]="Plans: Warder's Gauntlet",
+ [251421]="Plans: Prefect's Gauntlet",
+ [251422]="Plans: Justicar's Gauntlet",
+ [251423]="Plans: Officer's Waistguard",
+ [251424]="Plans: Sentinel's Waistguard",
+ [251425]="Plans: Warder's Waistguard",
+ [251426]="Plans: Prefect's Waistguard",
+ [251427]="Plans: Justicar's Waistguard",
+ [251428]="Plans: Officer's Pauldrons",
+ [251429]="Plans: Sentinel's Pauldrons",
+ [251430]="Plans: Warder's Pauldrons",
+ [251431]="Plans: Prefect's Pauldrons",
+ [251432]="Plans: Justicar's Pauldrons",
+ [251433]="Plans: Officer's Wristguard",
+ [251434]="Plans: Sentinel's Wristguard",
+ [251435]="Plans: Warder's Wristguard",
+ [251436]="Plans: Prefect's Wristguard",
+ [251437]="Plans: Justicar's Wristguards",
+ [251447]="Plans: Enriched Thorium Breastplate",
+ [251448]="Plans: Enriched Thorium Leggings",
+ [251449]="Plans: Enriched Thorium Helm",
+ [251454]="Plans: Brass Knuckles",
+ [251455]="Plans: Bronze Dory",
+ [251456]="Plans: Iron Fists",
+ [251457]="Plans: Steel Spear",
+ [251458]="Plans: Iron Morningstar",
+ [251459]="Plans: Mithril Shortsword",
+ [251460]="Plans: Mithril Warhammer",
+ [251461]="Plans: Mithril Claws",
+ [251463]="Plans: Mithril Stiletto",
+ [251465]="Plans: Thorium Greatmace",
+ [251466]="Plans: Thorium Cestus",
+ [251471]="Plans: Legionite Glaive",
+ [251524]="Whimsyfin",
+ [251525]="Savory Whimsyfin Delight",
+ [251526]="Recipe: Savory Whimsyfin Delight",
+ [252424]="Black Whelp Slippers",
+ [252425]="Dark Leather Boots",
+ [252426]="Murloc Scale Shoes",
+ [252427]="Moonglow Boots",
+ [252428]="Brawler's Leather Belt",
+ [252429]="Trapper's Leather Belt",
+ [252430]="Defender's Leather Belt",
+ [252431]="Totemic Leather Belt",
+ [252432]="Stormrider's Leather Belt",
+ [252433]="Wisdom's Leather Belt",
+ [252434]="Defender's Leather Armor",
+ [252435]="Totemic Leather Armor",
+ [252436]="Mystic Medium Armor Kit",
+ [252437]="Forceful Medium Armor Kit",
+ [252439]="Brawler's Leather Boots",
+ [252440]="Trapper's Leather Boots",
+ [252441]="Defender's Leather Boots",
+ [252442]="Totemic Leather Boots",
+ [252443]="Stormrider's Leather Boots",
+ [252444]="Wisdom's Leather Boots",
+ [252445]="Defender's Leather Pants",
+ [252446]="Totemic Leather Pants",
+ [252447]="Defender's Leather Hood",
+ [252448]="Totemic Leather Hood",
+ [252449]="Hillman's Leather Boots",
+ [252450]="Defender's Leather Tunic",
+ [252451]="Totemic Leather Tunic",
+ [252452]="Mystic Heavy Armor Kit",
+ [252453]="Forceful Heavy Armor Kit",
+ [252456]="Totemic Leather Helm",
+ [252457]="Defender's Leather Kilt",
+ [252458]="Totemic Leather Leggings",
+ [252459]="Prowler's Leather Belt",
+ [252460]="Warden's Leather Belt",
+ [252461]="Skirmisher's Leather Belt",
+ [252462]="Mystic Thick Armor Kit",
+ [252463]="Forceful Thick Armor Kit",
+ [252466]="Warden's Leather Shoes",
+ [252468]="Prowler's Leather Boots",
+ [252469]="Skulker's Leather Boots",
+ [252470]="Warden's Leather Boots",
+ [252471]="Skycaller's Leather Boots",
+ [252472]="Mender's Leather Boots",
+ [252473]="Prowler's Leather Waistguard",
+ [252474]="Skulker's Leather Waistguard",
+ [252475]="Warden's Leather Waistguard",
+ [252476]="Skycaller's Leather Waistguard",
+ [252477]="Mender's Leather Waistguard",
+ [252487]="Mystic Rugged Armor Kit",
+ [252488]="Forceful Rugged Armor Kit",
+ [252490]="Brawler's Leather Armor",
+ [252491]="Trapper's Leather Armor",
+ [252492]="Stormrider's Leather Armor",
+ [252493]="Wisdom's Leather Armor",
+ [252494]="Brawler's Leather Gloves",
+ [252495]="Trapper's Leather Gloves",
+ [252496]="Defender's Leather Gloves",
+ [252497]="Totemic Leather Gloves",
+ [252498]="Stormrider's Leather Gloves",
+ [252499]="Wisdom's Leather Gloves",
+ [252500]="Brawler's Leather Pants",
+ [252501]="Trapper's Leather Pants",
+ [252502]="Stormrider's Leather Pants",
+ [252503]="Wisdom's Leather Pants",
+ [252504]="Brawler's Leather Hood",
+ [252505]="Trapper's Leather Hood",
+ [252506]="Stormrider's Leather Hood",
+ [252507]="Wisdom's Leather Hood",
+ [252508]="Brawler's Leather Tunic",
+ [252509]="Trapper's Leather Tunic",
+ [252510]="Stormrider's Leather Tunic",
+ [252511]="Wisdom's Leather Tunic",
+ [252512]="Brawler's Leather Helm",
+ [252513]="Trapper's Leather Helm",
+ [252514]="Stormrider's Leather Helm",
+ [252515]="Wisdom's Leather Helm",
+ [252516]="Brawler's Leather Legguards",
+ [252517]="Trapper's Leather Legguards",
+ [252518]="Stormrider's Leather Kilt",
+ [252519]="Wisdom's Leather Leggings",
+ [252520]="Skulker's Leather Belt",
+ [252521]="Stalker's Leather Belt",
+ [252522]="Skycaller's Leather Belt",
+ [252523]="Mender's Leather Belt",
+ [252524]="Prowler's Leather Gloves",
+ [252525]="Skulker's Leather Gloves",
+ [252526]="Stalker's Leather Gloves",
+ [252527]="Warden's Leather Gloves",
+ [252528]="Skirmisher's Leather Gloves",
+ [252529]="Skycaller's Leather Gloves",
+ [252530]="Mender's Leather Gloves",
+ [252532]="Skycaller's Leather Shoes",
+ [252533]="Mender's Leather Shoes",
+ [252534]="Prowler's Leather Shoulders",
+ [252535]="Skulker's Leather Shoulder",
+ [252536]="Warden's Leather Shoulders",
+ [252537]="Skycaller's Leather Shoulders",
+ [252538]="Mender's Leather Shoulders",
+ [252539]="Prowler's Leather Bracers",
+ [252540]="Skulker's Leather Bracers",
+ [252541]="Warden's Leather Bracers",
+ [252542]="Skycaller's Leather Bracers",
+ [252543]="Mender's Leather Bracers",
+ [252552]="Tooled Leather Armor",
+ [252565]="Mender's Mail Boots",
+ [252566]="Stalker's Mail Shoulders",
+ [252567]="Skycaller's Mail Shoulders",
+ [252568]="Skirmisher's Mail Shoulders",
+ [252569]="Mender's Mail Shoulders",
+ [252570]="Stalker's Mail Bracers",
+ [252571]="Skycaller's Mail Bracers",
+ [252572]="Skirmisher's Mail Bracers",
+ [252573]="Mender's Mail Bracers",
+ [252576]="Stalker's Mail Sabatons",
+ [252577]="Skycaller's Mail Sabatons",
+ [252578]="Skirmisher's Mail Sabatons",
+ [252579]="Mender's Mail Sabatons",
+ [252588]="Stalker's Mail Belt",
+ [252589]="Skycaller's Mail Belt",
+ [252590]="Skirmisher's Mail Belt",
+ [252591]="Mender's Mail Belt",
+ [252599]="Supple Scorpid Vest",
+ [252761]="Pattern: Black Whelp Slippers",
+ [252762]="Pattern: Dark Leather Boots",
+ [252763]="Pattern: Murloc Scale Shoes",
+ [252764]="Pattern: Moonglow Boots",
+ [252765]="Pattern: Brawler's Leather Belt",
+ [252766]="Pattern: Trapper's Leather Belt",
+ [252767]="Pattern: Defender's Leather Belt",
+ [252768]="Pattern: Totemic Leather Belt",
+ [252769]="Pattern: Stormrider's Leather Belt",
+ [252770]="Pattern: Wisdom's Leather Belt",
+ [252771]="Pattern: Brawler's Leather Armor",
+ [252772]="Pattern: Trapper's Leather Armor",
+ [252773]="Pattern: Defender's Leather Armor",
+ [252774]="Pattern: Totemic Leather Armor",
+ [252775]="Pattern: Stormrider's Leather Armor",
+ [252776]="Pattern: Wisdom's Leather Armor",
+ [252777]="Pattern: Brawler's Leather Gloves",
+ [252778]="Pattern: Trapper's Leather Gloves",
+ [252779]="Pattern: Defender's Leather Gloves",
+ [252780]="Pattern: Totemic Leather Gloves",
+ [252781]="Pattern: Stormrider's Leather Gloves",
+ [252782]="Pattern: Wisdom's Leather Gloves",
+ [252783]="Pattern: Mystic Medium Armor Kit",
+ [252784]="Pattern: Forceful Medium Armor Kit",
+ [252786]="Pattern: Brawler's Leather Boots",
+ [252787]="Pattern: Trapper's Leather Boots",
+ [252788]="Pattern: Defender's Leather Boots",
+ [252789]="Pattern: Totemic Leather Boots",
+ [252790]="Pattern: Stormrider's Leather Boots",
+ [252791]="Pattern: Wisdom's Leather Boots",
+ [252792]="Pattern: Brawler's Leather Pants",
+ [252793]="Pattern: Trapper's Leather Pants",
+ [252794]="Pattern: Defender's Leather Pants",
+ [252795]="Pattern: Totemic Leather Pants",
+ [252796]="Pattern: Stormrider's Leather Pants",
+ [252797]="Pattern: Wisdom's Leather Pants",
+ [252798]="Pattern: Brawler's Leather Hood",
+ [252799]="Pattern: Trapper's Leather Hood",
+ [252800]="Pattern: Defender's Leather Hood",
+ [252801]="Pattern: Totemic Leather Hood",
+ [252802]="Pattern: Stormrider's Leather Hood",
+ [252803]="Pattern: Wisdom's Leather Hood",
+ [252804]="Pattern: Hillman's Leather Boots",
+ [252805]="Pattern: Brawler's Leather Tunic",
+ [252806]="Pattern: Trapper's Leather Tunic",
+ [252807]="Pattern: Defender's Leather Tunic",
+ [252808]="Pattern: Totemic Leather Tunic",
+ [252809]="Pattern: Stormrider's Leather Tunic",
+ [252810]="Pattern: Wisdom's Leather Tunic",
+ [252811]="Pattern: Mystic Heavy Armor Kit",
+ [252812]="Pattern: Forceful Heavy Armor Kit",
+ [252814]="Pattern: Brawler's Leather Helm",
+ [252815]="Pattern: Trapper's Leather Helm",
+ [252817]="Pattern: Totemic Leather Helm",
+ [252818]="Pattern: Stormrider's Leather Helm",
+ [252819]="Pattern: Wisdom's Leather Helm",
+ [252820]="Pattern: Brawler's Leather Legguards",
+ [252821]="Pattern: Trapper's Leather Legguards",
+ [252822]="Pattern: Defender's Leather Kilt",
+ [252823]="Pattern: Totemic Leather Leggings",
+ [252824]="Pattern: Stormrider's Leather Kilt",
+ [252825]="Pattern: Wisdom's Leather Leggings",
+ [252826]="Pattern: Prowler's Leather Belt",
+ [252827]="Pattern: Skulker's Leather Belt",
+ [252828]="Pattern: Stalker's Leather Belt",
+ [252829]="Pattern: Warden's Leather Belt",
+ [252830]="Pattern: Skirmisher's Leather Belt",
+ [252831]="Pattern: Skycaller's Leather Belt",
+ [252832]="Pattern: Mender's Leather Belt",
+ [252833]="Pattern: Mystic Thick Armor Kit",
+ [252834]="Pattern: Forceful Thick Armor Kit",
+ [252836]="Pattern: Prowler's Leather Gloves",
+ [252837]="Pattern: Skulker's Leather Gloves",
+ [252838]="Pattern: Stalker's Leather Gloves",
+ [252839]="Pattern: Warden's Leather Gloves",
+ [252840]="Pattern: Skirmisher's Leather Gloves",
+ [252841]="Pattern: Skycaller's Leather Gloves",
+ [252842]="Pattern: Mender's Leather Gloves",
+ [252845]="Pattern: Warden's Leather Shoes",
+ [252846]="Pattern: Skycaller's Leather Shoes",
+ [252847]="Pattern: Mender's Leather Shoes",
+ [252848]="Pattern: Prowler's Leather Shoulders",
+ [252849]="Pattern: Skulker's Leather Shoulder",
+ [252850]="Pattern: Warden's Leather Shoulders",
+ [252851]="Pattern: Skycaller's Leather Shoulders",
+ [252852]="Pattern: Mender's Leather Shoulders",
+ [252853]="Pattern: Prowler's Leather Bracers",
+ [252854]="Pattern: Skulker's Leather Bracers",
+ [252855]="Pattern: Warden's Leather Bracers",
+ [252856]="Pattern: Skycaller's Leather Bracers",
+ [252857]="Pattern: Mender's Leather Bracers",
+ [252860]="Pattern: Prowler's Leather Boots",
+ [252861]="Pattern: Skulker's Leather Boots",
+ [252862]="Pattern: Warden's Leather Boots",
+ [252863]="Pattern: Skycaller's Leather Boots",
+ [252864]="Pattern: Mender's Leather Boots",
+ [252872]="Pattern: Prowler's Leather Waistguard",
+ [252873]="Pattern: Skulker's Leather Waistguard",
+ [252874]="Pattern: Warden's Leather Waistguard",
+ [252875]="Pattern: Skycaller's Leather Waistguard",
+ [252876]="Pattern: Mender's Leather Waistguard",
+ [252877]="Pattern: Tooled Leather Armor",
+ [252899]="Pattern: Mender's Mail Boots",
+ [252900]="Pattern: Stalker's Mail Shoulders",
+ [252901]="Pattern: Skycaller's Mail Shoulders",
+ [252902]="Pattern: Skirmisher's Mail Shoulders",
+ [252903]="Pattern: Mender's Mail Shoulders",
+ [252904]="Pattern: Stalker's Mail Bracers",
+ [252905]="Pattern: Skycaller's Mail Bracers",
+ [252906]="Pattern: Skirmisher's Mail Bracers",
+ [252907]="Pattern: Mender's Mail Bracers",
+ [252910]="Pattern: Stalker's Mail Sabatons",
+ [252911]="Pattern: Skycaller's Mail Sabatons",
+ [252912]="Pattern: Skirmisher's Mail Sabatons",
+ [252913]="Pattern: Mender's Mail Sabatons",
+ [252922]="Pattern: Stalker's Mail Belt",
+ [252923]="Pattern: Skycaller's Mail Belt",
+ [252924]="Pattern: Skirmisher's Mail Belt",
+ [252925]="Pattern: Mender's Mail Belt",
+ [252933]="Pattern: Supple Scorpid Vest",
+ [252941]="Pattern: Mystic Rugged Armor Kit",
+ [252942]="Pattern: Forceful Rugged Armor Kit",
+ [253664]="Linen Reagent Bag",
+ [253665]="Pattern: Linen Reagent Bag",
+ [253667]="Woolen Reagent Bag",
+ [253668]="Pattern: Woolen Reagent Bag",
+ [253885]="Novice Arcanist's Sash",
+ [253886]="Pattern: Novice Arcanist's Sash",
+ [253887]="Novice Ardent's Sash",
+ [253888]="Pattern: Novice Ardent's Sash",
+ [253889]="Pristine Boots",
+ [253890]="Pattern: Pristine Boots",
+ [253891]="Silky Boots",
+ [253892]="Pattern: Silky Boots",
+ [253893]="Flame Boots",
+ [253894]="Pattern: Flame Boots",
+ [253895]="Shadow Boots",
+ [253896]="Pattern: Shadow Boots",
+ [253897]="Pearly Boots",
+ [253898]="Pattern: Pearly Boots",
+ [253899]="Shining Boots",
+ [253900]="Pattern: Shining Boots",
+ [253901]="Filigreed Pristine Gown",
+ [253902]="Pattern: Filigreed Pristine Gown",
+ [253903]="Filigreed Silky Gown",
+ [253904]="Pattern: Filigreed Silky Gown",
+ [253905]="Filigreed Flame Gown",
+ [253906]="Pattern: Filigreed Flame Gown",
+ [253907]="Filigreed Shadow Gown",
+ [253908]="Pattern: Filigreed Shadow Gown",
+ [253909]="Filigreed Pearly Gown",
+ [253910]="Pattern: Filigreed Pearly Gown",
+ [253911]="Filigreed Shining Gown",
+ [253912]="Pattern: Filigreed Shining Gown",
+ [253913]="Pristine Gloves",
+ [253914]="Pattern: Pristine Gloves",
+ [253915]="Silky Gloves",
+ [253916]="Pattern: Silky Gloves",
+ [253917]="Flame Gloves",
+ [253918]="Pattern: Flame Gloves",
+ [253919]="Shadow Gloves",
+ [253920]="Pattern: Shadow Gloves",
+ [253921]="Pearly Gloves",
+ [253922]="Pattern: Pearly Gloves",
+ [253923]="Shining Gloves",
+ [253924]="Pattern: Shining Gloves",
+ [253925]="Pristine Sash",
+ [253926]="Pattern: Pristine Sash",
+ [253927]="Silky Sash",
+ [253928]="Pattern: Silky Sash",
+ [253929]="Flame Sash",
+ [253930]="Pattern: Flame Sash",
+ [253931]="Shadow Sash",
+ [253932]="Pattern: Shadow Sash",
+ [253933]="Pearly Sash",
+ [253934]="Pattern: Pearly Sash",
+ [253935]="Shining Sash",
+ [253936]="Pattern: Shining Sash",
+ [253937]="Filigreed Pristine Leggings",
+ [253938]="Pattern: Filigreed Pristine Leggings",
+ [253939]="Filigreed Silky Leggings",
+ [253940]="Pattern: Filigreed Silky Leggings",
+ [253941]="Filigreed Flame Leggings",
+ [253942]="Pattern: Filigreed Flame Leggings",
+ [253943]="Filigreed Shadow Leggings",
+ [253944]="Pattern: Filigreed Shadow Leggings",
+ [253945]="Filigreed Pearly Leggings",
+ [253946]="Pattern: Filigreed Pearly Leggings",
+ [253947]="Filigreed Shining Leggings",
+ [253948]="Pattern: Filigreed Shining Leggings",
+ [253949]="Pristine Circlet",
+ [253950]="Pattern: Pristine Circlet",
+ [253951]="Silky Circlet",
+ [253952]="Pattern: Silky Circlet",
+ [253953]="Flame Circlet",
+ [253954]="Pattern: Flame Circlet",
+ [253955]="Shadow Circlet",
+ [253956]="Pattern: Shadow Circlet",
+ [253957]="Pearly Circlet",
+ [253958]="Pattern: Pearly Circlet",
+ [253959]="Shining Circlet",
+ [253960]="Pattern: Shining Circlet",
+ [253961]="Pristine Gown",
+ [253962]="Pattern: Pristine Gown",
+ [253963]="Silky Gown",
+ [253964]="Pattern: Silky Gown",
+ [253965]="Flame Gown",
+ [253966]="Pattern: Flame Gown",
+ [253967]="Shadow Gown",
+ [253968]="Pattern: Shadow Gown",
+ [253969]="Pearly Gown",
+ [253970]="Pattern: Pearly Gown",
+ [253971]="Shining Gown",
+ [253972]="Pattern: Shining Gown",
+ [253973]="Silk Reagent Bag",
+ [253974]="Pattern: Silk Reagent Bag",
+ [253975]="Filigreed Pristine Circlet",
+ [253976]="Pattern: Filigreed Pristine Circlet",
+ [253977]="Filigreed Silky Circlet",
+ [253978]="Pattern: Filigreed Silky Circlet",
+ [253979]="Filigreed Flame Circlet",
+ [253980]="Pattern: Filigreed Flame Circlet",
+ [253981]="Filigreed Shadow Circlet",
+ [253982]="Pattern: Filigreed Shadow Circlet",
+ [253983]="Filigreed Pearly Circlet",
+ [253984]="Pattern: Filigreed Pearly Circlet",
+ [253985]="Filigreed Shining Circlet",
+ [253986]="Pattern: Filigreed Shining Circlet",
+ [253987]="Pristine Leggings",
+ [253988]="Pattern: Pristine Leggings",
+ [253989]="Silky Leggings",
+ [253990]="Pattern: Silky Leggings",
+ [253991]="Flame Leggings",
+ [253992]="Pattern: Flame Leggings",
+ [253993]="Shadow Leggings",
+ [253994]="Pattern: Shadow Leggings",
+ [253995]="Pearly Leggings",
+ [253996]="Pattern: Pearly Leggings",
+ [253997]="Shining Leggings",
+ [253998]="Pattern: Shining Leggings",
+ [254001]="Gilded Slippers",
+ [254002]="Pattern: Gilded Slippers",
+ [254003]="Frothing Slippers",
+ [254004]="Pattern: Frothing Slippers",
+ [254005]="Fiery Slippers",
+ [254006]="Pattern: Fiery Slippers",
+ [254007]="Black Slippers",
+ [254008]="Pattern: Black Slippers",
+ [254009]="Golden Slippers",
+ [254010]="Pattern: Golden Slippers",
+ [254011]="Radiant Slippers",
+ [254012]="Pattern: Radiant Slippers",
+ [254019]="Earthen Silk Cuffs",
+ [254020]="Pattern: Earthen Silk Cuffs",
+ [254023]="Frothing Handwraps",
+ [254024]="Pattern: Frothing Handwraps",
+ [254025]="Fiery Handwraps",
+ [254026]="Pattern: Fiery Handwraps",
+ [254027]="Black Handwraps",
+ [254028]="Pattern: Black Handwraps",
+ [254029]="Golden Handwraps",
+ [254030]="Pattern: Golden Handwraps",
+ [254031]="Radiant Handwraps",
+ [254032]="Pattern: Radiant Handwraps",
+ [254033]="Earthen Silk Shoulders",
+ [254034]="Pattern: Earthen Silk Shoulders",
+ [254035]="Mageweave Reagent Bag",
+ [254036]="Pattern: Mageweave Reagent Bag",
+ [254049]="Nethergeld Shoulders",
+ [254050]="Pattern: Nethergeld Shoulders",
+ [254051]="Netherfroth Shoulders",
+ [254052]="Pattern: Netherfroth Shoulders",
+ [254053]="Netherflame Shoulders",
+ [254054]="Pattern: Netherflame Shoulders",
+ [254055]="Netherpearl Shoulders",
+ [254056]="Pattern: Netherpearl Shoulders",
+ [254057]="Nethershine Shoulders",
+ [254058]="Pattern: Nethershine Shoulders",
+ [254059]="Netherlight Shoulders",
+ [254060]="Pattern: Netherlight Shoulders",
+ [254061]="Nethergeld Cuffs",
+ [254062]="Pattern: Nethergeld Cuffs",
+ [254063]="Netherfroth Cuffs",
+ [254064]="Pattern: Netherfroth Cuffs",
+ [254065]="Netherflame Cuffs",
+ [254066]="Pattern: Netherflame Cuffs",
+ [254067]="Netherpearl Cuffs",
+ [254068]="Pattern: Netherpearl Cuffs",
+ [254069]="Nethershine Cuffs",
+ [254070]="Pattern: Nethershine Cuffs",
+ [254071]="Netherlight Cuffs",
+ [254072]="Pattern: Netherlight Cuffs",
+ [254079]="Runecloth Reagent Bag",
+ [254080]="Pattern: Runecloth Reagent Bag",
+ [254081]="Gilded Waistcord",
+ [254082]="Pattern: Gilded Waistcord",
+ [254083]="Frothing Waistcord",
+ [254084]="Pattern: Frothing Waistcord",
+ [254085]="Fiery Waistcord",
+ [254086]="Pattern: Fiery Waistcord",
+ [254087]="Black Waistcord",
+ [254088]="Pattern: Black Waistcord",
+ [254089]="Golden Waistcord",
+ [254090]="Pattern: Golden Waistcord",
+ [254091]="Radiant Waistcord",
+ [254092]="Pattern: Radiant Waistcord",
+ [254107]="Gilded Sandals",
+ [254108]="Pattern: Gilded Sandals",
+ [254109]="Frothing Sandals",
+ [254110]="Pattern: Frothing Sandals",
+ [254111]="Fiery Sandals",
+ [254112]="Pattern: Fiery Sandals",
+ [254113]="Black Sandals",
+ [254114]="Pattern: Black Sandals",
+ [254115]="Golden Sandals",
+ [254116]="Pattern: Golden Sandals",
+ [254117]="Radiant Sandals",
+ [254118]="Pattern: Radiant Sandals",
+ [254123]="Runecloth Cuffs",
+ [254124]="Pattern: Runecloth Cuffs",
+ [254133]="Mooncloth Reagent Bag",
+ [254134]="Pattern: Mooncloth Reagent Bag",
+ [254682]="Pattern: Stormcloth Gloves",
+ [255007]="Golem Isospring",
+ [260784]="SAF-T Tabs",
+ [260792]="SAF-T Dynamite",
+ [260793]="SAF-T Copper Bomb",
+ [260794]="EZ-Thro Wrap",
+ [260795]="EZ-Thro Copper Bomb XL",
+ [260796]="No Slip SAF-T Padding",
+ [260797]="SAF-T Bronze Bomb",
+ [260799]="SAF-T Bell",
+ [260801]="EZ-Thro Fireproof Fuse",
+ [260804]="SAF-T Casing",
+ [260806]="Emergency Field Cloak",
+ [260807]="Compact Critter Carrier",
+ [260810]="SAF-T Disposable Parachute",
+ [260811]="Gnomish Army Knife",
+ [260812]="Loot-A-Rang",
+ [260822]="Ultrasafe Rechargeable Battery",
+ [260824]="Gnomish Poultryizer",
+ [260825]="Ultralight Goblin Glider",
+ [260827]="Stealthman 52",
+ [263509]="Skywall Souffle",
+ [263511]="Recipe: Skywall Souffle",
+ [263512]="Pincer Bites",
+ [263513]="Recipe: Pincer Bites",
+ [264201]="Schematic: SAF-T Tabs",
+ [264202]="Schematic: SAF-T Dynamite",
+ [264203]="Schematic: SAF-T Copper Bomb",
+ [264204]="Schematic: EZ-Thro Wrap",
+ [264205]="Schematic: EZ-Thro Copper Bomb XL",
+ [264206]="Schematic: No Slip SAF-T Padding",
+ [264207]="Schematic: SAF-T Bronze Bomb",
+ [264209]="Schematic: SAF-T Bell",
+ [264211]="Schematic: EZ-Thro Fireproof Fuse",
+ [264216]="Schematic: Emergency Field Cloak",
+ [264217]="Schematic: Compact Critter Carrier",
+ [264220]="Schematic: SAF-T Disposable Parachute",
+ [264221]="Schematic: Gnomish Army Knife",
+ [264222]="Schematic: Loot-A-Rang",
+ [264232]="Schematic: Ultrasafe Rechargeable Battery",
+ [264234]="Schematic: Gnomish Poultryizer",
+ [264235]="Schematic: Ultralight Goblin Glider",
+ [264237]="Schematic: Stealthman 52",
+ [269900]="Centaur Banner Deployment Device",
+ [269901]="Schematic: Centaur Banner Deployment Device",
+ [269902]="Hoof-Shaped Foot Pedal",
+ [269903]="Schematic: Hoof-Shaped Foot Pedal",
+ [273085]="Blueprint: Fermenter",
+ [273086]="Blueprint: Anvil",
+ [273087]="Blueprint: Journeyman Campfire",
+ [273092]="Blueprint: Repair Bot",
+ [273096]="Blueprint: Tanning Rack",
+ [273097]="Blueprint: Rock Garden",
+ [273098]="Blueprint: Field Guide",
+ [273099]="Blueprint: Spinning Wheel",
+ [273102]="Blueprint: Cookie's Feast",
+ [273103]="Blueprint: Arcane Salvager",
+ [273105]="Blueprint: Toxin Study",
+ [273106]="Blueprint: Greenhouse",
+ [273141]="Blueprint: Fishing Rack",
+ [273952]="Pattern: Grovekeeper Trousers",
+ [273953]="Pattern: Grovekeeper Grips",
+ [273954]="Pattern: Grovekeeper Shoulderpads",
+ [273955]="Pattern: Grovekeeper Stompers",
+ [273956]="Pattern: Grovekeeper Kilt",
+ [273957]="Pattern: Grovekeeper Mitts",
+ [273958]="Pattern: Grovekeeper Mantle",
+ [273959]="Pattern: Grovekeeper Sandals",
+ [273960]="Pattern: Grovekeeper Legguards",
+ [273961]="Pattern: Grovekeeper Handguards",
+ [273962]="Pattern: Grovekeeper Pauldrons",
+ [273963]="Pattern: Grovekeeper Boots",
+ [273964]="Pattern: Grovekeeper Leggings",
+ [273965]="Pattern: Grovekeeper Gauntlets",
+ [273966]="Pattern: Grovekeeper Spaulders",
+ [273967]="Pattern: Grovekeeper Treads",
+ [273968]="Pattern: Wildstalker's Legguards",
+ [273969]="Pattern: Wildstalker's Gauntlets",
+ [273970]="Pattern: Wildstalker's Spaulders",
+ [273971]="Pattern: Wildstalker's Greaves",
+ [273972]="Pattern: Manaflare Pants",
+ [273973]="Pattern: Manaflare Gloves",
+ [273974]="Pattern: Manaflare Mantle",
+ [273975]="Pattern: Manaflare Boots",
+ [273976]="Plans: Justice Leggings",
+ [273977]="Plans: Justice Gauntlets",
+ [273978]="Plans: Justice Spaulders",
+ [273979]="Plans: Justice Greaves",
+ [273980]="Plans: Justice Legplates",
+ [273981]="Plans: Justice Gloves",
+ [273982]="Plans: Justice Epaulets",
+ [273983]="Plans: Justice Treads",
+ [273984]="Plans: Justice Legguards",
+ [273985]="Plans: Justice Handguards",
+ [273986]="Plans: Justice Pauldrons",
+ [273987]="Plans: Justice Sabatons",
+ [273988]="Pattern: Pants of Conviction",
+ [273989]="Pattern: Gloves of Conviction",
+ [273990]="Pattern: Mantle of Conviction",
+ [273991]="Pattern: Treads of Conviction",
+ [273992]="Pattern: Leggings of Conviction",
+ [273993]="Pattern: Handguards of Conviction",
+ [273994]="Pattern: Pauldrons of Conviction",
+ [273995]="Pattern: Boots of Conviction",
+ [273996]="Pattern: Grimstitch Pants",
+ [273997]="Pattern: Grimstitch Gloves",
+ [273998]="Pattern: Grimstitch Spaulders",
+ [273999]="Pattern: Grimstitch Boots",
+ [274000]="Pattern: Spiritcaller Leggings",
+ [274001]="Pattern: Spiritcaller Grips",
+ [274002]="Pattern: Spiritcaller Spaulders",
+ [274003]="Pattern: Spiritcaller Treads",
+ [274004]="Pattern: Spiritcaller Pants",
+ [274005]="Pattern: Spiritcaller Gauntlets",
+ [274006]="Pattern: Spiritcaller Epaulets",
+ [274007]="Pattern: Spiritcaller Greaves",
+ [274008]="Pattern: Demonheart Leggings",
+ [274009]="Pattern: Demonheart Gloves",
+ [274010]="Pattern: Demonheart Spaulders",
+ [274011]="Pattern: Demonheart Boots",
+ [274012]="Plans: Legplates of Glory",
+ [274013]="Plans: Gauntlets of Glory",
+ [274014]="Plans: Shoulders of Glory",
+ [274015]="Plans: Greaves of Glory",
+ [274016]="Plans: Legguards of Glory",
+ [274017]="Plans: Handguards of Glory",
+ [274018]="Plans: Pauldrons of Glory",
+ [274019]="Plans: Sabatons of Glory",
+ [274030]="Malleable Essence of Nature",
+ [274393]="Formula: Enchant Off Hand - Wisdom",
+ [274394]="Formula: Enchant 2H Weapon - Spellblasting",
+ [274398]="Formula: Enchant Gloves - Superior Strength",
+ [274399]="Formula: Enchant Cloak - Agility",
+ [274401]="Formula: Enchant Bracer - Greater Spellpower",
+ [274976]="Plain Ol' Paletusk",
+ [274977]="Recipe: Plain Ol' Paletusk",
+ [275580]="Pattern: Venomspew Gloves",
+ [275581]="Pattern: Venomspew Cord",
+ [275582]="Pattern: Venomspew Footpads",
+ [275583]="Pattern: Swarmtender's Gloves",
+ [275584]="Pattern: Swarmtender's Cord",
+ [275585]="Pattern: Swarmtender's Footpads",
+ [275598]="Plans: Goregasher Grips",
+ [275599]="Plans: Goregasher Support",
+ [275600]="Plans: Goregasher Stompers",
+ [275601]="Plans: Clutchlord's Grips",
+ [275602]="Plans: Clutchlord's Support",
+ [275603]="Plans: Clutchlord's Stompers",
+ [275604]="Venomspew Gloves",
+ [275605]="Venomspew Cord",
+ [275606]="Venomspew Footpads",
+ [275607]="Swarmtender's Gloves",
+ [275608]="Swarmtender's Cord",
+ [275609]="Swarmtender's Footpads",
+ [275622]="Goregasher Grips",
+ [275623]="Goregasher Support",
+ [275624]="Goregasher Stompers",
+ [275625]="Clutchlord's Grips",
+ [275626]="Clutchlord's Support",
+ [275627]="Clutchlord's Stompers",
+ [276538]="Spiritcaller Kilt",
+ [276539]="Spiritcaller Gloves",
+ [276540]="Spiritcaller Mantle",
+ [276541]="Spiritcaller Boots",
+ [276542]="Pattern: Spiritcaller Kilt",
+ [276543]="Pattern: Spiritcaller Gloves",
+ [276544]="Pattern: Spiritcaller Mantle",
+ [276545]="Pattern: Spiritcaller Boots",
+ [276928]="Plans: Cloudy Skyforged Chainmail",
+ [276929]="Plans: Cloudy Skyforged Wristguards",
+ [276930]="Plans: Cloudy Skyforged Gauntlets",
+ [276931]="Plans: Cloudy Skyforged Chain",
+ [276932]="Plans: Cloudy Skyforged Legguards",
+ [276933]="Plans: Cloudy Skyforged Greaves",
+ [276934]="Pattern: Cloudy Gustwoven Harness",
+ [276935]="Pattern: Cloudy Gustwoven Bracers",
+ [276936]="Pattern: Cloudy Gustwoven Gloves",
+ [276937]="Pattern: Cloudy Gustwoven Belt",
+ [276938]="Pattern: Cloudy Gustwoven Trousers",
+ [276939]="Pattern: Cloudy Gustwoven Boots",
+ [276940]="Pattern: Cloudy Windraveled Jerkin",
+ [276941]="Pattern: Cloudy Windraveled Armguards",
+ [276942]="Pattern: Cloudy Windraveled Mitts",
+ [276943]="Pattern: Cloudy Windraveled Strap",
+ [276944]="Pattern: Cloudy Windraveled Pants",
+ [276945]="Pattern: Cloudy Windraveled Footwraps",
+ [276946]="Pattern: Cloudy Stormsewn Vest",
+ [276947]="Pattern: Cloudy Stormsewn Cuffs",
+ [276948]="Pattern: Cloudy Stormsewn Handwraps",
+ [276949]="Pattern: Cloudy Stormsewn Cord",
+ [276950]="Pattern: Cloudy Stormsewn Leggings",
+ [276951]="Pattern: Cloudy Stormsewn Shoes",
+ [276952]="Plans: Azure Skyforged Chainmail",
+ [276953]="Plans: Azure Skyforged Wristguards",
+ [276954]="Plans: Azure Skyforged Gauntlets",
+ [276955]="Plans: Azure Skyforged Chain",
+ [276956]="Plans: Azure Skyforged Legguards",
+ [276957]="Plans: Azure Skyforged Greaves",
+ [276958]="Pattern: Azure Gustwoven Harness",
+ [276959]="Pattern: Azure Gustwoven Bracers",
+ [276960]="Pattern: Azure Gustwoven Gloves",
+ [276961]="Pattern: Azure Gustwoven Belt",
+ [276962]="Pattern: Azure Gustwoven Trousers",
+ [276963]="Pattern: Azure Gustwoven Boots",
+ [276964]="Pattern: Azure Windraveled Jerkin",
+ [276965]="Pattern: Azure Windraveled Armguards",
+ [276966]="Pattern: Azure Windraveled Mitts",
+ [276967]="Pattern: Azure Windraveled Strap",
+ [276968]="Pattern: Azure Windraveled Pants",
+ [276969]="Pattern: Azure Windraveled Footwraps",
+ [276970]="Pattern: Azure Stormsewn Vest",
+ [276971]="Pattern: Azure Stormsewn Cuffs",
+ [276972]="Pattern: Azure Stormsewn Handwraps",
+ [276973]="Pattern: Azure Stormsewn Cord",
+ [276974]="Pattern: Azure Stormsewn Leggings",
+ [276975]="Pattern: Azure Stormsewn Shoes",
+ [276976]="Plans: Cloudy Skyforged Helm",
+ [276977]="Plans: Cloudy Skyforged Pauldrons",
+ [276978]="Pattern: Cloudy Gustwoven Hood",
+ [276979]="Pattern: Cloudy Gustwoven Spaulders",
+ [276980]="Pattern: Cloudy Windraveled Cover",
+ [276981]="Pattern: Cloudy Windraveled Drapes",
+ [276982]="Pattern: Cloudy Stormsewn Cowl",
+ [276983]="Pattern: Cloudy Stormsewn Epaulets",
+ [276984]="Plans: Azure Skyforged Helm",
+ [276985]="Plans: Azure Skyforged Pauldrons",
+ [276986]="Pattern: Azure Gustwoven Hood",
+ [276987]="Pattern: Azure Gustwoven Spaulders",
+ [276988]="Pattern: Azure Windraveled Cover",
+ [276989]="Pattern: Azure Windraveled Drapes",
+ [276990]="Pattern: Azure Stormsewn Cowl",
+ [276991]="Pattern: Azure Stormsewn Epaulets",
+ [276992]="Cloudy Skyforged Chainmail",
+ [276993]="Cloudy Skyforged Wristguards",
+ [276994]="Cloudy Skyforged Gauntlets",
+ [276995]="Cloudy Skyforged Chain",
+ [276996]="Cloudy Skyforged Legguards",
+ [276997]="Cloudy Skyforged Greaves",
+ [276998]="Cloudy Gustwoven Harness",
+ [276999]="Cloudy Gustwoven Bracers",
+ [277000]="Cloudy Gustwoven Gloves",
+ [277001]="Cloudy Gustwoven Belt",
+ [277002]="Cloudy Gustwoven Trousers",
+ [277003]="Cloudy Gustwoven Boots",
+ [277004]="Cloudy Windraveled Jerkin",
+ [277005]="Cloudy Windraveled Armguards",
+ [277006]="Cloudy Windraveled Mitts",
+ [277007]="Cloudy Windraveled Strap",
+ [277008]="Cloudy Windraveled Pants",
+ [277009]="Cloudy Windraveled Footwraps",
+ [277010]="Cloudy Stormsewn Vest",
+ [277011]="Cloudy Stormsewn Cuffs",
+ [277012]="Cloudy Stormsewn Handwraps",
+ [277013]="Cloudy Stormsewn Cord",
+ [277014]="Cloudy Stormsewn Leggings",
+ [277015]="Cloudy Stormsewn Shoes",
+ [277016]="Azure Skyforged Chainmail",
+ [277017]="Azure Skyforged Wristguards",
+ [277018]="Azure Skyforged Gauntlets",
+ [277019]="Azure Skyforged Chain",
+ [277020]="Azure Skyforged Legguards",
+ [277021]="Azure Skyforged Greaves",
+ [277022]="Azure Gustwoven Harness",
+ [277023]="Azure Gustwoven Bracers",
+ [277024]="Azure Gustwoven Gloves",
+ [277025]="Azure Gustwoven Belt",
+ [277026]="Azure Gustwoven Trousers",
+ [277027]="Azure Gustwoven Boots",
+ [277028]="Azure Windraveled Jerkin",
+ [277029]="Azure Windraveled Armguards",
+ [277030]="Azure Windraveled Mitts",
+ [277031]="Azure Windraveled Strap",
+ [277032]="Azure Windraveled Pants",
+ [277033]="Azure Windraveled Footwraps",
+ [277034]="Azure Stormsewn Vest",
+ [277035]="Azure Stormsewn Cuffs",
+ [277036]="Azure Stormsewn Handwraps",
+ [277037]="Azure Stormsewn Cord",
+ [277038]="Azure Stormsewn Leggings",
+ [277039]="Azure Stormsewn Shoes",
+ [277040]="Cloudy Skyforged Helm",
+ [277041]="Cloudy Skyforged Pauldrons",
+ [277042]="Cloudy Gustwoven Hood",
+ [277043]="Cloudy Gustwoven Spaulders",
+ [277044]="Cloudy Windraveled Cover",
+ [277045]="Cloudy Windraveled Drapes",
+ [277046]="Cloudy Stormsewn Cowl",
+ [277047]="Cloudy Stormsewn Epaulets",
+ [277048]="Azure Skyforged Helm",
+ [277049]="Azure Skyforged Pauldrons",
+ [277050]="Azure Gustwoven Hood",
+ [277051]="Azure Gustwoven Spaulders",
+ [277052]="Azure Windraveled Cover",
+ [277053]="Azure Windraveled Drapes",
+ [277054]="Azure Stormsewn Cowl",
+ [277055]="Azure Stormsewn Epaulets",
+ [277132]="Harvester Override Signalcaster",
+ [277470]="Schematic: Harvester Override Signalcaster",
+ [277672]="Rough Copper Chain Boots",
+ [277673]="Plans: Rough Copper Chain Boots",
+ [277715]="Light Leather Reagent Bag",
+ [277716]="Pattern: Light Leather Reagent Bag",
+ [279940]="Toxin Study",
+ [279941]="Tanning Rack",
+ [279943]="Spinning Wheel",
+ [279944]="Sharpening Wheel",
+ [279948]="Rock Garden",
+ [279949]="Repair Bot",
+ [279950]="Reagent Bot",
+ [279956]="Mana Well",
+ [279957]="Cookie's Feast",
+ [279960]="Lodestone",
+ [279961]="Journeyman Campfire Kit",
+ [279964]="Greenhouse",
+ [279965]="Fishing Rack",
+ [279969]="Field Guide",
+ [279970]="Fermenter",
+ [279972]="Faction Banner",
+ [279973]="Faction Banner",
+ [279976]="Enchanted Lute",
+ [279978]="Camp Tent",
+ [279981]="Basic Campfire Kit",
+ [279985]="Arcane Salvager",
+ [279988]="Anvil",
+ [280306]="Whimsical Waistwrap",
+ [280307]="Gizmo Girdle",
+ [280308]="Clanking Cord",
+ [280310]="Floppy Goggles",
+ [280311]="Bent Goggles",
+ [280312]="Stuckbutton Goggles",
+ [280313]="Dented Goggles",
+ [280321]="Schematic: Whimsical Waistwrap",
+ [280322]="Schematic: Gizmo Girdle",
+ [280323]="Schematic: Clanking Cord",
+ [280325]="Schematic: Floppy Goggles",
+ [280326]="Schematic: Bent Goggles",
+ [280327]="Schematic: Stuckbutton Goggles",
+ [280328]="Schematic: Dented Goggles",
+ [285275]="Satchel of Copper Bombs",
+ [285276]="Satchel of Bronze Bombs",
+ [285277]="Satchel of Iron Bombs",
+ [285278]="Satchel of Dark Iron Bombs",
+ [285279]="Cracked Blacksmith Hammer",
+ [285280]="Mithril Blacksmith Hammer",
+ [285281]="Arcanite Blacksmith Hammer",
+ [285285]="Schematic: Satchel of Copper Bombs",
+ [285286]="Schematic: Satchel of Bronze Bombs",
+ [285287]="Schematic: Satchel of Iron Bombs",
+ [285288]="Schematic: Satchel of Dark Iron Bombs",
+ [285289]="Plans: Cracked Blacksmith Hammer",
+ [285290]="Plans: Mithril Blacksmith Hammer",
+ [285291]="Plans: Arcanite Blacksmith Hammer",
+ [289560]="Formula: Enchant Boots - Speed",
+}
+ns.RecipeSourceFacts.ingredientMeta = {schema=1,clientBuild="1.60.1.70938",recipeCount=1900,itemCount=501,unresolvedNameItems={227813,234011}}
+-- GF_RECIPE_INGREDIENTS70938_END

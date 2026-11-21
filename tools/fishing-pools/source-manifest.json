@@ -1,0 +1,108 @@
+{
+  "commit": "e1652ce62113c152da682baf2d6fb85f1396bcfb",
+  "coordinateSemantics": "Possible native Forever pool spawn; not live availability or observed catch evidence",
+  "expectedCounts": {
+    "associatedResourceRows": 125,
+    "maps": 7,
+    "objectTypes": 11,
+    "spawnPoints": 148
+  },
+  "files": [
+    {
+      "bytes": 1011387,
+      "gitBlobSHA1": "8d57a7f1d10949d5e154e19622426855cc7aec2a",
+      "localPath": "sources/foreverObjectDB.lua",
+      "sha256": "af4536c12c5b1da5fd32cb33be5c9c01d2436f97a5b9f60e2cdd238273b2cc09",
+      "upstreamPath": "data/Forever/foreverObjectDB.lua",
+      "url": "https://github.com/Questie/QuestieDB/blob/e1652ce62113c152da682baf2d6fb85f1396bcfb/data/Forever/foreverObjectDB.lua"
+    },
+    {
+      "bytes": 59485,
+      "gitBlobSHA1": "9e782fee2816cd9f7979e3f260f629a4d068c0ee",
+      "localPath": "sources/areaIdToUiMapId.lua",
+      "sha256": "805544d9e6234876c6cc1047fc0fbde1c034a46bb418d5f5b19384b8f615206b",
+      "upstreamPath": "support/Forever/Zones/areaIdToUiMapId.lua",
+      "url": "https://github.com/Questie/QuestieDB/blob/e1652ce62113c152da682baf2d6fb85f1396bcfb/support/Forever/Zones/areaIdToUiMapId.lua"
+    },
+    {
+      "bytes": 2598,
+      "gitBlobSHA1": "8464e61259ccfbcff721b3a1d1c6727cffc26849",
+      "localPath": "UPSTREAM-LICENSE.md",
+      "sha256": "d9937e385c401d234ef416b91f00290f8ea8e517f39ed4359aed99115770d8c9",
+      "upstreamPath": "LICENSE.md",
+      "url": "https://github.com/Questie/QuestieDB/blob/e1652ce62113c152da682baf2d6fb85f1396bcfb/LICENSE.md"
+    },
+    {
+      "bytes": 4198,
+      "gitBlobSHA1": "93d1c806f138a2bac93e7eeb2b27ee72a5f04652",
+      "localPath": "UPSTREAM-PROVENANCE.md",
+      "sha256": "f0af04c5daf16d72952710d6f78d82524f3c9d2f2876a1d59b86cc4759a7f628",
+      "upstreamPath": "PROVENANCE.md",
+      "url": "https://github.com/Questie/QuestieDB/blob/e1652ce62113c152da682baf2d6fb85f1396bcfb/PROVENANCE.md"
+    },
+    {
+      "bytes": 34893,
+      "gitBlobSHA1": "496acdb2ae812f69b9ef60a610f505fbab35aca0",
+      "localPath": "gpl-3.0.md",
+      "sha256": "cc5470feed66192387f06ae93aed0bd4fefae5a5fd7c1e54a4acf4ea64f1028b",
+      "upstreamPath": "gpl-3.0.md",
+      "url": "https://github.com/Questie/QuestieDB/blob/e1652ce62113c152da682baf2d6fb85f1396bcfb/gpl-3.0.md"
+    }
+  ],
+  "licenseNotice": "See exact upstream LICENSE.md qualification retained as UPSTREAM-LICENSE.md; not an unqualified clean GPL claim.",
+  "output": "GrindingForever/FishingPoolNodeData.lua",
+  "referenceSource": {
+    "commit": "a2c32eac47f4c56544809858bd69525564097d7a",
+    "expectedCounts": {
+      "DarkshoreBlackmouth": 5,
+      "DarkshoreSagefish": 22,
+      "maps": 23,
+      "nodeTypes": 8,
+      "points": 401,
+      "resourceRows": 369
+    },
+    "files": [
+      {
+        "bytes": 9474,
+        "gitBlobSHA1": "9eda7911db35bc0ebca26d19decd7c5c78d6f940",
+        "localPath": "gatherradar/ImportFish.lua",
+        "sha256": "f641b12f7f2905332e0a6cbe1c110c5c5db86668ed28950c7a1282941f3398d1",
+        "upstreamPath": "Data/ImportFish.lua",
+        "url": "https://github.com/Pirson-s-Addons/GatherRadar/blob/a2c32eac47f4c56544809858bd69525564097d7a/Data/ImportFish.lua"
+      },
+      {
+        "bytes": 29204,
+        "gitBlobSHA1": "591b31bdb86d9cc5340e085bbabd8375b908c6b1",
+        "localPath": "gatherradar/NodeNames.lua",
+        "sha256": "a02b8b1e39a4afeed25bfedc1e15f05e19e27066dcf9dfe36b523a4afea8057c",
+        "upstreamPath": "Data/NodeNames.lua",
+        "url": "https://github.com/Pirson-s-Addons/GatherRadar/blob/a2c32eac47f4c56544809858bd69525564097d7a/Data/NodeNames.lua"
+      },
+      {
+        "bytes": 1063,
+        "gitBlobSHA1": "0b319d03692e8f55ba18fd7a288edbe747f5adb4",
+        "localPath": "GATHERRADAR-MIT-LICENSE.txt",
+        "sha256": "e8598015b2917dbd8bbf226622024e97ac7a8adfe6b3c4a641e4af414957b856",
+        "upstreamPath": "LICENSE",
+        "url": "https://github.com/Pirson-s-Addons/GatherRadar/blob/a2c32eac47f4c56544809858bd69525564097d7a/LICENSE"
+      },
+      {
+        "bytes": 18092,
+        "gitBlobSHA1": "d159169d1050894d3ea3b98e1c965c4058208fe1",
+        "localPath": "AZEROTHCORE-GPL2-LICENSE.txt",
+        "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+        "upstreamPath": "LICENSE",
+        "url": "https://github.com/azerothcore/azerothcore-wotlk/blob/6ffb62abb867dabb258de6813ff5d06d6b011543/LICENSE"
+      }
+    ],
+    "native": false,
+    "observed": false,
+    "origin": "AzerothCore gameobject type25 converted to Forever UiMapAssignment by GatherRadar",
+    "output": "GrindingForever/FishingPoolReferenceData.lua",
+    "release": "1.05",
+    "source": "GatherRadar Forever inherited fishing reference",
+    "uncertainty": "Exact AzerothCore data revision and conversion generator unverified; current upstream license audit is not an input revision pin."
+  },
+  "release": "v1.1.2",
+  "source": "QuestieDB Forever"
+}

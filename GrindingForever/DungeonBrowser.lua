@@ -155,6 +155,11 @@ local lootCategoryIcons = {
 }
 
 local encounterRoutes = {
+    ["wailing caverns"] = {"Lady Anacondra", "Kresh", "Lord Cobrahn", "Lord Pythas", "Skum",
+        "Deviate Faerie Dragon", "Lord Serpentis", "Verdan the Everliving", "Mutanus the Devourer"},
+    ["blackfathom deeps"] = {"Ghamoo-ra", "Lady Sarevess", "Gelihast", "Lorgus Jett", "Baron Aquanis",
+        "Old Serra'kis", "Twilight Lord Kelris", "Aku'mai"},
+    ["ruins of lordaeron"] = {"Witherfang", "The Baron", "Viktor the Vile", "The Abandoned", "Bjork", "Rath'mael"},
     ["city of dalaran"] = {"Atrexis the Grave Knight", "Lyn the Ignored", "Arcane Anomaly", "Mana Devourer", "Fel Ancient", "Unstable Sentinel", "Arcanic Enigma", "Shade of the Archmage"},
     ["hall of thanes"] = {"Faldrim Anvilmar", "Magmatus", "Plunder", "Durgen Dirgehammer"},
     ["molten core"] = {"Lucifron", "Magmadar", "Gehennas", "Garr", "Shazzrah", "Baron Geddon", "Sulfuron Harbinger", "Golemagg the Incinerator", "Majordomo Executus", "Ragnaros"},
@@ -162,6 +167,20 @@ local encounterRoutes = {
     gnomeregan = {"Grubbis", "Viscous Fallout", "Electrocutioner 6000", "Crowd Pummeler 9-60",
         "Dark Iron Ambassador", "Mekgineer Thermaplugg"},
     ["ragefire chasm"] = {"Oggleflint", "Taragaman the Hungerer", "Jergosh the Invoker", "Bazzalan"},
+}
+
+local encounterNotes = {
+    ["wailing caverns"] = {
+        kresh = "Patrol · order may vary",
+        ["deviate faerie dragon"] = "Optional rare · only if present",
+        ["mutanus the devourer"] = "Return to the entrance, then complete the escort",
+    },
+    ["blackfathom deeps"] = {
+        ["baron aquanis"] = "Optional summon · Horde Fathom Stone",
+    },
+}
+local encounterLootGroups = {
+    ["shadowfang keep"] = {["arugals voidwalker"] = "Trash Drops"},
 }
 
 local bundledBossIcons = {
@@ -188,9 +207,70 @@ local pinnedBossDisplays = {
     ["primeval elemental"] = 129945,
 }
 
+local rarePortraitAtlas = "UI-HUD-UnitFrame-Target-PortraitOn-Boss-Rare-Silver-Winged"
+local curatedRarePortraits = {gill=true} -- Documented rare-spawn pin in DungeonReference.
+local function rareClassification(boss)
+    if not boss then return end
+    local key = ns.DungeonNameKey(boss.name)
+    if lootCategoryIcons[key] then return end
+    local npcID = boss.npcID or pinnedBossNPCs[key]
+    local liveID = npcID and E.NPCID(E.Call(UnitGUID, "target"))
+    if liveID == npcID and npcID then
+        local classification = E.Call(UnitClassification, "target")
+        if E.Public(classification) and (classification=="rare" or classification=="rareelite") then return classification end
+    end
+    local facts = npcID and ns.DungeonEncounterFacts and ns.DungeonEncounterFacts[npcID]
+    local rank = facts and facts.rank
+    if E.Public(rank) then
+        if rank==2 then return "rareelite" end
+        if rank==4 then return "rare" end
+    end
+    if curatedRarePortraits[key] then return "rare" end
+end
+local function rarityLabel(classification)
+    return classification=="rareelite" and "Rare elite encounter" or "Rare encounter"
+end
+local function rarePortraitBounds(size)
+    local diameter=size-4
+    local unit=diameter/58
+    local right,top=diameter/2+34*unit,diameter/2+12*unit
+    return math.min(-size/2,right-110*unit),math.min(-size/2,top-89*unit),
+        math.max(size/2,right),math.max(size/2,top)
+end
+local function paintRareFrame(token, boss, size)
+    local classification = rareClassification(boss)
+    token.rareClassification = classification
+    local info = classification and E.Call(C_Texture and C_Texture.GetAtlasInfo, rarePortraitAtlas)
+    if type(info)=="table" and E.Public(info) then
+        local trim = token.rareFrame
+        if not trim then trim=token:CreateTexture(nil,"OVERLAY",nil,5);token.rareFrame=trim end
+        if type(trim.SetAtlas)=="function" then
+            local ok, result = pcall(trim.SetAtlas, trim, rarePortraitAtlas, true)
+            if ok and E.Public(result) and result~=false then
+                local width,height = trim:GetWidth(),trim:GetHeight()
+                if E.Public(width) and E.Public(height) and type(width)=="number" and type(height)=="number"
+                    and width>0 and height>0 and width<math.huge and height<math.huge then
+                    local scale = math.max(1,size-4)/58
+                    trim:SetSize(width*scale,height*scale)
+                    trim:ClearAllPoints()
+                    -- Camelot's (+8,-7) container anchor relative to its 58px portrait at (-26,-19).
+                    trim:SetPoint("TOPRIGHT",token.portrait,"TOPRIGHT",34*scale,12*scale)
+                    trim:Show()
+                    return
+                end
+            end
+        end
+    end
+    if token.rareFrame then token.rareFrame:Hide() end
+end
+
 local function paintBossToken(frame, boss, anchor, offset, size, mapPin)
     if not boss then
-        if frame.bossToken then frame.bossToken:Hide() end
+        if frame.bossToken then
+            frame.bossToken.rareClassification=nil
+            if frame.bossToken.rareFrame then frame.bossToken.rareFrame:Hide() end
+            frame.bossToken:Hide()
+        end
         return
     end
     local token = frame.bossToken
@@ -226,6 +306,9 @@ local function paintBossToken(frame, boss, anchor, offset, size, mapPin)
             token.portrait:AddMaskTexture(innerMask)
         end
     end
+    token:SetSize(size,size)
+    token:ClearAllPoints()
+    token:SetPoint(anchor,offset,0)
     if boss.marker ~= nil and not mapPin then
         if not token.badge then
             token.badge = token:CreateTexture(nil, "ARTWORK")
@@ -274,9 +357,168 @@ local function paintBossToken(frame, boss, anchor, offset, size, mapPin)
     end
     -- A successful portrait request can return nil while the client loads it.
     token.fallback:SetShown(not portrait:GetTexture())
+    paintRareFrame(token, boss, size)
     token:Show()
 end
 ns.PaintDungeonBossToken = paintBossToken
+
+local function positionDungeonMapPin(pin, surface, mapWidth, mapHeight, pixelContext, offsetUnit)
+    pixelContext=pixelContext or surface
+    offsetUnit=offsetUnit or N.PixelSize(pixelContext,1)
+    local point = pin.landmark
+    local dx = (point.markerX and point.markerX*offsetUnit or 0)+(point.layoutX or 0)
+    local dy = (point.markerY and point.markerY*offsetUnit or 0)+(point.layoutY or 0)
+    if math.abs(dx)<.000001 then dx=0 end
+    if math.abs(dy)<.000001 then dy=0 end
+    local scale = pin:GetScale()
+    pin:ClearAllPoints()
+    pin:SetPoint("CENTER", surface, "TOPLEFT", (point.x * mapWidth + dx) / scale,
+        (-point.y * mapHeight + dy) / scale)
+    if (dx ~= 0 or dy ~= 0) and pin.CreateLine then
+        if not pin.leader then
+            pin.leader = pin:CreateLine(nil, "BACKGROUND")
+            pin.leader:SetColorTexture(.98, .84, .54, 1)
+        end
+        pin.leader:SetThickness(N.PixelSize(pixelContext, 1))
+        pin.leader:SetStartPoint("CENTER", pin, -dx / scale, -dy / scale)
+        pin.leader:SetEndPoint("CENTER", pin, 0, 0)
+        pin.leader:Show()
+    elseif pin.leader then
+        pin.leader:Hide()
+    end
+end
+
+local function layoutDungeonMapPins(pins, surface, mapWidth, mapHeight, pixelContext, offsetUnit)
+    pixelContext=pixelContext or surface
+    offsetUnit=offsetUnit or N.PixelSize(pixelContext,1)
+    local groups, pending, occupied = {}, {}, {}
+    local pad = N.PixelSize(pixelContext,2)
+    local gap = N.PixelSize(pixelContext,2)
+    local function bounds(pin)
+        -- Reserve the focused envelope for every draw so selection/hover
+        -- never makes a shared-room cluster change its layout.
+        local focus,size = 1.22,pin.portraitSize or 23
+        local half=math.max(pin:GetWidth(),size)/2*focus
+        local left,bottom,right,top=-half,-half,half,half
+        if pin.bossToken and pin.bossToken.rareClassification then
+            local l,b,r,t=rarePortraitBounds(size)
+            left,bottom=math.min(left,l*focus),math.min(bottom,b*focus)
+            right,top=math.max(right,r*focus),math.max(top,t*focus)
+        end
+        return {left=left,bottom=bottom,right=right,top=top}
+    end
+    local function clamp(value,low,high)
+        if low>high then return (low+high)/2 end
+        return math.max(low,math.min(high,value))
+    end
+    for _,pin in ipairs(pins) do if pin:IsShown() and pin.landmark then
+        local point=pin.landmark
+        point.layoutX,point.layoutY=nil,nil
+        local glyph={pin=pin,point=point,bounds=bounds(pin),x=point.x*mapWidth,y=-point.y*mapHeight}
+        if point.possible then
+            pending[#pending+1]=glyph
+            if type(point.displayCluster)=="string" then
+                local group=groups[point.displayCluster] or {};groups[point.displayCluster]=group
+                group[#group+1]=glyph
+            end
+        else
+            local x=glyph.x+(point.markerX and point.markerX*offsetUnit or 0)
+            local y=glyph.y+(point.markerY and point.markerY*offsetUnit or 0)
+            local edge=glyph.bounds
+            occupied[#occupied+1]={left=x+edge.left,bottom=y+edge.bottom,right=x+edge.right,top=y+edge.top}
+        end
+    end end
+    for _,group in pairs(groups) do if #group>1 then
+        table.sort(group,function(a,b)
+            return (a.point.pointID or a.point.name)<(b.point.pointID or b.point.name)
+        end)
+        local center,left,right=0,0,0
+        for _,glyph in ipairs(group) do
+            center=center+glyph.x
+            left=math.min(left,glyph.bounds.left);right=math.max(right,glyph.bounds.right)
+        end
+        center=center/#group
+        local step=math.max(N.PixelSize(pixelContext,32),right-left+N.PixelSize(pixelContext,6))
+        local half=(#group-1)*step/2
+        center=clamp(center,pad+half-left,mapWidth-pad-half-right)
+        for i,glyph in ipairs(group) do glyph.displayX=center+(i-(#group+1)/2)*step end
+    end end
+    table.sort(pending,function(a,b)
+        local ak,bk=a.point.pointID or a.point.name,b.point.pointID or b.point.name
+        if ak~=bk then return ak<bk end
+        if a.x~=b.x then return a.x<b.x end
+        return a.y<b.y
+    end)
+    for _,glyph in ipairs(pending) do
+        local point,edge=glyph.point,glyph.bounds
+        local x=glyph.displayX or glyph.x+(point.markerX and point.markerX*offsetUnit or 0)
+        local y=glyph.y+(point.markerY and point.markerY*offsetUnit or 0)
+        local minX,maxX=pad-edge.left,mapWidth-pad-edge.right
+        local minY,maxY=-mapHeight+pad-edge.bottom,-pad-edge.top
+        x,y=clamp(x,minX,maxX),clamp(y,minY,maxY)
+        local function fits(cx,cy)
+            for _,rect in ipairs(occupied) do
+                if cx+edge.right+gap>rect.left and cx+edge.left-gap<rect.right
+                    and cy+edge.top+gap>rect.bottom and cy+edge.bottom-gap<rect.top then return false end
+            end
+            return true
+        end
+        if not fits(x,y) then
+            -- Only display glyphs move. Rectangle-edge candidates find the
+            -- nearest free space without changing any recorded map anchor.
+            local xs,ys={x,minX,maxX},{y,minY,maxY}
+            for _,rect in ipairs(occupied) do
+                xs[#xs+1]=clamp(rect.left-gap-edge.right,minX,maxX)
+                xs[#xs+1]=clamp(rect.right+gap-edge.left,minX,maxX)
+                ys[#ys+1]=clamp(rect.bottom-gap-edge.top,minY,maxY)
+                ys[#ys+1]=clamp(rect.top+gap-edge.bottom,minY,maxY)
+            end
+            local bestX,bestY,bestDistance,bestAnchor
+            for _,cx in ipairs(xs) do for _,cy in ipairs(ys) do
+                local distance=(cx-x)^2+(cy-y)^2
+                local anchorDistance=(cx-glyph.x)^2+(cy-glyph.y)^2
+                if (not bestDistance or distance<bestDistance-.0001
+                    or (math.abs(distance-bestDistance)<.0001 and anchorDistance<bestAnchor-.0001))
+                    and fits(cx,cy) then
+                    bestX,bestY,bestDistance,bestAnchor=cx,cy,distance,anchorDistance
+                end
+            end end
+            if bestX then x,y=bestX,bestY end
+        end
+        glyph.displayX,glyph.displayY=x,y
+        occupied[#occupied+1]={left=x+edge.left,bottom=y+edge.bottom,right=x+edge.right,top=y+edge.top}
+    end
+    -- Equal envelopes can exchange their already collision-free display
+    -- slots. Each swap strictly shortens the total squared leader length;
+    -- stable ID order and a bounded pass count keep the result repeatable.
+    local function distance(glyph,x,y)return (x-glyph.x)^2+(y-glyph.y)^2 end
+    for pass=1,#pending do
+        local changed=false
+        for i=1,#pending-1 do for j=i+1,#pending do
+            local a,b=pending[i],pending[j]
+            local ae,be=a.bounds,b.bounds
+            if math.abs(ae.left-be.left)<.0001 and math.abs(ae.right-be.right)<.0001
+                and math.abs(ae.bottom-be.bottom)<.0001 and math.abs(ae.top-be.top)<.0001 then
+                local current=distance(a,a.displayX,a.displayY)+distance(b,b.displayX,b.displayY)
+                local swapped=distance(a,b.displayX,b.displayY)+distance(b,a.displayX,a.displayY)
+                if swapped<current-.0001 then
+                    a.displayX,b.displayX=b.displayX,a.displayX
+                    a.displayY,b.displayY=b.displayY,a.displayY
+                    changed=true
+                end
+            end
+        end end
+        if not changed then break end
+    end
+    for _,glyph in ipairs(pending) do
+        local point=glyph.point
+        point.layoutX=glyph.displayX-glyph.x-(point.markerX and point.markerX*offsetUnit or 0)
+        point.layoutY=glyph.displayY-glyph.y-(point.markerY and point.markerY*offsetUnit or 0)
+    end
+end
+
+ns.LayoutDungeonMapPins=layoutDungeonMapPins
+ns.PositionDungeonMapPin=positionDungeonMapPin
 
 local function setWaypoint(loc)
     if not loc then return "No coordinates recorded" end
@@ -330,6 +572,28 @@ local function recordFor(instance, name)
     end
 end
 
+-- World Map may open before Journal has assembled its encounter rows.
+-- Resolve a fresh portrait subject from the same canonical data at file load.
+function ns.DungeonPortraitSubject(name,npcID,instanceName)
+    local key=ns.DungeonNameKey(name)
+    local subject={name=name,npcID=npcID}
+    local function merge(boss)
+        if ns.DungeonNameKey(boss.name)==key then
+            subject.npcID=subject.npcID or boss.npcID
+            subject.portraitNpcID=subject.portraitNpcID or boss.portraitNpcID
+            subject.displayID=subject.displayID or boss.displayID
+            subject.customIcon=subject.customIcon or boss.customIcon
+        end
+    end
+    local instance=recordFor(E.dungeons,instanceName)
+    for _,boss in ipairs(instance and instance.bosses or{})do merge(boss)end
+    for _,reference in ipairs(ns.DungeonReferencesFor(instanceName))do
+        for _,boss in ipairs(reference.encounters or{})do merge(boss)end
+    end
+    subject.npcID=subject.npcID or pinnedBossNPCs[key]
+    return subject
+end
+
 function ns.ToggleDungeonBrowser()
     if window then
         window:SetShown(not window:IsShown())
@@ -344,7 +608,6 @@ function ns.ToggleDungeonBrowser()
     window:SetMovable(true)
     window:EnableMouse(true)
     local media = "Interface\\AddOns\\GrindingForever\\Media\\"
-    local detailActive = false
     local textScale = 1
     local function sizeText(label, parent, size, minimumPixels, compactPixels)
         local font, _, flags = label:GetFont()
@@ -398,16 +661,35 @@ function ns.ToggleDungeonBrowser()
     local content = CreateFrame("Frame", nil, list)
     content:SetSize(window:GetWidth() - 52, 1)
     list:SetScrollChild(content)
+    local chooserContent = content
+    local detailList = CreateFrame("ScrollFrame", nil, window)
+    local detailContent = CreateFrame("Frame", nil, detailList)
+    detailContent:SetSize(300, 1)
+    detailList:SetScrollChild(detailContent)
     local syncScroll = N.PanelScroll(window, list, function() return list:GetVerticalScroll() end,
         function(value) list:SetVerticalScroll(value) end,
-        function() return math.max(0, content:GetHeight() - list:GetHeight()) end, 114)
+        function() return list:IsShown() and math.max(0, chooserContent:GetHeight() - list:GetHeight()) or 0 end, 114)
+    local syncDetailScroll = N.PanelScroll(window, detailList, function() return detailList:GetVerticalScroll() end,
+        function(value) detailList:SetVerticalScroll(value) end,
+        function() return detailList:IsShown() and math.max(0, detailContent:GetHeight() - detailList:GetHeight()) or 0 end, 114)
     local rows, cards, pendingItems, detailBlocks = {}, {}, {}, {}
+    local rowIndex, blockIndex = 0, 0
     local rowHeight = 38
     local selected, floor, tab = nil, 1, "bosses"
     local selectedBoss, selectedQuest, questLandmark
+    local narrow, mapOpen = false, false
+    local expandedSteps, layoutState = {}, {}
+    local detailAnchor
     local draw
-    N.PanelChrome(window, {"Dungeon","Journal"}, 600, 490, function() draw(true) end)
+    N.PanelChrome(window, {"Dungeon","Journal"}, 340, 460, function() draw(true) end)
+    local unit = N.PixelSize(window, 1)
+    local maxWidth = math.min(1590, UIParent:GetWidth()*.94/unit)
+    local maxHeight = math.min(1000, UIParent:GetHeight()*.92/unit)
+    window:SetResizeBounds(math.min(340,maxWidth)*unit, math.min(460,maxHeight)*unit, maxWidth*unit, maxHeight*unit)
+    window:SetSize(math.min(900,maxWidth)*unit, math.min(700,maxHeight)*unit)
     local headerExtra = N.HeaderSize(window) - N.PixelSize(window, 40)
+    ns.DungeonJournal = {frame=window, list=list, detailList=detailList, map=map, rows=rows, cards=cards,
+        detailContent=detailContent, chooserContent=chooserContent, expandedSteps=expandedSteps}
 
     local function button(parent, label, width, action)
         local b = N.WoodButton(parent, label, width, action)
@@ -434,17 +716,91 @@ function ns.ToggleDungeonBrowser()
     end)
     floorButton:HookScript("OnLeave", function() GameTooltip:Hide() end)
 
-    local entrance = button(window, "Pin Entrance", 142, function()
-        if selected then status:SetText(setWaypoint(ns.DungeonEntrance(selected))) end
+    local function paintPin(control, loc, kind)
+        control.location, control.pinKind = loc, kind
+        local compass = ns.NavigationCompass
+        local key = loc and compass and compass.FlagKey({name=(kind=="entrance" and "Dungeon: " or "Quest: ")..(loc.name or loc.zone or "Quest")},loc)
+        local pressed = key and compass and (kind=="entrance" and compass.dungeonPin or compass.questPin)==key
+        control.pinned = pressed == true
+        control.symbol:SetTexture(media..(pressed and "JournalNailOnlyOn" or "JournalNailOnlyOff"))
+        control:SetAlpha(loc and 1 or .45)
+    end
+    local function pinButton(parent, action)
+        local control
+        control = N.WoodButton(parent,"",28,function()if action then action(control)end end)
+        control:RegisterForClicks("LeftButtonUp")
+        control:SetSize(N.PixelSize(control,28),N.PixelSize(control,28))
+        control.nailLayer=CreateFrame("Frame",nil,control)
+        control.nailLayer:SetAllPoints(control)
+        control.nailLayer:SetFrameLevel(control:GetFrameLevel()+2)
+        control.nailLayer:EnableMouse(false)
+        control.symbol=control.nailLayer:CreateTexture(nil,"ARTWORK")
+        control.symbol:SetAllPoints(control.nailLayer)
+        control.symbol:SetTexture(media.."JournalNailOnlyOff")
+        control:HookScript("OnEnter",function(self)
+            paintPin(self,self.location,self.pinKind)
+            local loc=self.location;if not loc then return end
+            GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
+            GameTooltip:AddLine((self.pinned and "Unpin " or "Pin ")..(loc.name or loc.zone or "Quest"))
+            if loc.zone then GameTooltip:AddLine(loc.zone,1,.88,.66)end
+            GameTooltip:Show()
+        end)
+        control:HookScript("OnLeave",function()GameTooltip:Hide()end)
+        control:HookScript("OnHide",function(self)
+            if GameTooltip.GetOwner and GameTooltip:GetOwner()==self then GameTooltip:Hide()end
+        end)
+        control.Paint=paintPin
+        return control
+    end
+    local entrance
+    entrance = pinButton(window, function()
+        if not selected then return end
+        local loc=ns.DungeonEntrance(selected);local compass=ns.NavigationCompass
+        local result
+        if entrance.pinned and compass then
+            compass.Unpin(compass.dungeonPin)
+            if ns.RecipeCatalog.UnpinWorldMap then ns.RecipeCatalog.UnpinWorldMap(loc)end
+            result="Entrance pin cleared"
+        else result=setWaypoint(loc) end
+        draw(true);status:SetText(result)
     end)
     entrance:SetPoint("LEFT", back, "RIGHT", 8, 0)
-    local clearQuest = button(window, "Clear Quest Pin", 134, function()
+    local clearQuest = pinButton(window, function()
         if ns.NavigationCompass.ClearQuestPin() then
-            draw()
+            draw(true)
             status:SetText("Quest pin cleared")
         end
     end)
     clearQuest:SetPoint("LEFT", entrance, "RIGHT", 8, 0)
+    local wingButton = button(window,"",150)
+    N.ButtonArrow(wingButton,"down","RIGHT")
+    local mapButton = button(window,"Map",68,function()mapOpen=not mapOpen;draw(true)end)
+    local prepButton = button(window,"Prepare Quests",140,function()
+        local prep=ns.DungeonPrep;if not prep or not selected then return end
+        local state=prep.Status and prep.Status()or{}
+        local same=state.instance==selected or type(state.name)=="string"and ns.DungeonNameKey(state.name)==ns.DungeonNameKey(selected.name)
+        local ok,why
+        if same and state.paused then ok,why=prep.Resume()
+        elseif same and state.active then ok,why=prep.Pause()
+        else ok,why=prep.Start(selected)end
+        draw(true)
+        if why then status:SetText(why)end
+    end)
+    local prepStatus=N.MakeText(window,12);darkInk(prepStatus,true)
+    prepButton:HookScript("OnEnter",function(self)
+        local prep=ns.DungeonPrep
+        local state=prep and prep.Status and prep.Status(selected)
+        if not state or state.matches==false or not state.message then return end
+        GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
+        if GameTooltip.ClearLines then GameTooltip:ClearLines() end
+        GameTooltip:AddLine(state.message,1,.88,.66,true)
+        GameTooltip:Show()
+    end)
+    prepButton:HookScript("OnLeave",function(self)
+        if GameTooltip.GetOwner and GameTooltip:GetOwner()==self then GameTooltip:Hide() end
+    end)
+    ns.DungeonJournal.entrance,ns.DungeonJournal.wingButton,ns.DungeonJournal.mapButton=entrance,wingButton,mapButton
+    ns.DungeonJournal.prepButton,ns.DungeonJournal.prepStatus=prepButton,prepStatus
 
     local function layoutFloorButton()
         if not floorButton.floorCount or floorButton.floorCount < 2 then return end
@@ -457,9 +813,9 @@ function ns.ToggleDungeonBrowser()
         local leftWidth = back:GetWidth()
         if entrance:IsShown() then leftWidth = leftWidth + 8 + entrance:GetWidth() end
         if clearQuest:IsShown() then leftWidth = leftWidth + 8 + clearQuest:GetWidth() end
-        local room = window:GetWidth() - 44 - leftWidth
+        local room = layoutState.mapWidth or window:GetWidth() - 44 - leftWidth
         if needed > room then floorButton.label:SetText(short); needed = 120 end
-        floorButton:SetWidth(needed)
+        floorButton:SetWidth(math.max(80,math.min(needed,room or needed)))
     end
     window:HookScript("OnSizeChanged", layoutFloorButton)
 
@@ -476,6 +832,74 @@ function ns.ToggleDungeonBrowser()
 
     local bossTab = makeTab("Bosses", "bosses", 85)
     local questTab = makeTab("Quests", "quests", 72)
+    local wingChoices = {
+        ["scarlet monastery"]={"Scarlet Monastery: Graveyard","Scarlet Monastery: Library","Scarlet Monastery: Armory","Scarlet Monastery: Cathedral"},
+        ["dire maul"]={"Dire Maul: East","Dire Maul: West","Dire Maul: North"},
+        stratholme={"Stratholme: Living","Stratholme: Undead"},
+        ["blackrock spire"]={"Lower Blackrock Spire","Upper Blackrock Spire"},
+    }
+    local function selectWing(name)
+        local instance
+        for title,candidate in pairs(E.dungeons)do
+            if ns.DungeonNameKey(title)==ns.DungeonNameKey(name)then instance=candidate;break end
+        end
+        local copy={}
+        for key,value in pairs(instance or{})do copy[key]=value end
+        copy.name=name;copy.bosses=copy.bosses or{}
+        local wing=wingFloors[ns.DungeonNameKey(name)]
+        copy.gfMaps=copy.gfMaps or recordFor(ns.BundledDungeonMaps,name)
+            or wing and recordFor(ns.BundledDungeonMaps,wing[1])
+        local range=levelRanges[ns.DungeonNameKey(name)]
+        if range then copy.minimum,copy.maximum=range[1],range[2]end
+        selected,floor,selectedBoss,questLandmark=copy,1,nil,nil
+        list:SetVerticalScroll(0)
+        draw(true)
+    end
+    local wingMenuEntry
+    local function ownedWingMenu()
+        local menu=ns.Review100.menu
+        if menu and menu:IsShown()then
+            local _,anchor=menu:GetPoint(1)
+            if anchor==wingButton then return menu end
+        end
+    end
+    local function closeWingMenu()
+        local menu=ownedWingMenu()
+        if menu then menu:Hide();return true end
+    end
+    local hookedWingMenus={}
+    wingButton:SetScript("OnClick",function(self)
+        if closeWingMenu()then return end
+        local context=ns.DungeonWingContext(selected)
+        if not context then return end
+        local choices={}
+        for _,name in ipairs(wingChoices[context.family]or{})do
+            local wing=ns.DungeonWingContext(name)
+            choices[#choices+1]={name=wing.label,instanceName=name,selected=wing.wing==context.wing}
+        end
+        ns.Review100.Menu(self,choices,function(value)selectWing(value.instanceName)end)
+        local menu=ownedWingMenu()
+        if menu then
+            N.dropdownMenus=N.dropdownMenus or{}
+            wingMenuEntry={menu,self}
+            N.dropdownMenus[#N.dropdownMenus+1]=wingMenuEntry
+            if not hookedWingMenus[menu]then
+                hookedWingMenus[menu]=true
+                menu:HookScript("OnHide",function(hidden)
+                    if wingMenuEntry and wingMenuEntry[1]==hidden then
+                        for i=#N.dropdownMenus,1,-1 do
+                            if N.dropdownMenus[i]==wingMenuEntry then table.remove(N.dropdownMenus,i)end
+                        end
+                        wingMenuEntry=nil
+                    end
+                end)
+            end
+        end
+    end)
+    bossTab:HookScript("OnClick",closeWingMenu)
+    questTab:HookScript("OnClick",closeWingMenu)
+    window:HookScript("OnHide",closeWingMenu)
+    ns.DungeonJournal.SelectWing=selectWing
 
     local function itemLabel(name)
         if E.Public(name) and type(name) == "string" and name ~= "" and not name:match("^Item%s+%d+$") then
@@ -511,14 +935,14 @@ function ns.ToggleDungeonBrowser()
         if not pendingItems[itemID] then return end
         pendingItems[itemID] = false
         if not self:IsShown() then return end
-        for index = 1, content.visibleRows do
+        for index = 1, rowIndex do
             local row = rows[index]
             if row.itemID == itemID then paintItem(row) end
         end
     end)
     window:RegisterEvent("GET_ITEM_INFO_RECEIVED")
     E.Call(window.RegisterEvent, window, "QUEST_DATA_LOAD_RESULT")
-    for _, event in ipairs({"QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN"}) do
+    for _, event in ipairs({"QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "QUEST_WATCH_UPDATE"}) do
         E.Call(window.RegisterEvent, window, event)
     end
 
@@ -534,9 +958,10 @@ function ns.ToggleDungeonBrowser()
         if row.action then row.action(row, mouseButton) end
     end
 
-    local function addRow(label, action, itemID, detail, actionLabel, boss, heading, completed, underway, framed, inDetailBlock, itemLink)
-        local index = content.visibleRows + 1
-        content.visibleRows = index
+    local function addRow(label, action, itemID, detail, actionLabel, boss, heading, completed, underway, framed, inDetailBlock, itemLink, questName)
+        rowIndex = rowIndex + 1
+        local index = rowIndex
+        content.visibleRows = (content.visibleRows or 0) + 1
         local row = rows[index]
         if not row then
             row = CreateFrame("Button", nil, content)
@@ -581,7 +1006,7 @@ function ns.ToggleDungeonBrowser()
             row.stampGold:SetTexCoord(0, 88 / 128, 0, 68 / 128)
             row.stampGold:SetAllPoints(row.stamp)
             row.stampGold:SetBlendMode("ADD")
-            row.stampGold:SetVertexColor(.98, .83, .52, .25)
+            row.stampGold:SetVertexColor(1, .86, .32, .95)
             row.underway=row:CreateTexture(nil,"OVERLAY",nil,5)
             row.underway:SetSize(26,26)
             row.underway:SetPoint("RIGHT",-28,0)
@@ -610,6 +1035,11 @@ function ns.ToggleDungeonBrowser()
             end)
             rows[index] = row
         end
+        row:SetParent(content)
+        if row.pinButton then row.pinButton:Hide()end
+        row.questID,row.questChainKey,row.questStepID,row.questStepExpanded=nil,nil,nil,nil
+        row.questHeading=nil
+        row.encounterName,row.optionalEncounter=nil,nil
         row.itemID, row.itemName, row.itemLink, row.action = itemID, label, itemLink, action
         local showUnderway = type(underway) == "string"
         local chainMarker = showUnderway and completed == true
@@ -624,7 +1054,9 @@ function ns.ToggleDungeonBrowser()
         row.separator:SetShown(not inDetailBlock)
         row.woodFill:SetShown(woodenRow)
         local titleSize = (boss or showUnderway) and 16 or heading and 15 or 14
-        sizeText(row.label, row, titleSize, (boss or showUnderway) and 17 or 15, woodenRow and 15.5 or 14)
+        local nameReduction=questName and 1 or 0
+        sizeText(row.label, row, titleSize-nameReduction, ((boss or showUnderway) and 17 or 15)-nameReduction,
+            (woodenRow and 15.5 or 14)-nameReduction)
         sizeText(row.detail, row, 13, 14, woodenRow and 11.5 or 12.5)
         sizeText(row.command, row, 13, 14, 12.5)
         if woodenRow then
@@ -641,15 +1073,27 @@ function ns.ToggleDungeonBrowser()
         row.icon:SetShown(itemID ~= nil)
         row.itemButton:SetShown(itemID ~= nil)
         paintBossToken(row, boss, "LEFT", pad, bossSize)
+        local portraitPad,portraitY,rareRight,rareHeight=pad,0,0,0
         if boss then
+            if row.bossToken.rareClassification then
+                local l,b,r,t=rarePortraitBounds(bossSize)
+                portraitPad=pad+math.max(0,-bossSize/2-l)
+                portraitY=-(t+b)/2
+                rareRight=math.max(0,r-bossSize/2)
+                rareHeight=t-b+2*verticalPad
+                if row.bossToken.badge and boss.marker~=nil then
+                    row.bossToken.badge:ClearAllPoints()
+                    row.bossToken.badge:SetPoint("LEFT",row.bossToken,"RIGHT",rareRight+N.PixelSize(row.bossToken,4),0)
+                end
+            end
             row.bossToken:SetSize(bossSize, bossSize)
             row.bossToken:ClearAllPoints()
-            row.bossToken:SetPoint("LEFT", row, "LEFT", pad, 0)
+            row.bossToken:SetPoint("LEFT", row, "LEFT", portraitPad, portraitY)
         end
         row.label:ClearAllPoints()
         row.detail:ClearAllPoints()
         local markerWidth = boss and boss.marker ~= nil and N.PixelSize(row, 25) or 0
-        local left = boss and (bossSize + 2 * pad + markerWidth) or itemID and 40 or pad
+        local left = boss and (portraitPad + bossSize + rareRight + pad + markerWidth) or itemID and 40 or pad
         local disclosure = actionLabel=="Expand" or actionLabel=="Collapse"
         row.command:SetText(not disclosure and actionLabel or "")
         local glyphWidth = math.max(12, 12 * pixel)
@@ -689,12 +1133,13 @@ function ns.ToggleDungeonBrowser()
         local detailHeight=detail and row.detail:GetStringHeight() + 2 * pixel or 0
         local minimumHeight=boss and math.max(41,42*pixel) or showUnderway and math.max(48,50*pixel) or rowHeight
         if inDetailBlock then minimumHeight=itemID and 30 * pixel or 27 * pixel end
-        local height=math.max(minimumHeight,labelHeight+detailHeight+2*verticalPad)
+        local height=math.max(minimumHeight,labelHeight+detailHeight+2*verticalPad,rareHeight)
         row.label:SetPoint("TOPLEFT",left,detail and -verticalPad or -(height-labelHeight)/2)
         row.detail:SetPoint("TOPLEFT",left,-labelHeight-verticalPad-2*pixel)
         row.stamp:ClearAllPoints()
         row.stamp:SetPoint("RIGHT",row,"RIGHT",-stampInset,0)
         row:ClearAllPoints()
+        row.journalY=content.rowY
         row:SetPoint("TOPLEFT",content,"TOPLEFT",0,-content.rowY)
         row:SetPoint("TOPRIGHT",content,"TOPRIGHT",0,-content.rowY)
         row:SetHeight(height)
@@ -705,8 +1150,9 @@ function ns.ToggleDungeonBrowser()
     end
 
     local function drawDetailBlock(top)
-        local index = content.visibleDetailBlocks + 1
-        content.visibleDetailBlocks = index
+        blockIndex = blockIndex + 1
+        local index = blockIndex
+        content.visibleDetailBlocks = (content.visibleDetailBlocks or 0) + 1
         local block = detailBlocks[index]
         if not block then
             block = CreateFrame("Frame", nil, content)
@@ -716,6 +1162,7 @@ function ns.ToggleDungeonBrowser()
             N.BronzeRectangle(block, 2)
             detailBlocks[index] = block
         end
+        block:SetParent(content)
         local pixel = N.PixelSize(block, 1)
         block:ClearAllPoints()
         block:SetPoint("TOPLEFT",content,"TOPLEFT",0,-top)
@@ -726,25 +1173,11 @@ function ns.ToggleDungeonBrowser()
     end
 
     local function positionPin(pin, mapWidth, mapHeight)
-        local point = pin.landmark
-        local dx = point.markerX and N.PixelSize(map, point.markerX) or 0
-        local dy = point.markerY and N.PixelSize(map, point.markerY) or 0
-        local scale = pin:GetScale()
-        pin:ClearAllPoints()
-        pin:SetPoint("CENTER", map, "TOPLEFT", (point.x * mapWidth + dx) / scale,
-            (-point.y * mapHeight + dy) / scale)
-        if (dx ~= 0 or dy ~= 0) and pin.CreateLine then
-            if not pin.leader then
-                pin.leader = pin:CreateLine(nil, "BACKGROUND")
-                pin.leader:SetColorTexture(.98, .84, .54, 1)
-            end
-            pin.leader:SetThickness(N.PixelSize(map, 1))
-            pin.leader:SetStartPoint("CENTER", pin, -dx / scale, -dy / scale)
-            pin.leader:SetEndPoint("CENTER", pin, 0, 0)
-            pin.leader:Show()
-        elseif pin.leader then
-            pin.leader:Hide()
-        end
+        ns.PositionDungeonMapPin(pin,map,mapWidth,mapHeight,map)
+    end
+
+    local function layoutPossibleMarkers(mapWidth, mapHeight)
+        ns.LayoutDungeonMapPins(pins,map,mapWidth,mapHeight,map)
     end
 
     local function addPin(position, count)
@@ -757,6 +1190,19 @@ function ns.ToggleDungeonBrowser()
             pin:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(self.landmark.name)
+                if self.landmark.possible then
+                    GameTooltip:AddLine("Possible spawn location",.95,.86,.68,true)
+                    if self.landmark.evidence=="inherited-reference" or self.landmark.nativeVerified==false then
+                        GameTooltip:AddLine("Inherited Classic reference; Forever position unverified.",1,1,1,true)
+                    else
+                        GameTooltip:AddLine("Recorded possible site; current presence is unconfirmed.",1,1,1,true)
+                    end
+                    if self.landmark.source then GameTooltip:AddLine(self.landmark.source,.7,.7,.7,true) end
+                end
+                local classification = rareClassification(self.landmark.boss)
+                if classification and not (self.landmark.detail or ""):lower():find("rare",1,true) then
+                    GameTooltip:AddLine(rarityLabel(classification),1,1,1,true)
+                end
                 if self.landmark.detail then GameTooltip:AddLine(self.landmark.detail, 1, 1, 1, true) end
                 GameTooltip:Show()
             end)
@@ -775,7 +1221,10 @@ function ns.ToggleDungeonBrowser()
                     end
                 elseif self.landmark.kind == "entrance" then
                     local loc = ns.DungeonEntrance(selected)
-                    if loc then status:SetText(setWaypoint(loc)) end
+                    if loc then
+                        local result=setWaypoint(loc)
+                        draw(true);status:SetText(result)
+                    end
                 elseif self.landmark.kind == "quest" then
                     selectedQuest, questLandmark, tab = nil, self.landmark, "quests"
                     GameTooltip:Hide()
@@ -814,22 +1263,20 @@ function ns.ToggleDungeonBrowser()
             pin.icon:SetTexture(position.kind == "quest" and "Interface\\GossipFrame\\AvailableQuestIcon"
                 or "Interface\\MINIMAP\\TRACKING\\Dungeon")
         end
-        paintBossToken(pin, position.boss, "CENTER", 0, 23, true)
+        pin.portraitSize=position.possible and 23*.7 or 23
+        paintBossToken(pin, position.boss, "CENTER", 0, pin.portraitSize, true)
         positionPin(pin, map:GetWidth(), map:GetHeight())
         pin:Show()
     end
 
     local currentMapAspect
     local function fitMap()
-        if not currentMapAspect or not map:IsShown() then return end
-        local width = window:GetWidth()
-        local leftWidth = math.max(250, math.floor(width * .36))
-        mapPane:ClearAllPoints()
-        mapPane:SetPoint("TOPLEFT", window, "TOPLEFT", leftWidth + 22, -76 - headerExtra)
-        mapPane:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -18, 42)
-        local height = math.max(1, math.min(window:GetHeight() - 126 - headerExtra, (width - leftWidth - 48) / currentMapAspect))
+        if not currentMapAspect or not map:IsShown() or not layoutState.mapWidth then return end
+        local height = math.max(1, math.min(layoutState.mapHeight, layoutState.mapWidth / currentMapAspect))
         local mapWidth = height * currentMapAspect
+        map:ClearAllPoints();map:SetPoint("TOP",mapPane,"TOP",0,-(layoutState.floorHeight or 0))
         map:SetSize(mapWidth, height)
+        layoutPossibleMarkers(mapWidth,height)
         for _, pin in ipairs(pins) do
             if pin:IsShown() and pin.landmark then
                 positionPin(pin, mapWidth, height)
@@ -865,8 +1312,10 @@ function ns.ToggleDungeonBrowser()
             end
             local key = kind .. ":" .. ns.DungeonNameKey(name)
             local positions = seen[key] or {}
+            local possible=kind=="boss" and options and options.possible==true
             for _, position in ipairs(positions) do
-                if kind == "boss" or (math.abs(position.x - x) < .006 and math.abs(position.y - y) < .006) then
+                if (kind=="boss" and not possible)
+                    or (math.abs(position.x-x)<(possible and .000001 or .006) and math.abs(position.y-y)<(possible and .000001 or .006)) then
                     return
                 end
             end
@@ -882,6 +1331,11 @@ function ns.ToggleDungeonBrowser()
             count = count + 1
             addPin({name = name, x = x, y = y, kind = kind, detail = detail, boss = boss,
                 markerX = options and options.markerX, markerY = options and options.markerY,
+                possible=possible,pointID=options and options.pointID,
+                candidateIndex=options and options.candidateIndex,candidateCount=options and options.candidateCount,
+                npcID=options and options.npcID,source=options and options.source,sourceUrl=options and options.sourceUrl,
+                evidence=options and options.evidence,nativeVerified=options and options.nativeVerified,
+                displayCluster=options and options.displayCluster,
                 targetFloor = options and options.targetFloor,
                 stairLabel = options and kind == "floor" and (options.stairLabel or options.marker),
                 focusAlias = selectedBoss and positionAlias[selectedBoss]}, count)
@@ -910,6 +1364,8 @@ function ns.ToggleDungeonBrowser()
                 landmark(name, x, y, "boss")
             end
         end
+        layoutPossibleMarkers(map:GetWidth(),map:GetHeight())
+        for i=1,count do positionPin(pins[i],map:GetWidth(),map:GetHeight()) end
         return count
     end
 
@@ -999,9 +1455,26 @@ function ns.ToggleDungeonBrowser()
     end
 
     local function showBosses(bosses, questRows, fallback)
+        local dungeonKey = ns.DungeonNameKey(selected.name)
+        for source, category in pairs(encounterLootGroups[dungeonKey] or {}) do
+            local mob = bosses[source]
+            if mob then
+                local key = ns.DungeonNameKey(category)
+                local group = bosses[key] or {name=category}
+                group.referenceLoot = group.referenceLoot or {}
+                for _, collection in ipairs({mob.referenceLoot or {}, mob.loot or {}}) do
+                    for _, item in ipairs(collection) do group.referenceLoot[#group.referenceLoot+1] = item end
+                end
+                for _, item in ipairs(recordFor(fallback, mob.name) or {}) do
+                    group.referenceLoot[#group.referenceLoot+1] = type(item)=="table" and {item[1],nil,item[2]} or {item}
+                end
+                bosses[key],bosses[source] = group,nil
+                if selectedBoss and ns.DungeonNameKey(selectedBoss)==source then selectedBoss=category end
+            end
+        end
         local names = {}
         for _, boss in pairs(bosses) do names[#names + 1] = boss.name end
-        local order, count = {}, 0
+        local order, curated, count = {}, {}, 0
         local function rank(name)
             local key = ns.DungeonNameKey(name)
             if not order[key] and not lootCategoryIcons[key] then
@@ -1009,15 +1482,35 @@ function ns.ToggleDungeonBrowser()
                 order[key] = count
             end
         end
-        for _, name in ipairs(encounterRoutes[ns.DungeonNameKey(selected.name)] or {}) do rank(name) end
-        for _, boss in ipairs(selected.bosses or {}) do rank(boss.name) end
+        for _, name in ipairs(encounterRoutes[dungeonKey] or {}) do
+            rank(name);curated[ns.DungeonNameKey(name)] = true
+        end
         for _, reference in ipairs(ns.DungeonReferencesFor(selected.name)) do
             for _, boss in ipairs(reference.encounters) do rank(boss.name) end
+        end
+        for _, boss in ipairs(selected.bosses or {}) do rank(boss.name) end
+        local function optional(name)
+            local boss=bosses[ns.DungeonNameKey(name)]
+            return boss.optional==true or ns.DungeonNameKey(name)=="lordaeron captain"
+        end
+        local function encounterNote(name, number)
+            local key = ns.DungeonNameKey(name)
+            local extra = encounterNotes[dungeonKey] and encounterNotes[dungeonKey][key]
+            local note = optional(name) and "Optional encounter" or number and not order[key] and "Order not recorded" or nil
+            if extra then note=optional(name) and extra or note and (note.." · "..extra) or extra end
+            local classification = rareClassification(bosses[key])
+            if classification and not (note or ""):lower():find("rare",1,true) then
+                note=note and (note.." · "..rarityLabel(classification)) or rarityLabel(classification)
+            end
+            return note
         end
         table.sort(names, function(a, b)
             local keyA, keyB = ns.DungeonNameKey(a), ns.DungeonNameKey(b)
             local categoryA, categoryB = lootCategoryIcons[keyA] ~= nil, lootCategoryIcons[keyB] ~= nil
             if categoryA ~= categoryB then return not categoryA end
+            if curated[keyA]~=curated[keyB] then return curated[keyA]==true end
+            if curated[keyA] and curated[keyB] and order[keyA]~=order[keyB] then return order[keyA]<order[keyB] end
+            if optional(a)~=optional(b)then return not optional(a)end
             local rankA, rankB = order[keyA] or math.huge, order[keyB] or math.huge
             if rankA ~= rankB then return rankA < rankB end
             local floorA, floorB = bosses[keyA].floor or math.huge, bosses[keyB].floor or math.huge
@@ -1027,20 +1520,35 @@ function ns.ToggleDungeonBrowser()
         if selectedBoss then
             local boss = bosses[ns.DungeonNameKey(selectedBoss)]
             if boss then
-                addRow(boss.name, function() selectedBoss = nil; draw() end, nil, nil, "Back To Bosses", boss)
+                local previous=content;content=detailContent
+                addRow(boss.name, function()
+                    selectedBoss=nil
+                    draw(true)
+                end, nil, encounterNote(boss.name), "Collapse", boss)
                 showLoot(boss, questRows, recordFor(fallback, boss.name))
-                return
-            end
-            selectedBoss = nil
+                content=previous
+            else selectedBoss = nil end
         end
-        for _, name in ipairs(names) do
+        local encounterNumber=0
+        for _, name in ipairs(names) do if not narrow or not selectedBoss then
             local boss = bosses[ns.DungeonNameKey(name)]
-            addRow(name, function()
-                selectedBoss = name
-                if boss.floor then floor = boss.floor end
-                draw()
-            end, nil, nil, "Expand", boss)
-        end
+            local category=lootCategoryIcons[ns.DungeonNameKey(name)]~=nil
+            if not category and not optional(name)then encounterNumber=encounterNumber+1 end
+            local note=not category and encounterNote(name,encounterNumber)or nil
+            local expanded=selectedBoss and ns.DungeonNameKey(selectedBoss)==ns.DungeonNameKey(name)
+            local row=addRow(name, function()
+                if expanded then
+                    selectedBoss=nil
+                    draw(true)
+                else
+                    selectedBoss=name
+                    if boss.floor then floor=boss.floor end
+                    draw()
+                end
+            end, nil, note, expanded and "Collapse"or"Expand", boss)
+            row.encounterName=not category and name or nil;row.optionalEncounter=optional(name)
+            row.woodFill:SetVertexColor(expanded and .85 or .64, expanded and .74 or .58, expanded and .52 or .50)
+        end end
         if #names == 0 then addRow("No encounters recorded for this instance") end
     end
 
@@ -1053,7 +1561,7 @@ function ns.ToggleDungeonBrowser()
     end
 
     local function dungeonQuests(instance)
-        local rows = ns.DungeonQuestRows(instance, instance.name)
+        local rows = ns.DungeonQuestRows(instance, instance.name, true)
         local faction = E.Call(UnitFactionGroup, "player")
         local _, class = E.Call(UnitClass, "player")
         local policy = ns.ForeverQuestPlanner
@@ -1073,21 +1581,28 @@ function ns.ToggleDungeonBrowser()
                 row.reference = row.reference or fact
             end
         end
+        local chainRows = {}
         for i = #rows, 1, -1 do
             local quest = rows[i]
             local fact = quest.reference or quest.record
             local side = fact.faction or quest.record.side
+            local wingMembership, wingFact, wingContext = ns.DungeonQuestWingMembership(instance, quest.id)
+            quest.wingMembership, quest.wingFact, quest.wingContext = wingMembership, wingFact, wingContext
             if (policy and not policy.AllowsQuest(quest.id, faction, fact))
                 or (fact.classOnly and class and fact.classOnly ~= class)
                 or ((side == "Alliance" or side == "Horde") and faction and side ~= faction) then
                 table.remove(rows, i)
+            else
+                chainRows[#chainRows+1] = quest
+                if wingMembership == false then table.remove(rows, i) end
             end
         end
         table.sort(rows, function(a,b) return a.name < b.name end)
-        return rows
+        table.sort(chainRows, function(a,b) return a.name < b.name end)
+        return rows, chainRows
     end
 
-    local function showQuests(questRows)
+    local function showQuests(questRows, chainRows)
         local faction = E.Call(UnitFactionGroup, "player")
         local _, class = E.Call(UnitClass, "player")
         local questData = ns.ForeverQuestData
@@ -1105,9 +1620,9 @@ function ns.ToggleDungeonBrowser()
                 or not (a.preferred and b.preferred) and a.world and b.world and a.world == b.world
         end
         local function endpoints(q, start)
-            local hint, points = ns.DungeonQuestLocations(q, start)
+            local hint, points, resolved = ns.DungeonQuestLocations(q, start)
             local reference = q.reference
-            local primary = reference and ns.DungeonLocation(start and reference.startPoint or not start and reference.endPoint, hint or q.name)
+            local primary = resolved or reference and ns.DungeonLocation(start and reference.startPoint or not start and reference.endPoint, hint or q.name)
             local record = data[q.id] or q.record or {}
             local sources = (start and record.starts or not start and record.ends) or {}
             local source = #sources == 1 and sources[1]
@@ -1164,8 +1679,19 @@ function ns.ToggleDungeonBrowser()
                 blockRow(title)
             else
                 local location = string.format("%s (%.1f, %.1f)", point.zone or "Zone Map", point.x, point.y)
-                blockRow(title, location, nil,
-                    function() local result=questWaypoint(point); draw(true); status:SetText(result) end, questPinLabel(point))
+                local row=blockRow(title, location, nil,
+                    function() local result=questWaypoint(point); draw(true); status:SetText(result) end)
+                if not row.pinButton then row.pinButton=pinButton(row,function()if row.action then row.action()end end)end
+                row.pinButton:ClearAllPoints();row.pinButton:SetPoint("RIGHT",row,"RIGHT",-N.PixelSize(row,5),0)
+                row.pinButton:Paint(point,"quest");row.pinButton:Show()
+                row.label:SetWidth(math.max(32,row.label:GetWidth()-N.PixelSize(row,36)))
+                row.detail:SetWidth(row.label:GetWidth())
+                local pixel=N.PixelSize(row,1)
+                local labelHeight=math.max(18*pixel,row.label:GetStringHeight())
+                local height=math.max(row:GetHeight(),labelHeight+row.detail:GetStringHeight()+12*pixel)
+                content.rowY=content.rowY+height-row:GetHeight()
+                row:SetHeight(height)
+                row.detail:ClearAllPoints();row.detail:SetPoint("TOPLEFT",row.label,"TOPLEFT",0,-labelHeight-2*pixel)
             end
         end
         local function addEndpoints(q)
@@ -1202,12 +1728,13 @@ function ns.ToggleDungeonBrowser()
             table.insert(previous[after], before)
             table.insert(nextSteps[before], after)
         end
-        for _, row in ipairs(questRows) do
-            if row.id then
-                known[row.id], registeredRows[row.id] = row, row
-            end
+        for _, row in ipairs(chainRows or questRows) do
+            if row.id then known[row.id] = row end
         end
         for _, row in ipairs(questRows) do
+            if row.id then registeredRows[row.id] = row end
+        end
+        for _, row in ipairs(chainRows or questRows) do
             local last
             for _, step in ipairs(row.reference and row.reference.chain or {}) do
                 local id = step[1]
@@ -1229,7 +1756,7 @@ function ns.ToggleDungeonBrowser()
                 link(step.after or row.id, step.id)
             end
         end
-        for _, row in ipairs(questRows) do
+        for _, row in ipairs(chainRows or questRows) do
             local record = data[row.id] or row.record
             if row.record.leadsToQuestLink then link(row.id,row.record.leadsToQuestLink.id) end
             if not previous[row.id] then
@@ -1339,22 +1866,70 @@ function ns.ToggleDungeonBrowser()
             if hint and hint~=step.name and not hint:match("^%a+ #%d+$") then return "Speak with "..hint.." to turn in this step." end
         end
 
+        local function wingNote(questID)
+            local membership, fact, context = ns.DungeonQuestWingMembership(selected, questID)
+            if not context then return end
+            if membership == nil then return "Wing not confirmed" end
+            local labels = {}
+            for _, wing in ipairs(fact.wings) do
+                local other = ns.DungeonWingContext({family=context.family, wing=wing})
+                if other then labels[#labels+1] = other.label end
+            end
+            return (membership == false and "Other wing · " or #labels > 1 and "Shared quest · " or "")
+                .. table.concat(labels, ", ")
+        end
+
+        local function localObjectiveText(step)
+            local targets, fact, context = ns.DungeonQuestWingObjectives(selected, step.id)
+            if not context or not fact or type(fact.wings) ~= "table" or #fact.wings < 2 then return end
+            local names, seen = {}, {}
+            local state = E.QuestState(step.id)
+            for _, target in ipairs(targets) do
+                local name = questData.names and questData.names[target]
+                local itemID = target:match("^item:(%d+)$")
+                if not name and itemID then name = E.Call(GetItemInfo, tonumber(itemID)) end
+                if E.Public(name) and type(name) == "string" and name ~= "" and not seen[name] then
+                    seen[name] = true
+                    for _, goal in ipairs(state and state.objectives or {}) do
+                        if E.Public(goal.text) and type(goal.text) == "string" and goal.text:find(name, 1, true) then
+                            name = goal.text
+                            break
+                        end
+                    end
+                    names[#names+1] = name
+                end
+            end
+            if #names > 0 then return "This wing · " .. context.label, table.concat(names, "\n") end
+        end
+
         local function details(chain)
             local nextStep
             for _, step in ipairs(chain) do
                 if underway(step) then nextStep=step; break end
                 if not nextStep and not questComplete(step) then nextStep=step end
             end
+            local chainKey=tostring(chain[#chain].id or chain[#chain].name)
+            local disclosure=expandedSteps[chainKey]
+            if not disclosure or not disclosure.manual then
+                local preferred=nextStep or chain[#chain]
+                disclosure={id=preferred.id or preferred.name,manual=false}
+                expandedSteps[chainKey]=disclosure
+            end
             local stepNumber = 0
             for _, step in ipairs(chain) do
                 local record = step.record
                 local supplemental = ns.ForeverQuestData.quests[step.id] or {}
-                if #chain > 1 then
+                local stepKey=step.id or step.name
+                local expanded=disclosure.id==stepKey
+                do
                     local summary = questLevel(step)
                     if step == nextStep then
                         local progress = underway(step) and "Current step" or "Next step"
                         summary = summary and (summary .. " · " .. progress) or progress
                     end
+                    local _, wingFact = ns.DungeonQuestWingMembership(selected, step.id)
+                    local note = (wingFact or registeredRows[step.id]) and wingNote(step.id)
+                    if note then summary = summary and (summary .. "\n" .. note) or note end
                     local title
                     if step.prerequisite then
                         title = "Prerequisite · " .. step.name
@@ -1362,14 +1937,30 @@ function ns.ToggleDungeonBrowser()
                         stepNumber = stepNumber + 1
                         title = stepNumber .. ". " .. step.name
                     end
-                    addRow(title, nil, nil, summary, nil, nil, true, false, badge(step), true)
+                    local header
+                    header=addRow(title, function()
+                        detailAnchor={id=step.id,offset=header.journalY-detailList:GetVerticalScroll()}
+                        expandedSteps[chainKey]={id=not expanded and stepKey or false,manual=true}
+                        draw(true)
+                    end, nil, summary, expanded and "Collapse"or"Expand", nil, true, false, badge(step), true,nil,nil,true)
+                    header.questStepID=step.id;header.questStepExpanded=expanded
                 end
+                if expanded then
                 local top = content.rowY
                 local objective=objectiveText(step,supplemental)
-                if objective then blockRow("Objective", objective, nil, nil, nil, true) end
+                local wingTitle, wingObjective = localObjectiveText(step)
+                if wingTitle then blockRow(wingTitle, wingObjective, nil, nil, nil, true) end
+                if objective then blockRow(wingTitle and "Full quest checklist" or "Objective", objective, nil, nil, nil, true) end
                 local objectivePoint = step.reference and ns.DungeonLocation(step.reference.objectivePoint)
                 if localEndpoint(objectivePoint) then
                     endpointRow("Objective Location", {name=objectivePoint.name, point=objectivePoint})
+                end
+                local itemGuide = ns.DungeonQuestItemGuides and ns.DungeonQuestItemGuides[step.id]
+                if itemGuide then
+                    blockRow("Quest items", itemGuide.text, nil, nil, nil, true)
+                    for _, item in ipairs(itemGuide.items or {}) do
+                        blockRow(item.name, item.detail, item.id)
+                    end
                 end
                 addEndpoints(step)
                 if questRewards then
@@ -1412,6 +2003,7 @@ function ns.ToggleDungeonBrowser()
                 end
                 if type(record.requires) == "string" then blockRow(record.requires, "Requirement") end
                 drawDetailBlock(top)
+                end
             end
         end
         local landmarkTitle, landmarkQuests
@@ -1429,7 +2021,7 @@ function ns.ToggleDungeonBrowser()
             local terminal = chain[#chain]
             local key = terminal.id or terminal.name
             local display = terminal
-            if followups[terminal.id] then
+            if followups[terminal.id] or not registeredRows[terminal.id] then
                 for index = #chain, 1, -1 do
                     local id = chain[index].id
                     if id and registeredRows[id] and not followups[id] then
@@ -1471,16 +2063,32 @@ function ns.ToggleDungeonBrowser()
                 end
                 local detail = (#chain > 1 and ("Quest Chain · " .. stepCount .. (stepCount == 1 and " Step" or " Steps")) or "Dungeon Quest")
                     .. (level and ("\n" .. level) or "")
+                local note = wingNote(q.id)
+                if note then detail = detail .. "\n" .. note end
                 local status = "Complete"
                 for _, step in ipairs(chain) do
                     local stepStatus=badge(step)
                     if stepStatus=="Ready" then status="Ready"; break end
                     if stepStatus=="Active" or status=="Complete" then status=stepStatus end
                 end
-                addRow(q.name, function() selectedQuest = not expanded and key or nil; draw(true) end,
-                    nil, detail, expanded and "Collapse" or "Expand", nil, nil, #chain > 1,
-                    status)
-                if expanded then details(chain) end
+                if not narrow or not selectedQuest then
+                    local card=addRow(q.name, function()
+                        if selectedQuest==key then selectedQuest=nil else selectedQuest=key end
+                        detailList:SetVerticalScroll(0)
+                        draw(true)
+                    end,nil, detail, expanded and "Collapse"or"Expand", nil, nil, #chain > 1,status,nil,nil,nil,true)
+                    card.questID=q.id;card.questChainKey=key
+                end
+                if expanded then
+                    local previous=content;content=detailContent
+                    local heading=addRow(q.name,function()
+                        selectedQuest=nil
+                        draw(true)
+                    end,nil,wingNote(q.id),"Collapse",nil,true,nil,nil,nil,nil,nil,true)
+                    heading.questHeading=true;heading.questChainKey=key
+                    details(chain)
+                    content=previous
+                end
                 matched = true
             end
         end
@@ -1515,9 +2123,17 @@ function ns.ToggleDungeonBrowser()
             bandEdge:SetAlpha(.60)
             card.name = N.MakeText(card, 15, "", true)
             card.name:SetPoint("LEFT", card.band, "LEFT", 5, 0)
-            if card.name.SetMaxLines then card.name:SetMaxLines(2) end
-            card.level = N.MakeText(card, 11, "", true)
-            card.level:SetPoint("RIGHT",card.band,"RIGHT",-5,0)
+            card.name:SetWordWrap(false)
+            if card.name.SetMaxLines then card.name:SetMaxLines(1) end
+            card.family = N.MakeText(card, 10, "", true)
+            card.family:SetWordWrap(false)
+            card.rangeBadge=CreateFrame("Frame",nil,card)
+            card.rangeBadge:EnableMouse(false)
+            card.rangeWood=wood(card.rangeBadge,"BACKGROUND")
+            card.rangeWood:SetAllPoints()
+            card.rangeTrim=N.BronzeRectangle(card.rangeBadge,1)
+            card.level = N.MakeText(card.rangeBadge, 11, "", true)
+            card.level:SetPoint("CENTER")
             card.level:SetWordWrap(false)
             card.complete = card:CreateTexture(nil, "OVERLAY", nil, 5)
             card.complete:SetTexture("Interface\\AddOns\\GrindingForever\\Media\\DungeonQuestCompleteStamp")
@@ -1532,9 +2148,12 @@ function ns.ToggleDungeonBrowser()
         card:SetSize(width,height)
         card:ClearAllPoints();card:SetPoint("TOPLEFT",content,"TOPLEFT",x,-y)
         local pixel = N.PixelSize(card, 1)
-        sizeText(card.name, card, 14, 15, 14.5)
+        sizeText(card.name, card, 13, 14, 13.5)
+        sizeText(card.family,card,10,11,10.5)
         sizeText(card.level, card, 12, 13, 12)
         warmLight(card.name, pixel)
+        warmLight(card.family,pixel)
+        card.family:SetTextColor(.87,.72,.47)
         warmLight(card.level, pixel)
         card.level:SetTextColor(.97, .80, .53)
         local quests = dungeonQuests(entry.instance)
@@ -1545,9 +2164,47 @@ function ns.ToggleDungeonBrowser()
         card.complete:SetShown(complete)
         local levels = entry.minimum and entry.maximum and string.format("%d–%d",entry.minimum,entry.maximum)
         card.level:SetText(entry.archivedMap and "Reference" or levels or (entry.raid and "Raid" or ""))
-        card.name:SetWidth(math.max(38, width - card.level:GetStringWidth() - 24 * pixel))
-        card.name:SetText(entry.name)
-        card.band:SetHeight(math.max(24 * pixel, math.min(44 * pixel, card.name:GetStringHeight() + 8 * pixel)))
+        card.instanceName=entry.name
+        local context=ns.DungeonWingContext(entry.name)
+        local choices=context and wingChoices[context.family]
+        local split=choices and #choices>1
+        local wingLabel=split and (context.family=="blackrock spire" and (context.wing=="lower" and "Lower" or "Upper")or context.label)
+        card.name:SetText(wingLabel or entry.name)
+        card.family:SetText(split and context.familyLabel or "")
+        card.family:SetShown(split==true)
+        card.name:SetWidth(0);card.family:SetWidth(0)
+        card.band:SetHeight(height*.15)
+        local nameFont,nameSize,nameFlags=card.name:GetFont()
+        local familyFont,familySize,familyFlags=card.family:GetFont()
+        local available=width-8-10*pixel
+        local familyGap=split and 4*pixel or 0
+        local function titleWidth()
+            return card.name:GetStringWidth()+(split and card.family:GetStringWidth()+familyGap or 0)
+        end
+        local rangeWidth=card.level:GetStringWidth()+10*pixel
+        local hasRange=card.level:GetText()~=""
+        local rangeOnArt=hasRange and (width/pixel<210 or titleWidth()+rangeWidth+8*pixel>available
+            or card.level:GetStringHeight()>card.band:GetHeight()-2*pixel)
+        local titleRoom=available-(hasRange and not rangeOnArt and rangeWidth+8*pixel or 0)
+        while (titleWidth()>titleRoom or nameSize>card.band:GetHeight()-2*pixel) and nameSize>11*pixel do
+            nameSize=math.max(11*pixel,nameSize-.25*pixel)
+            familySize=math.max(10*pixel,familySize-.25*pixel)
+            card.name:SetFont(nameFont,nameSize,nameFlags)
+            card.family:SetFont(familyFont,familySize,familyFlags)
+        end
+        card.family:ClearAllPoints();card.family:SetPoint("LEFT",card.band,"LEFT",5*pixel,0)
+        card.family:SetWidth(split and card.family:GetStringWidth() or 0)
+        card.name:ClearAllPoints()
+        card.name:SetPoint("LEFT",card.band,"LEFT",5*pixel+(split and card.family:GetWidth()+familyGap or 0),0)
+        card.name:SetWidth(math.max(pixel,titleRoom-(split and card.family:GetWidth()+familyGap or 0)))
+        card.rangeOnArt=rangeOnArt
+        card.rangeBadge:ClearAllPoints()
+        if rangeOnArt then card.rangeBadge:SetPoint("TOPRIGHT",card,"TOPRIGHT",-6*pixel,-6*pixel)
+        else card.rangeBadge:SetPoint("RIGHT",card.band,"RIGHT",-5*pixel,0)end
+        card.rangeBadge:SetShown(hasRange)
+        card.rangeBadge:SetSize(rangeWidth,rangeOnArt and card.level:GetStringHeight()+4*pixel or card.band:GetHeight())
+        card.rangeWood:SetShown(rangeOnArt)
+        card.rangeTrim:SetShown(rangeOnArt)
         card:SetScript("OnClick",function()
             local maps = entry.instance.gfMaps
             selected, floor, tab = entry.instance, maps and maps.startFloor or 1, "bosses"
@@ -1557,25 +2214,132 @@ function ns.ToggleDungeonBrowser()
         card:Show()
     end
 
+    local function layoutPanes(image)
+        local pixel=N.PixelSize(window,1)
+        local width,height=window:GetWidth(),window:GetHeight()
+        narrow=width/pixel<720
+        -- Match Steps at compact widths, then blend into the existing roomy type.
+        local widthPixels = width / pixel
+        local compactWidth = image and 820 or 730
+        textScale = math.max(0, math.min(1, (widthPixels - compactWidth) / 180))
+        sizeText(status, window, 13, 14, 12)
+        for _, control in ipairs({back,floorButton,bossTab,questTab,wingButton,mapButton,prepButton}) do
+            sizeText(control.label, control, 14, 0, 13)
+        end
+        local inset,gap=18*pixel,16*pixel
+        local top=N.HeaderSize(window)+8*pixel
+        local bottom=height-42*pixel
+        local leftWidth=math.min(300*pixel,math.max(240*pixel,width*.31))
+        local navWidth=narrow and width-2*inset or leftWidth-16*pixel
+        local function place(frame,x,y,w,h)
+            frame:ClearAllPoints();frame:SetPoint("TOPLEFT",window,"TOPLEFT",x,-y)
+            frame:SetSize(math.max(pixel,w),math.max(pixel,h))
+        end
+        local wingContext=selected and ns.DungeonWingContext(selected)
+        local choices=wingContext and wingChoices[wingContext.family]
+        local hasWings=choices~=nil and #choices>1
+        wingButton:SetShown(hasWings)
+        mapButton:SetShown(selected~=nil and narrow and image~=nil)
+        prepButton:SetShown(selected~=nil and tab=="quests" and ns.DungeonPrep~=nil)
+        prepStatus:SetShown(prepButton:IsShown())
+        local selectedDetail=selected and (tab=="quests" and selectedQuest~=nil or tab=="bosses" and selectedBoss~=nil)
+        local bodyTop=top
+        if selected then
+            place(back,inset,top,128*pixel,28*pixel)
+            local x=inset+back:GetWidth()+8*pixel
+            if narrow then x=width-inset-(clearQuest:IsShown()and 64 or 28)*pixel end
+            place(entrance,x,top,28*pixel,28*pixel)
+            place(clearQuest,x+36*pixel,top,28*pixel,28*pixel)
+            bodyTop=top+36*pixel
+            if hasWings then
+                wingButton.label:SetText(wingContext.familyLabel.." · "..wingContext.label)
+                place(wingButton,inset,bodyTop,navWidth,28*pixel)
+                bodyTop=bodyTop+36*pixel
+            end
+            place(bossTab,inset,bodyTop,85*pixel,29*pixel)
+            place(questTab,inset+93*pixel,bodyTop,72*pixel,29*pixel)
+            place(mapButton,width-inset-76*pixel,bodyTop,76*pixel,29*pixel)
+            mapButton.label:SetText(mapOpen and "Hide Map"or"Map")
+            bodyTop=bodyTop+37*pixel
+            if prepButton:IsShown()then
+                local prep=ns.DungeonPrep
+                local state=prep.Status and prep.Status()or{}
+                local same=state.instance==selected or type(state.name)=="string"and ns.DungeonNameKey(state.name)==ns.DungeonNameKey(selected.name)
+                prepButton.label:SetText(same and state.paused and "Resume Prep"or same and state.active and "Pause Prep"or"Prepare Quests")
+                place(prepButton,inset,bodyTop,140*pixel,28*pixel)
+                sizeText(prepStatus,window,12,0,12)
+                prepStatus:ClearAllPoints();prepStatus:SetPoint("LEFT",prepButton,"RIGHT",8*pixel,0)
+                prepStatus:SetWidth(math.max(pixel,navWidth-prepButton:GetWidth()-8*pixel))
+                local total=tonumber(state.total)or 0
+                local phase=state.phase or "Before"
+                if total<=0 and (phase=="Complete"or phase=="Before"or phase=="During"or phase=="After")then phase="Unavailable"end
+                prepStatus:SetText(same and (total>0 and (phase.." · "..(state.done or 0).."/"..total)or phase)or"")
+                bodyTop=bodyTop+36*pixel
+            end
+        end
+        local showMap=image~=nil and (not narrow or mapOpen)
+        mapPane:SetShown(showMap);map:SetShown(showMap)
+        floorButton:SetShown(showMap and floorButton.floorCount>1)
+        local rightX=narrow and inset or inset+leftWidth+gap
+        local rightWidth=width-rightX-inset
+        local readingTop=selected and not narrow and top or bodyTop
+        local available=math.max(90*pixel,bottom-readingTop)
+        layoutState.mapWidth=rightWidth
+        layoutState.floorHeight=floorButton:IsShown()and floorButton:GetHeight()+5*pixel or 0
+        local readerReserve=narrow and 90*pixel or math.max(180*pixel,available*.32)
+        local mapHeight=showMap and math.max(pixel,math.min(rightWidth/(currentMapAspect or 1.5),
+            narrow and available*.44 or available,available-layoutState.floorHeight-readerReserve-10*pixel))or 0
+        layoutState.mapHeight=mapHeight
+        local mapTotal=showMap and mapHeight+layoutState.floorHeight+10*pixel or 0
+        place(mapPane,rightX,readingTop,rightWidth,mapTotal)
+        floorButton:ClearAllPoints();floorButton:SetPoint("TOPRIGHT",mapPane,"TOPRIGHT",0,0)
+        layoutFloorButton();fitMap()
+        if not selected then
+            list:Show();detailList:Hide()
+            place(list,inset,bodyTop,width-inset-34*pixel,bottom-bodyTop)
+        elseif narrow then
+            list:SetShown(not selectedDetail);detailList:SetShown(selectedDetail==true)
+            place(list,inset,bodyTop+mapTotal,width-inset-34*pixel,bottom-bodyTop-mapTotal)
+            place(detailList,inset,bodyTop+mapTotal,width-inset-34*pixel,bottom-bodyTop-mapTotal)
+        else
+            list:Show();detailList:Show()
+            place(list,inset,bodyTop,leftWidth-16*pixel,bottom-bodyTop)
+            place(detailList,rightX,readingTop+mapTotal,rightWidth-16*pixel,bottom-readingTop-mapTotal)
+        end
+        chooserContent:SetWidth(list:GetWidth())
+        detailContent:SetWidth(detailList:GetWidth())
+        ns.DungeonJournal.narrow,ns.DungeonJournal.selected,ns.DungeonJournal.tab=narrow,selected,tab
+        ns.DungeonJournal.floor,ns.DungeonJournal.selectedQuest,ns.DungeonJournal.selectedBoss=floor,selectedQuest,selectedBoss
+        return selectedDetail
+    end
+
     local function drawContents(keepScroll)
+        closeWingMenu()
         openRewardQuests = {}
         local previousScroll = keepScroll == true and list:GetVerticalScroll() or 0
-        local width = window:GetWidth()
-        local leftWidth = math.max(250,math.floor(width * .36))
+        local previousDetailScroll = keepScroll == true and detailList:GetVerticalScroll() or 0
+        rowIndex,blockIndex=0,0
+        content=chooserContent
         for _, row in ipairs(rows) do row:Hide() end
         for _, block in ipairs(detailBlocks) do block:Hide() end
         for _, card in ipairs(cards) do card:Hide() end
         for _, pin in ipairs(pins) do pin:Hide() end
-        content.visibleRows, content.visibleDetailBlocks = 0, 0
-        content.rowY=0
+        for _,pane in ipairs({chooserContent,detailContent})do
+            pane.visibleRows,pane.visibleDetailBlocks,pane.rowY=0,0,0
+        end
         list:SetVerticalScroll(0)
+        detailList:SetVerticalScroll(0)
         back:SetShown(selected ~= nil)
         bossTab:SetShown(selected ~= nil)
         questTab:SetShown(selected ~= nil)
         local loc = selected and not archivedRaidMaps[ns.DungeonNameKey(selected.name)]
             and ns.DungeonEntrance(selected)
         entrance:SetShown(loc ~= nil)
-        clearQuest:SetShown(ns.NavigationCompass and ns.NavigationCompass.questPin ~= nil)
+        entrance:Paint(loc,"entrance")
+        local compass=ns.NavigationCompass
+        local questPin=compass and compass.questPin and compass.pins[compass.questPin]
+        clearQuest:SetShown(selected ~= nil and questPin ~= nil)
+        clearQuest:Paint(questPin and questPin.location,"quest")
         local floors = selected and selected.gfMaps
         local wing = selected and wingFloors[ns.DungeonNameKey(selected.name)]
         local parentFloors = wing and recordFor(ns.BundledDungeonMaps,wing[1])
@@ -1583,47 +2347,17 @@ function ns.ToggleDungeonBrowser()
             floors = {}
             for index = 2,#wing do floors[#floors+1] = parentFloors[wing[index]] end
         end
+        if floors and not floors[floor]then floor=1 end
         local image = floors and floors[floor]
         floorButton.floorCount = floors and #floors or 0
-        floorButton:SetShown(floors and #floors > 1 or false)
         floorButton.floorLabel = image and image.label
-        local previousMapAspect=currentMapAspect
         currentMapAspect = image and image.aspect
-        if (image ~= nil) ~= detailActive or (image and previousMapAspect ~= image.aspect) then
-            detailActive = image ~= nil
-            local unit,p,minW,minH,maxW,maxH=N.ApplySizeProfile(window,detailActive and "detail" or "")
-            local width=math.max(minW,math.min(p[3],maxW))
-            local leftWidth=math.max(250,math.floor(width*unit*.36))
-            local height=detailActive and math.floor(((width*unit-leftWidth-48)/image.aspect+126+headerExtra)/unit+.5) or p[4]
-            window:SetSize(width*unit,math.max(minH,math.min(height,maxH))*unit)
-        end
-        mapPane:SetShown(image ~= nil)
-        map:SetShown(image ~= nil)
-        list:ClearAllPoints()
-        width=window:GetWidth()
-        -- Match Steps at compact widths, then blend into the existing roomy type.
-        local widthPixels = width / N.PixelSize(window, 1)
-        local compactWidth = detailActive and 820 or 730
-        textScale = math.max(0, math.min(1, (widthPixels - compactWidth) / 180))
-        sizeText(status, window, 13, 14, 12)
-        for _, control in ipairs({back, entrance, clearQuest, floorButton, bossTab, questTab}) do
-            sizeText(control.label, control, 14, 0, 13)
-        end
-        layoutFloorButton()
-        leftWidth=math.max(250,math.floor(width*.36))
-        local rightInset = image and (width - leftWidth) or 34
-        list:SetPoint("TOPLEFT", 18, (selected and -119 or -47) - headerExtra)
-        list:SetPoint("BOTTOMRIGHT", -rightInset, 42)
-        content:SetWidth(width - rightInset - 18)
+        local selectedDetail=layoutPanes(image)
         local cardHeight
         if selected then
-            bossTab:ClearAllPoints()
-            bossTab:SetPoint("TOPLEFT", 18, -85 - headerExtra)
-            questTab:ClearAllPoints()
-            questTab:SetPoint("LEFT", bossTab, "RIGHT", 8, 0)
             bossTab:SetSelected(tab == "bosses")
             questTab:SetSelected(tab == "quests")
-            local questRows = dungeonQuests(selected)
+            local questRows, chainRows = dungeonQuests(selected)
             local allowedNames = {}
             for _, quest in ipairs(questRows) do
                 allowedNames[ns.DungeonNameKey(quest.name)] = quest.name
@@ -1632,6 +2366,7 @@ function ns.ToggleDungeonBrowser()
             for _, boss in ipairs(selected.bosses or {}) do
                 bosses[ns.DungeonNameKey(boss.name)] = {
                     name = boss.name, loot = boss.loot, npcID = boss.npcID,
+                    optional = boss.optional,
                     customIcon = boss.customIcon, displayID = boss.displayID, portraitNpcID = boss.portraitNpcID,
                 }
             end
@@ -1643,6 +2378,7 @@ function ns.ToggleDungeonBrowser()
                     entry.portraitNpcID = entry.portraitNpcID or boss.portraitNpcID
                     entry.displayID = entry.displayID or boss.displayID
                     entry.customIcon = entry.customIcon or boss.customIcon
+                    entry.optional = entry.optional or boss.optional
                     entry.referenceLoot = entry.referenceLoot or {}
                     for _, item in ipairs(boss.loot) do table.insert(entry.referenceLoot, item) end
                     bosses[key] = entry
@@ -1692,7 +2428,16 @@ function ns.ToggleDungeonBrowser()
             status:SetText(not image and "Map artwork unavailable for this instance"
                 or archivedRaidMaps[ns.DungeonNameKey(selected.name)] and "Reference map · Live raid access unconfirmed"
                 or pinCount == 0 and "No landmarks recorded for this floor" or "")
-            if tab == "bosses" then showBosses(bosses, questRows, fallback) else showQuests(questRows) end
+            if tab == "bosses" then showBosses(bosses, questRows, fallback) else showQuests(questRows, chainRows) end
+            if selectedDetail and detailContent.visibleRows==0 then
+                if tab=="quests"then selectedQuest=nil else selectedBoss=nil end
+                draw(true)
+            elseif not narrow and detailContent.visibleRows==0 then
+                local previous=content;content=detailContent
+                addRow(tab=="quests"and"Choose a quest"or"Choose an encounter",nil,nil,
+                    tab=="quests"and"Select a quest on the left to read its full chain."or"Select an encounter on the left for abilities and loot.")
+                content=previous
+            end
         else
             local entries = {}
             local catalog = {}
@@ -1739,9 +2484,9 @@ function ns.ToggleDungeonBrowser()
             end)
             local raid, x, y = false, 0, 0
             local gap = 10
-            local columns=math.max(2,math.min(5,math.floor((content:GetWidth()+gap)/178)))
+            local columns=math.max(1,math.min(5,math.floor((content:GetWidth()+gap)/178)))
             local cardWidth=(content:GetWidth()-gap*(columns-1))/columns
-            local cardSize=math.max(85,math.min(112,cardWidth*.57))
+            local cardSize=math.max(85,math.min(112,cardWidth*.57),13*N.PixelSize(content,1)/.15)
             local stride=cardSize+8
             for index, entry in ipairs(entries) do
                 if entry.raid and not raid then
@@ -1759,10 +2504,23 @@ function ns.ToggleDungeonBrowser()
             cardHeight = y + (x ~= 0 and stride or 0)
             status:SetText(#entries == 0 and "No instances available" or "")
         end
-        content:SetHeight(math.max(1, cardHeight or content.rowY))
+        chooserContent:SetHeight(math.max(1,cardHeight or chooserContent.rowY))
+        detailContent:SetHeight(math.max(1,detailContent.rowY))
         list:UpdateScrollChildRect()
-        if previousScroll > 0 then list:SetVerticalScroll(math.min(previousScroll, math.max(0, content:GetHeight() - list:GetHeight()))) end
-        syncScroll()
+        detailList:UpdateScrollChildRect()
+        if detailAnchor then
+            for index=1,rowIndex do
+                local row=rows[index]
+                if row.questStepID==detailAnchor.id and row:GetParent()==detailContent then
+                    previousDetailScroll=math.max(0,row.journalY-detailAnchor.offset)
+                    break
+                end
+            end
+            detailAnchor=nil
+        end
+        list:SetVerticalScroll(math.min(previousScroll,math.max(0,chooserContent:GetHeight()-list:GetHeight())))
+        detailList:SetVerticalScroll(math.min(previousDetailScroll,math.max(0,detailContent:GetHeight()-detailList:GetHeight())))
+        syncScroll();syncDetailScroll()
     end
 
     local drawing, redrawPending

@@ -1,5 +1,11 @@
 Grinding Forever: Forever quest data
 
+Forever-54 fishing-pool possible-site facts: normalized from QuestieDB Forever v1.1.2, commit e1652ce62113c152da682baf2d6fb85f1396bcfb. Coordinates and resource associations are source records, not proof of a currently spawned pool or an observed catch. Pinned fishing-layer source URLs, hashes and upstream license/provenance notices are retained under tools/fishing-pools; immutable upstream input links are listed in source-manifest.json. Upstream LICENSE.md distinguishes newer GPLv3 contributions and historic imported/contributor material; this notice does not assert a uniform license for every historic contribution.
+Source: https://github.com/Questie/QuestieDB/blob/e1652ce62113c152da682baf2d6fb85f1396bcfb/data/Forever/foreverObjectDB.lua
+License/provenance: https://github.com/Questie/QuestieDB/blob/e1652ce62113c152da682baf2d6fb85f1396bcfb/LICENSE.md
+
+Forever-54 inherited fishing reference sites: GatherRadar, Pirson's Addons, commit a2c32eac47f4c56544809858bd69525564097d7a, Data/ImportFish.lua blob 9eda7911db35bc0ebca26d19decd7c5c78d6f940. The pack targets Forever and states that it converts AzerothCore gameobject-type-25 positions with Forever UiMapAssignment. These 401 reference positions are separate from native Forever and observed evidence. The exact originating AzerothCore revision and conversion generator are not supplied by that pack and are not independently verified. No actual gameobject IDs are invented from GatherMate node-type IDs. Preserve both the pack's MIT/Pirson 2026 notice and its upstream AzerothCore GPLv2 provenance; full pinned notices and qualification are in tools/fishing-pools in this source checkout.
+
 Derived, normalized quest facts from Polestar forever-db, commit 463c52c8a65babd48f88f74cb69d640b2025fbe3; dataset2026.10.1, client1.60.1.70532. Data licenses GPL-3.0-only and CC-BY-4.0 as recorded by its datapackage. The data is transformed into GF Lua tables; GF planning code is independently written. No Polestar addon/engine code is embedded.
 Source: https://github.com/fitzforge/polestar/tree/463c52c8a65babd48f88f74cb69d640b2025fbe3/forever-db
 Rebuild: Collaboration/ForeverQuestBuild/build.py and the source manifest.

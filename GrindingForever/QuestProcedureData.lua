@@ -5365,3 +5365,37 @@ ns.QuestProcedureGuidance = {
  [99326]={["source"]="QuestieDB Forever",["text"]="Inspect the riding horses to choose your first mount."},
  [99411]={["source"]="QuestieDB Forever",["text"]="Ahab Wheathoof at Bloodhoof Village in Mulgore wants you to feed his prized puppy, Kyle the Frenzied.\010Feed Kyle Tender Strider Meat and return to Ahab Wheathoof."},
 }
+
+-- Owner-approved quest-use information for existing Dungeon Journal cards.
+-- Display-only: these records do not define eligibility, phases, progress,
+-- preparation gates, route destinations or inventory-completion rules.
+do
+ local source={name="QuestieDB Forever",revision="v1.1.2:e1652ce62113c152da682baf2d6fb85f1396bcfb",
+  sourceURL="https://github.com/Questie/QuestieDB/releases/tag/v1.1.2"}
+ local guides=ns.DungeonQuestItemGuides or {}
+ ns.DungeonQuestItemGuides=guides
+ guides[4867]={source=source,recordKey="4867",fields={"providedItemId","requiredSourceItems","extraObjectives"},
+  text="Read Warosh's Scroll. The quest instructions call for combining Omokk's Head with the Roughshod Pike.",
+  items={
+   {id=12730,name="Warosh's Scroll",detail="Supplied for this quest; read it for Warosh's instructions.",role="provided"},
+   {id=12533,name="Roughshod Pike",detail="Collect the Roughshod Pike in Lower Blackrock Spire.",role="component",objectID=175886,areaID=1583},
+   {id=12534,name="Omokk's Head",detail="Recorded source: Highlord Omokk, Lower Blackrock Spire.",role="component",npcID=9196,areaID=1583},
+  }}
+ guides[7067]={source=source,recordKey="7067",fields={"providedItemId","requiredSourceItems"},
+  text="Quest components come from Desolace and Maraudon. Read the supplied instructions as you work through the task.",
+  items={
+   {id=17781,name="The Pariah's Instructions",detail="Supplied for this quest.",role="provided"},
+   {id=17757,name="Amulet of Spirits",detail="Recorded source: The Nameless Prophet, Desolace.",role="component",npcID=13718,areaID=405},
+   {id=17761,name="Gem of the First Khan",detail="Recorded source: Spirit of Kolk, Desolace.",role="component",npcID=12240,areaID=405},
+   {id=17762,name="Gem of the Second Khan",detail="Recorded source: Spirit of Gelk, Desolace.",role="component",npcID=12239,areaID=405},
+   {id=17763,name="Gem of the Third Khan",detail="Recorded source: Spirit of Magra, Desolace.",role="component",npcID=12241,areaID=405},
+   {id=17764,name="Gem of the Fourth Khan",detail="Recorded source: Spirit of Maraudos, Maraudon.",role="component",npcID=12242,areaID=2100},
+   {id=17765,name="Gem of the Fifth Khan",detail="Recorded source: Spirit of Veng, Maraudon.",role="component",npcID=12243,areaID=2100},
+  }}
+ guides[3528]={source=source,recordKey="3528",fields={"providedItemId","requiredSourceItems"},
+  text="Items used for the Hakkar encounter.",
+  items={
+   {id=10465,name="Egg of Hakkar",detail="Supplied for this quest.",role="provided"},
+   {id=10663,name="Essence of Hakkar",detail="Recorded source: Shade of Hakkar, The Temple of Atal'Hakkar.",role="component",npcID=8440,areaID=1477},
+  }}
+end

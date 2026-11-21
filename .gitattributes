@@ -1,4 +1,4 @@
-# Publish stable text bytes and preserve game assets.
+* text=auto
 *.lua text eol=lf
 *.toc text eol=lf
 *.txt text eol=lf
@@ -10,3 +10,12 @@
 *.tga binary
 *.blp binary
 *.ttf binary
+*.png binary
+*.jpg binary
+# These are immutable upstream byte snapshots used by Git-blob validation.
+/.gitattributes text eol=lf
+tools/fishing-pools/sources/** -text
+tools/fishing-pools/gatherradar/** -text
+tools/fishing-pools/UPSTREAM-* -text
+tools/fishing-pools/gpl-3.0.md -text
+tools/fishing-pools/*LICENSE* -text

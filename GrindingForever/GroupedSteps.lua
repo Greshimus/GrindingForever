@@ -401,9 +401,12 @@ function Steps.Group(rows, state)
    end
    if questCount > 1 then
     local at, keys, groups, attached, mobSet, mobs = first.index, {}, {}, {}, {}, {}
+    local prep, prepPhase, priority
     for _, match in ipairs(selected) do
      local entry, point = match.candidate, match.position.point
      local child, row = entry.child, entry.row
+     if row.dungeonPrep then prep,prepPhase = true,prepPhase or row.dungeonPrepPhase end
+     if type(row.priority)=='number' and (not priority or row.priority>priority) then priority=row.priority end
      used[child.id] = true
      members[row.id] = members[row.id] or {}
      members[row.id][child.id] = true
@@ -430,7 +433,8 @@ function Steps.Group(rows, state)
      groupedAt[at][#groupedAt[at]+1] = {id=id, kind='objective', category=first.row.category, title=heading,
       context=questCount..' quests · '..#selected..' objectives', groupObjectives=groups, areaTask=true,
       destination=destination, zone=zone, mobIDs=mobs, areaDistance=first.points[1].yards,
-      resourceCounters=rows[at].resourceCounters, craftingSections=rows[at].craftingSections}
+      resourceCounters=rows[at].resourceCounters, craftingSections=rows[at].craftingSections,
+      dungeonPrep=prep, dungeonPrepPhase=prepPhase, priority=priority}
     end
    end
   end
@@ -661,6 +665,7 @@ local function applyActive(parent, action)
  parent.destination, parent.zone, parent.mobIDs = row.destination, row.zone, row.mobIDs
  parent.starterTurnIn, parent.localQuestTurnIn = row.starterTurnIn, row.localQuestTurnIn
  parent.localQuestPickup, parent.overworldTravel = row.localQuestPickup, row.overworldTravel
+ parent.dungeonPrep,parent.dungeonPrepPhase,parent.priority = row.dungeonPrep,row.dungeonPrepPhase,row.priority
 end
 
 function Steps.SelectRouteAction(parent, id)
@@ -825,8 +830,7 @@ end
 local refresh = P.Refresh
 function P.Refresh(...)
  local rows = refresh(...)
- if ns.DungeonPrep and (ns.DungeonPrep.active or ns.DungeonPrep.navigation)
-  or ns.FarmingPlanner and ns.FarmingPlanner.route then return rows end
+ if ns.FarmingPlanner and ns.FarmingPlanner.route then return rows end
  P.steps = Steps.Group(Steps.RouteGroups(rows, E.state), E.state)
  P.firstPending = P.steps[1] and P.steps[1].id
  return P.steps

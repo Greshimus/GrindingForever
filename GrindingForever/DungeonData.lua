@@ -16,6 +16,63 @@ function ns.IsForeverDungeon(name)
     return not excluded[ns.DungeonNameKey(title)]
 end
 
+local wingFamilies = {
+    ["scarlet monastery"] = {name="Scarlet Monastery", wings={
+        graveyard="Graveyard", library="Library", armory="Armory", cathedral="Cathedral"}},
+    ["dire maul"] = {name="Dire Maul", wings={east="East", west="West", north="North"}},
+    stratholme = {name="Stratholme", wings={living="Living", undead="Undead"}},
+    ["blackrock spire"] = {name="Blackrock Spire", wings={
+        lower="Lower Blackrock Spire", upper="Upper Blackrock Spire"}},
+}
+
+function ns.DungeonWingContext(instance)
+    local family, wing, name
+    if type(instance) == "table" then
+        family, wing, name = instance.family, instance.wing, instance.name
+    else name = instance end
+    if type(name) == "string" then
+        local key = ns.DungeonNameKey(name):gsub("%s+", " "):match("^ *(.-) *$")
+        if key == "lower blackrock spire" then family, wing = "blackrock spire", "lower"
+        elseif key == "upper blackrock spire" then family, wing = "blackrock spire", "upper"
+        else family, wing = key:match("^([^:]+): *(.-) *$") end
+    end
+    local definition = wingFamilies[family]
+    local label = definition and definition.wings[wing]
+    if not label then return end
+    return {family=family, wing=wing, label=label, familyLabel=definition.name}
+end
+
+local function wingMembership(context, wings)
+    local definition = wingFamilies[context.family]
+    if type(wings) ~= "table" or #wings == 0 then return end
+    local included = false
+    for _, wing in ipairs(wings) do
+        if not definition.wings[wing] then return end
+        if wing == context.wing then included = true end
+    end
+    return included
+end
+
+function ns.DungeonQuestWingMembership(instance, questID)
+    local context = ns.DungeonWingContext(instance)
+    if not context then return nil, nil, nil end
+    local family = ns.DungeonQuestWingFacts and ns.DungeonQuestWingFacts[context.family]
+    local fact = family and family.quests and family.quests[questID]
+    if type(fact) ~= "table" then return nil, nil, context end
+    return wingMembership(context, fact.wings), fact, context
+end
+
+function ns.DungeonQuestWingObjectives(instance, questID)
+    local membership, fact, context = ns.DungeonQuestWingMembership(instance, questID)
+    local targets = {}
+    if membership ~= true or type(fact.objectives) ~= "table" then return targets, fact, context end
+    for target, wings in pairs(fact.objectives) do
+        if type(target) == "string" and wingMembership(context, wings) == true then targets[#targets+1] = target end
+    end
+    table.sort(targets)
+    return targets, fact, context
+end
+
 -- Exterior waypoints use zone coordinates in percent. Interior landmarks are separate.
 ns.DungeonEntrances = {
     ["Ragefire Chasm"] = {1454, 52.6, 49.0},
@@ -110,11 +167,148 @@ function ns.DungeonEntrance(instance)
     end
 end
 
+-- A reviewed navigation estimate never replaces raw spawn or observation facts.
+local function contactNumber(value, low, high)
+    return type(value) == "number" and value == value and value >= low and value <= high
+end
+
+local function contactArrayCount(values)
+    if type(values) ~= "table" then return end
+    local count, last = 0, 0
+    for key in pairs(values) do
+        if not contactNumber(key, 1, 256) or key % 1 ~= 0 then return end
+        count, last = count + 1, math.max(last, key)
+    end
+    if count > 0 and count == last then return count end
+end
+
+local contactFields = {"entityKind", "entityID", "mapID", "frameID", "siteID"}
+
+function ns.MeanQuestContact(points, context)
+    if type(context) ~= "table" or (context.entityKind ~= "npc" and context.entityKind ~= "object")
+        or not contactNumber(context.entityID, 1, 1e9) or context.entityID % 1 ~= 0
+        or not contactNumber(context.mapID, 1, 1e9) or context.mapID % 1 ~= 0
+        or type(context.frameID) ~= "string" or context.frameID == ""
+        or type(context.siteID) ~= "string" or context.siteID == "" then return nil, "Invalid contact context" end
+    local count = contactArrayCount(points)
+    if not count then return nil, "Invalid contact points" end
+    local unique, seen, sumX, sumY = {}, {}, 0, 0
+    for _, point in ipairs(points) do
+        if type(point) ~= "table" then return nil, "Invalid contact point" end
+        for _, field in ipairs(contactFields) do
+            if point[field] ~= context[field] then return nil, "Contact identity or frame differs" end
+        end
+        if not contactNumber(point.x, 0, 100) or not contactNumber(point.y, 0, 100) then
+            return nil, "Invalid contact coordinate"
+        end
+        local sourceCount = contactArrayCount(point.provenance)
+        if not sourceCount then return nil, "Missing contact provenance" end
+        local x, y = point.x == 0 and 0 or point.x, point.y == 0 and 0 or point.y
+        local key = string.format("%.17g:%.17g", x, y)
+        local contributor = seen[key]
+        if not contributor then
+            contributor = {x=x, y=y, provenance={}}
+            seen[key], unique[#unique+1] = contributor, contributor
+            sumX, sumY = sumX + x, sumY + y
+        end
+        for _, source in ipairs(point.provenance) do
+            if type(source) ~= "string" or source == "" then return nil, "Invalid contact provenance" end
+            local present = false
+            for _, prior in ipairs(contributor.provenance) do if prior == source then present = true; break end end
+            if not present then contributor.provenance[#contributor.provenance+1] = source end
+        end
+    end
+    local x, y, dx, dy = sumX / #unique, sumY / #unique, 0, 0
+    for _, point in ipairs(unique) do
+        dx, dy = math.max(dx, math.abs(point.x-x)), math.max(dy, math.abs(point.y-y))
+    end
+    if dx > 2 or dy > 2 then return nil, "Contact coordinates exceed two-axis limit" end
+    return {mapID=context.mapID, x=x, y=y, name=context.name, zone=context.zone,
+        npcID=context.entityKind == "npc" and context.entityID or nil,
+        objectID=context.entityKind == "object" and context.entityID or nil,
+        source="Grinding Forever reviewed contact mean", evidence="derived-navigation-mean",
+        contactResolution={id=context.resolutionID, inputCount=count, distinctCount=#unique,
+            maxDeltaX=dx, maxDeltaY=dy, contributors=unique}}
+end
+
+local bashanaContext = {entityKind="npc", entityID=9087, mapID=1456,
+    frameID="Forever:uiMap1456:percent", siteID="npc:9087:Thunder Bluff",
+    name="Bashana Runetotem", zone="Thunder Bluff", resolutionID="bashana-20261119"}
+local function bashanaPoint(x, y, source)
+    return {entityKind="npc", entityID=9087, mapID=1456, frameID=bashanaContext.frameID,
+        siteID=bashanaContext.siteID, x=x, y=y, provenance={source}}
+end
+ns.QuestContactResolutionFacts = {
+    ["npc:9087"] = {context=bashanaContext,
+        -- These world positions identify preserved projection aliases, not a new mean world position.
+        worldSites={{worldMap=1,worldX=-1088,worldY=-225},{worldMap=1,worldX=-1088,worldY=-223}},
+        points={
+            bashanaPoint(71.058,34.204,"Bundled QuestData NPC9087; world1/-1088/-225; legacy spawn reference"),
+            bashanaPoint(70.866,34.204,"Bundled QuestData NPC9087; world1/-1088/-223; legacy spawn reference"),
+            bashanaPoint(71.06,34.19,"QuestLocationEvidence QuestieDB Forever v1.1.0; shared contact coordinate"),
+            bashanaPoint(70.95539569854736,33.86580944061279,
+                "Imported target NPC9087 and linked quest6561 turn-in; live player approach, not exact NPC position"),
+            bashanaPoint(70.8,33.4,
+                "DungeonReference Earthen Echo98823 Bashana pickup; legacy curated reference, exact spawn/build unverified"),
+        }},
+}
+
+function ns.ResolveQuestContact(quest, start, context)
+    local data = ns.ForeverQuestData
+    local id = type(quest) == "table" and quest.id or quest
+    local record = data and data.quests and data.quests[id]
+    local sources = record and (start and record.starts or not start and record.ends)
+    if contactArrayCount(sources) ~= 1 then return end
+    local source = sources[1]
+    if type(source) ~= "table" or (source.kind ~= "npc" and source.kind ~= "object")
+        or not contactNumber(source.id, 1, 1e9) or source.id % 1 ~= 0 then return end
+    local fact = ns.QuestContactResolutionFacts[source.kind..":"..source.id]
+    if not fact then return end
+    if context then
+        if type(context) ~= "table" then return end
+        for _, field in ipairs(contactFields) do
+            if context[field] ~= nil and context[field] ~= fact.context[field] then return end
+        end
+    end
+    local function knownPoint(point)
+        if type(point) ~= "table" or point.mapID ~= fact.context.mapID then return false end
+        if point.npcID ~= nil and (source.kind ~= "npc" or point.npcID ~= source.id)
+            or point.objectID ~= nil and (source.kind ~= "object" or point.objectID ~= source.id) then return false end
+        for _, approved in ipairs(fact.points) do
+            if point.x == approved.x and point.y == approved.y then return true end
+        end
+        return false
+    end
+    -- A later source update adding another site must be reviewed, not hidden by this one-site record.
+    for _, point in ipairs(data.spawns[source.kind..":"..source.id] or {}) do
+        local alias = false
+        for _, site in ipairs(fact.worldSites) do
+            if point.worldMap == site.worldMap and point.worldX == site.worldX and point.worldY == site.worldY then
+                alias = true; break
+            end
+        end
+        if (point.worldMap ~= nil or point.worldX ~= nil or point.worldY ~= nil) and not alias then return end
+        if point.mapID == fact.context.mapID then
+            if not knownPoint(point) then return end
+        elseif not alias then return end
+    end
+    local evidence = ns.QuestLocationEvidence and ns.QuestLocationEvidence[id]
+    for _, point in ipairs(evidence and (start and evidence.startPoints or not start and evidence.endPoints) or {}) do
+        if not knownPoint(point) then return end
+    end
+    local reference = type(quest) == "table" and quest.reference
+    local preferred = reference and (start and reference.startPoint or not start and reference.endPoint)
+    if preferred and not knownPoint({mapID=preferred[1],x=preferred[2],y=preferred[3]}) then return end
+    return ns.MeanQuestContact(fact.points, fact.context)
+end
+
 function ns.DungeonQuestLocations(quest, start)
     local data = ns.ForeverQuestData
     local record = data and data.quests and data.quests[quest.id] or quest.record or {}
     local endpoints = {}
     local hint = start and record.pickup or not start and record.turnin
+    local resolved = ns.ResolveQuestContact(quest, start)
+    if resolved then return hint or resolved.name, {resolved}, resolved end
     local seen = {}
     local function add(mapID, x, y, name)
         if not mapID or type(x) ~= "number" or type(y) ~= "number" then return end

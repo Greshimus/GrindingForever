@@ -226,6 +226,7 @@ function E.CheckEnhancementAuras()
  return not state or enhancementSignature(auras,fed,readable)~=state.enhancementSignature
 end
 
+-- Public compatibility hook; owner-only activity recording is not included.
 function E.Record() end
 function E.Snapshot()
  local _,race,raceId=call(UnitRace,'player');local _,class=call(UnitClass,'player')
@@ -585,8 +586,14 @@ E.RecipeVendorRadius=650
 local reputationRanks={Hated=1,Hostile=2,Unfriendly=3,Neutral=4,Friendly=5,Honored=6,Revered=7,Exalted=8}
 local function recipeVendorAllowed(v,state,requirement,live)
  if not E.Eligible(v,state,true) then return false end
- local vendorFlag={source='Vendor',npcID=v.npcID,name=v.name,currency=v.currency,requirement=requirement}
- if (v.hasExtendedCost or v.currency or v.merchantFavor or
+ local vendorFlag={source='Vendor',npcID=v.npcID,name=v.name,currency=v.currency,requirement=requirement,
+  merchantFavor=v.merchantFavor,price=v.price,verifiedCoinCost=v.verifiedCoinCost,hasExtendedCost=v.hasExtendedCost}
+ if live and live.costComponentsComplete then
+  vendorFlag.merchantFavor,vendorFlag.price,vendorFlag.verifiedCoinCost,vendorFlag.hasExtendedCost=
+   live.merchantFavor,live.price,live.verifiedCoinCost,live.hasExtendedCost
+  if live.verifiedCoinCost then vendorFlag.currency=nil end
+ end
+ if (vendorFlag.hasExtendedCost or vendorFlag.currency or vendorFlag.merchantFavor or
      E.IsMerchantFavorVendor and E.IsMerchantFavorVendor(vendorFlag)) and not (live and live.costText) then return false end
  if not requirement then return true end
  local name,rank=requirement:match('^(.+) / (%a+)$')
@@ -598,7 +605,10 @@ local function recipeVendorAllowed(v,state,requirement,live)
  return false
 end
 function E.RecipeOpportunity(r,state,vendorDistances)
- state=state or E.state or E.Snapshot();local skill=r.profession and state.skills[r.profession]
+ state=state or E.state or E.Snapshot()
+ local catalog=ns.RecipeCatalog
+ if catalog and catalog.PurchasePolicyAllows and catalog.PurchasePolicyAllows(r,state)~=true then return end
+ local skill=r.profession and state.skills[r.profession]
  if not skill then return end
  if type(r.requiredSkill)~='number'or r.requiredSkill>skill.rank+25 then return end
  local itemID=r.learnableItemID or r.itemId or r.itemID
@@ -883,12 +893,7 @@ function E.AddCookingRecipeTooltip(tip,itemID,names)
 end
 
 function E.UsageLines(itemID,isQuestItem,hasCookingRecipes)
- local out,names={},{}
- for profession in pairs(E.reagents[itemID] or {}) do
-  if profession~="Cooking" or not hasCookingRecipes then names[#names+1]=profession end
- end
- table.sort(names)
- if #names>0 then out[#out+1]='Used by '..table.concat(names,', ')end
+ local out={}
  if not isQuestItem then local quests={};for _,name in pairs(E.itemQuests[itemID]or{})do quests[#quests+1]=name end;table.sort(quests);if #quests>0 then out[#out+1]='Used for '..table.concat(quests,', ')end end
  return out
 end
@@ -1220,34 +1225,69 @@ function E.ObserveVendorRecipe(itemID)
  if not profession then return end
  return E.IndexRecipe({learnableItemID=itemID,itemId=itemID,name=name,profession=profession,icon=E.Public(icon)and icon or nil,sources={},locations={},catalogOnly=true,observed=true})
 end
-local function affordableMerchantCost(index)
- local count=call(GetMerchantItemCostInfo,index)
- if not E.Public(count) or type(count)~='number' or count<1 then return end
- local costs={}
+local function merchantInteger(value,minimum,maximum)
+ return E.Public(value)and type(value)=='number'and value==value and value>=minimum
+  and value<=(maximum or 1e9)and value%1==0 and value or nil
+end
+local function nativeMerchantCost(index,price,quantity,extended)
+ if not merchantInteger(price,0,1e11)or not merchantInteger(quantity,1)or type(extended)~='boolean'then return end
+ local count=extended and call(GetMerchantItemCostInfo,index)or 0
+ if not merchantInteger(count,0,8)or extended and count==0 then return end
+ local components,extras,signature={}, {},{tostring(price),tostring(quantity),tostring(count)}
+ if price>0 then components[#components+1]={kind='coin',amount=price}end
+ local affordable,knownLabels,favor=true,true,false
  for slot=1,count do
   local _,amount,link,name=call(GetMerchantItemCostItem,index,slot)
-  if not E.Public(link) or type(link)~='string' or not E.Public(amount) or type(amount)~='number' or amount<1 then return end
-  local itemID=E.ItemID(link)
-  local currencyID=tonumber(link:match('currency:(%d+)'))
-  local available
-  if itemID then available=call(C_Item and C_Item.GetItemCount or GetItemCount,itemID)
-  elseif currencyID then
-   local info=call(C_CurrencyInfo and C_CurrencyInfo.GetCurrencyInfo,currencyID)
-   if E.Public(info) and type(info)=='table' then available=info.quantity end
-  end
-  if not E.Public(available) or type(available)~='number' or available<amount then return end
+  if not merchantInteger(amount,1)or not E.Public(link)or type(link)~='string'then return end
+  local itemID=merchantInteger(E.ItemID(link),1)
+  local currencyID=merchantInteger(tonumber(link:match('currency:(%d+)')),1)
+  if(itemID~=nil)==(currencyID~=nil)then return end
   local label=link:match('|h%[(.-)%]|h')
-  if not label and E.Public(name) and type(name)=='string' then label=name end
-  if not label then return end
-  costs[#costs+1]=amount..' × '..label
+  if not label and E.Public(name)and type(name)=='string'and name:find('%S')then label=name end
+  local available,info
+  if itemID then available=call(C_Item and C_Item.GetItemCount or GetItemCount,itemID)
+  else
+   info=call(C_CurrencyInfo and C_CurrencyInfo.GetCurrencyInfo,currencyID)
+   if E.Public(info)and type(info)=='table'then
+    available=info.quantity
+    if not label and E.Public(info.name)and type(info.name)=='string'and info.name:find('%S')then label=info.name end
+   end
+  end
+  if not merchantInteger(available,0,1e12)or available<amount then affordable=false end
+  if not label or label==''then knownLabels=false;label=(itemID and'Item 'or'Currency ')..(itemID or currencyID)end
+  if label:lower():find("merchant's favor",1,true)then favor=true end
+  local component={kind=itemID and'item'or'currency',itemID=itemID,currencyID=currencyID,amount=amount,name=label,link=link}
+  components[#components+1]=component;extras[#extras+1]=amount..' × '..label
+  signature[#signature+1]=(itemID and'i'or'c')..(itemID or currencyID)..':'..amount
  end
- return table.concat(costs,', ')
+ local catalog=ns.RecipeCatalog
+ local result={price=price,quantity=quantity,hasExtendedCost=extended,verifiedCoinCost=not extended,
+  costComponents=components,costComponentsComplete=true,costEvidence='native-merchant-offer',
+  costSignature=table.concat(signature,'|')}
+ if not extended or knownLabels then result.merchantFavor=favor end
+ result.costText=catalog and catalog.OfferCostText and catalog.OfferCostText(result,favor)or nil
+ result.extendedCostText=#extras>0 and table.concat(extras,', ')or nil
+ result.affordable=affordable
+ if favor and #extras==1 then
+  local component=components[#components]
+  result.currency="Merchant's Favor";result.currencyAmount=component.amount
+  result.currencyID,result.currencyItemID=component.currencyID,component.itemID
+ end
+ return result
 end
+local merchantCostFields={'price','quantity','hasExtendedCost','verifiedCoinCost','currency','currencyType','currencyID',
+ 'currencyItemID','currencyAmount','merchantFavor','costComponents','costComponentsComplete','costEvidence','costSignature','costText',
+ 'costReadIncomplete','costReference','costAvailabilityNote','costEvidenceTier','priceEvidence','offerCostEvidence'}
 function E.ObserveMerchant(recordVisit)
- local id=E.NPCID(call(UnitGUID,'npc'));local p=E.CurrentPosition();if not id or not p then E.activeRecipeMerchant=nil;return end
- local state=E.state or E.Snapshot();local info=call(C_Map and C_Map.GetMapInfo,p.mapID);p.zone=info and info.name;p.name=call(UnitName,'npc');p.npcID=id;p.faction=state.faction;p.source='Vendor';p.evidence='observed-player-at-vendor'
+ local id=E.NPCID(call(UnitGUID,'npc'));local p=E.CurrentPosition();if not id then E.activeRecipeMerchant=nil;return end
  local previous=E.vendors[id]
- p.stockItems=previous and previous.stockItems or{};E.vendors[id]=p
+ if not E.Public(p)or type(p)~='table'then p={}end
+ -- Identity and offer costs stay observable even when an indoor map has no
+ -- player position. Retain an older recorded contact rather than inventing one.
+ if not p.mapID and previous then p.mapID,p.x,p.y,p.zone=previous.mapID,previous.x,previous.y,previous.zone end
+ local state=E.state or E.Snapshot();local info=p.mapID and call(C_Map and C_Map.GetMapInfo,p.mapID)
+ p.zone=info and info.name or p.zone;p.name=call(UnitName,'npc');p.npcID=id;p.faction=state.faction;p.source='Vendor';p.evidence='observed-player-at-vendor'
+ p.stockItems=previous and previous.stockItems or{};p.offers=previous and previous.offers or{};E.vendors[id]=p
  local active={npcID=id,items={}}
  E.activeRecipeMerchant=active
  for i=1,call(GetMerchantNumItems)or 0 do
@@ -1257,15 +1297,25 @@ function E.ObserveMerchant(recordVisit)
   local itemID=E.Public(link) and E.ItemID(link) or nil
   if not itemID and E.Public(merchant.itemLink) then itemID=E.ItemID(merchant.itemLink) end
   if itemID then
-   local _,_,price,_,stock,_,extended=call(GetMerchantItemInfo,i)
+   local _,_,price,quantity,stock,_,extended=call(GetMerchantItemInfo,i)
    if E.Public(merchant.price) and merchant.price~=nil then price=merchant.price end
+   if merchantInteger(merchant.stackCount,1)then quantity=merchant.stackCount
+   elseif merchantInteger(merchant.quantity,1)then quantity=merchant.quantity end
    if E.Public(merchant.numAvailable) and merchant.numAvailable~=nil then stock=merchant.numAvailable end
    if E.Public(merchant.hasExtendedCost) and merchant.hasExtendedCost~=nil then extended=merchant.hasExtendedCost end
-   if not E.Public(price) or type(price)~='number' then price=nil end
-   if not E.Public(stock) or type(stock)~='number' then stock=nil end
-   extended=E.Public(extended) and (extended==true or extended==1)
-   active.items[itemID]={price=price,stock=stock,hasExtendedCost=extended,costText=extended and affordableMerchantCost(i) or nil}
-   if price and price>0 and not extended then
+   price=merchantInteger(price,0,1e11)
+   quantity=merchantInteger(quantity,1)
+   if not merchantInteger(stock,-1)then stock=nil end
+   if E.Public(extended)and(extended==true or extended==1)then extended=true
+   elseif E.Public(extended)and(extended==false or extended==0)then extended=false else extended=nil end
+   local observed=nativeMerchantCost(i,price,quantity,extended)
+   local oldOffer=p.offers[itemID]
+   if observed then p.offers[itemID]=observed end
+   active.items[itemID]={price=price,stock=stock,hasExtendedCost=extended,
+    costText=observed and observed.affordable and observed.extendedCostText or nil,
+    costComponentsComplete=observed and true or nil,merchantFavor=observed and observed.merchantFavor,
+    verifiedCoinCost=observed and observed.verifiedCoinCost,quantity=quantity}
+   if price and price>0 and extended==false then
     p.stockItems[itemID]=true
     if E.NoteVendorStock then E.NoteVendorStock(itemID)end
    end
@@ -1274,32 +1324,32 @@ function E.ObserveMerchant(recordVisit)
     local loc
     for _,prior in ipairs(r.locations)do if prior.npcID==id and prior.source=='Vendor'then loc=prior;break end end
     if not loc then loc={};r.locations[#r.locations+1]=loc end
-    for k,v in pairs(p)do if k~='stockItems'then loc[k]=v end end
-    loc.price,loc.stock,loc.hasExtendedCost=price,stock,extended
+    local changed=false
+    local function assign(key,value)if value~=nil and loc[key]~=value then loc[key]=value;changed=true end end
+    for k,v in pairs(p)do if k~='stockItems'and k~='offers'then assign(k,v)end end
+    assign('stock',stock)
+    if observed then
+     if loc.costSignature~=observed.costSignature or loc.costText~=observed.costText or loc.costEvidence~='native-merchant-offer'then
+      for _,field in ipairs(merchantCostFields)do loc[field]=observed[field]end
+      changed=true
+     end
+     loc.costReadIncomplete=nil
+    else
+     -- An incomplete native response must not erase the last positive price/cost.
+     local known=loc.costComponentsComplete or loc.verifiedCoinCost and merchantInteger(loc.price,0,1e11)
+       or merchantInteger(loc.currencyAmount,1)
+     if not known then assign('price',price);assign('quantity',quantity);assign('hasExtendedCost',extended)end
+     if not loc.costComponentsComplete then assign('costReadIncomplete',true)end
+    end
     local source=false
     for _,v in ipairs(r.sources)do if v=='Vendor'then source=true;break end end
     if not source then r.sources[#r.sources+1]='Vendor'end
     r.observed=true
-    if E.NoteRecipeSource then E.NoteRecipeSource(r,id)end
+    if changed and E.NoteRecipeSource then E.NoteRecipeSource(r,id)end
    end
   end
  end
  if recordVisit then E.Record('vendor-observed',{npcID=id}) end
-end
-function E.ObserveLoot()
- local p=E.CurrentPosition();if not p then return end
- for slot=1,call(GetNumLootItems)or 0 do
-  local itemID=E.ItemID(call(GetLootSlotLink,slot));local guid=call(GetLootSourceInfo,slot);local npc=E.NPCID(guid)
-  if itemID and npc then
-   E.mobDrops[npc]=E.mobDrops[npc]or{};E.mobDrops[npc][itemID]=true
-   E.materialSites=E.materialSites or{};local list=E.materialSites[itemID]or{};local near=false;for _,site in ipairs(list)do local d=E.Distance(site,p);if d and d<40 then near=true end end
-   if not near then local site={mapID=p.mapID,x=p.x,y=p.y,npcID=npc,name=(E.NPCID(call(UnitGUID,'target'))==npc and call(UnitName,'target'))or('NPC '..npc),evidence='observed-player-at-loot'};list[#list+1]=site;if #list>24 then table.remove(list,1)end;E.materialSites[itemID]=list end
-   E.Record('loot',{npcID=npc,itemID=itemID})
-   local model=ns.NormalUI and ns.NormalUI.model
-   local current=model and model:Current()
-   if current and current.kind=='objective'and current.targetKind=='item'and current.targetID==itemID then E.objectiveArea={key=current.id,position=p}end
-  end
- end
 end
 function E.CatchupSteps(state,route)
  local rows={};local futureZones={};for i=1,math.min(12,#route)do if route[i].zone then futureZones[route[i].zone]=true end end
@@ -1457,15 +1507,6 @@ end)(ADDON,GF)
 -- Bounded observations refine evidence; they never assert unseen drops or exact spawns.
 local _,ns=...
 local E,F=ns.Forever,ns.ForeverFacts;local call=E.Call
-local snapshot=E.Snapshot
-function E.Snapshot()
- local state=snapshot();if E.db and E.db.collect then
-  for id,q in pairs(state.quests)do for slot,goal in ipairs(q.objectives or{})do
-   local key=id..':'..slot;E.previousObjectives=E.previousObjectives or{};local old=E.previousObjectives[key];local count=goal.numFulfilled
-   if old~=count and count~=nil then E.Record('quest-objective',{questID=id,slot=slot,current=count,required=goal.numRequired,text=goal.text});E.previousObjectives[key]=count end
-  end end
- end;return state
-end
 -- Camps can only be recommended from observed camp influence or a client-labelled camp POI.
 local campPOIMap,campPOITime
 function E.ReadCampPOIs()
@@ -1557,7 +1598,6 @@ function E.CheckFlight()
  if call(UnitOnTaxi,'player')then pending.departed=true
  elseif pending.departed then
   pending.edge.seconds=E.Time()-pending.start
-  if E.db.collect then E.db.flightDurations=E.db.flightDurations or{};E.db.flightDurations[pending.edge.id]=pending.edge.seconds end
   E.Record('flight-measured',{seconds=pending.edge.seconds,cost=pending.edge.cost});E.flightPending=nil
  elseif E.Time()-pending.start>20 then E.flightPending=nil end
 end
@@ -3829,7 +3869,7 @@ end)(ADDON,GF)
 -- Forever bootstrap and bounded, event-driven local observations.
 local _,ns=...
 local E,F=ns.Forever,ns.ForeverFacts;local call=E.Call
-local frame=CreateFrame('Frame');local dirty=true;local waited=0;local started=false;local refreshTrigger='startup'
+local frame=CreateFrame('Frame');local dirty=true;local waited=0;local started=false
 local function refresh()
  if not started then return end
  E.ObserveCamp();E.ReadCampPOIs()
@@ -3838,13 +3878,27 @@ local function refresh()
  else ns.ProfessionGuide.dirty=true end
 end
 local partyBagCheckElapsed,recipeVendorCheckElapsed=0,0
+-- Ordinary named-node memory is supplied by GatheringMemory.lua.
 ns.GatheringObserver={ready=true,enabled=false,Initialize=function()end,Update=function()end}
+local function professionCast(id)
+ if not E.Public(id)or type(id)~='number'then return false end
+ if id==2575 or id==2366 or id==8613 or id==7620 or id==7731 or id==7732 or id==18248
+  or id==1240948 or id==1240959 or id==1240970 or id==1240983 then return true end
+ local function name(spell)
+  local info=call(C_Spell and C_Spell.GetSpellInfo,spell);local value=E.Public(info)and type(info)=='table'and info.name
+  if not E.Public(value)or type(value)~='string'then value=call(GetSpellInfo,spell)end
+  return E.Public(value)and type(value)=='string'and value~=''and value or nil
+ end
+ local label=name(id);if not label then return false end
+ for _,spell in ipairs({2575,2366,8613,7620})do if id==spell or label==name(spell)then return true end end
+ return false
+end
 local function initialize()
  if started then return end
  local version,build,_,interface=call(GetBuildInfo)
  if interface~=16001 or type(version)~='string'or not version:match('^1%.60%.')then ns.Print('This package is for the Forever 1.60 client. It is inactive on this client.');return end
  GrindingForeverLiveCharacterDB=type(GrindingForeverLiveCharacterDB)=='table'and GrindingForeverLiveCharacterDB or{}
- local d=GrindingForeverLiveCharacterDB;d.version=1;d.manual=d.manual or{};d.deferred={};d.recipeDeferred=d.recipeDeferred or{};d.farmFlags=d.farmFlags or{};d.journey=d.journey=='Completionist'and'Completionist'or'Leveling';d.pace=d.pace=='Relaxed'and'Relaxed'or'Grinding';d.collect=false;d.performanceEnabled=false;d.focusFishingPools=false
+ local d=GrindingForeverLiveCharacterDB;d.version=1;d.manual=d.manual or{};d.deferred={};d.recipeDeferred=d.recipeDeferred or{};d.farmFlags=d.farmFlags or{};d.journey=d.journey=='Completionist'and'Completionist'or'Leveling';d.pace=d.pace=='Relaxed'and'Relaxed'or'Grinding';d.collect=false;d.focusFishingPools=false
  E.db=d;ns.db=d;E.farmFlags=d.farmFlags
  ns.NormalUI.RefreshBackgroundOpacity()
  local function copy(value,depth)if type(value)~='table'then return value end;if depth>12 then return nil end;local out={};for k,v in pairs(value)do out[k]=copy(v,depth+1)end;return out end
@@ -3856,7 +3910,7 @@ local function initialize()
  if compass and compass.RestoreLayout then compass.RestoreLayout() end
  local versionLabel=call(C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata,ADDON,'Version')
  ns.Print((E.Public(versionLabel) and type(versionLabel)=='string' and versionLabel or 'Grinding Forever')..' loaded.')
- E.Record('login',{client=version,build=build})
+ E.Record('login', {client=version, build=build})
 end
 local function save()
  if not E.db then return end
@@ -3898,7 +3952,7 @@ local function hookTooltips()
   end
  end
 end
-for _,event in ipairs({'PLAYER_LOGIN','PLAYER_ENTERING_WORLD','PLAYER_LOGOUT','ADDON_LOADED','QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','GOSSIP_SHOW','GOSSIP_CLOSED','QUEST_DETAIL','QUEST_LOG_UPDATE','UNIT_QUEST_LOG_CHANGED','SKILL_LINES_CHANGED','TRADE_SKILL_SHOW','TRADE_SKILL_LIST_UPDATE','CRAFT_SHOW','CRAFT_UPDATE','TRAINER_SHOW','TRAINER_UPDATE','MERCHANT_SHOW','LOOT_OPENED','CHAT_MSG_LOOT','UNIT_SPELLCAST_SUCCEEDED','UNIT_AURA','PLAYER_LEVEL_UP','BAG_UPDATE_DELAYED','UPDATE_FACTION','PLAYER_TALENT_UPDATE','TAXIMAP_OPENED'})do call(frame.RegisterEvent,frame,event)end
+for _,event in ipairs({'PLAYER_LOGIN','PLAYER_ENTERING_WORLD','PLAYER_LOGOUT','ADDON_LOADED','QUEST_ACCEPTED','QUEST_TURNED_IN','QUEST_REMOVED','GOSSIP_SHOW','GOSSIP_CLOSED','QUEST_DETAIL','QUEST_LOG_UPDATE','UNIT_QUEST_LOG_CHANGED','SKILL_LINES_CHANGED','TRADE_SKILL_SHOW','TRADE_SKILL_LIST_UPDATE','CRAFT_SHOW','CRAFT_UPDATE','TRAINER_SHOW','TRAINER_UPDATE','MERCHANT_SHOW','UNIT_SPELLCAST_SUCCEEDED','UNIT_AURA','PLAYER_LEVEL_UP','BAG_UPDATE_DELAYED','UPDATE_FACTION','PLAYER_TALENT_UPDATE','TAXIMAP_OPENED'})do call(frame.RegisterEvent,frame,event)end
 for _,event in ipairs({'PLAYER_REGEN_DISABLED','PLAYER_REGEN_ENABLED','PLAYER_UPDATE_RESTING','PLAYER_DEAD','PLAYER_ALIVE','PLAYER_UNGHOST','GROUP_ROSTER_UPDATE',
  'MERCHANT_UPDATE','MERCHANT_CLOSED','PLAYER_MONEY','ZONE_CHANGED','ZONE_CHANGED_NEW_AREA'})do
  call(frame.RegisterEvent,frame,event)
@@ -3926,25 +3980,18 @@ frame:SetScript('OnEvent',function(_,event,...)
    return
   end
  end
- if event=='LOOT_OPENED'and E.db.collect then E.ObserveLoot()
- elseif event=='TRAINER_SHOW'or event=='TRAINER_UPDATE'then E.ObserveTrainer()
+ if event=='TRAINER_SHOW'or event=='TRAINER_UPDATE'then E.ObserveTrainer()
  elseif event=='MERCHANT_SHOW'or event=='MERCHANT_UPDATE'then E.ObserveMerchant(event=='MERCHANT_SHOW')
  elseif event=='MERCHANT_CLOSED'then E.activeRecipeMerchant=nil
  elseif (event=='BAG_UPDATE_DELAYED'or event=='PLAYER_MONEY') and E.activeRecipeMerchant then E.ObserveMerchant()
  elseif event=='TRADE_SKILL_SHOW'or event=='TRADE_SKILL_LIST_UPDATE'or event=='CRAFT_SHOW'or event=='CRAFT_UPDATE'then E.ReadBook()
- elseif event=='QUEST_ACCEPTED'then local a,b=...;E.Record('quest-accepted',{questID=b or a})
- elseif event=='QUEST_TURNED_IN'then local id=...;E.Record('quest-turned-in',{questID=id})
  elseif event=='QUEST_REMOVED' and ns.QuestProcedures then
   local id=...
   if E.Public(id) and type(id)=='number' then ns.QuestProcedures.ResetQuest(id) end
  elseif event=='TAXIMAP_OPENED'then E.ObserveTaxi();if E.AutoGuideFlight then E.AutoGuideFlight()end
- elseif event=='CHAT_MSG_LOOT'then local message=...;local id=E.ItemID(message);local gathering=E.lastGather and E.Time()-E.lastGather.time<20;E.Record(gathering and'gathered-item'or'loot-message',{itemID=id,profession=gathering and E.lastGather.profession or nil,quantity=type(message)=='string'and tonumber(message:match('x(%d+)'))or nil})
- elseif event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;local profession=({[7620]='Fishing',[2575]='Mining',[2366]='Herbalism',[8613]='Skinning'})[id];if profession then E.lastGather={time=E.Time(),profession=profession};E.Record('gather-success',{spellID=id,profession=profession})elseif E.known[id]then E.Record('craft-completed',{spellID=id})end
  end
- -- Loot observations are recorded above. Inventory changes queue their own refresh.
- if event=='LOOT_OPENED'or event=='CHAT_MSG_LOOT'then return end
- if event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;if not E.known[id]and not({[7620]=true,[2575]=true,[2366]=true,[8613]=true})[id]then return end end
- dirty=true;refreshTrigger=event
+ if event=='UNIT_SPELLCAST_SUCCEEDED'then local _,_,id=...;if not E.known[id]and not professionCast(id)then return end end
+ dirty=true
 end)
 frame:SetScript('OnUpdate',function(_,dt)
  if started and E.flightPending then E.CheckFlight()end
@@ -4186,11 +4233,24 @@ local function isPvPQuest(q)
  return false
 end
 local function questRaceBit(s)
+ -- QuestieDB Forever 1.1.2 maps native Skyborne IDs 95/96 to bits 32/33.
+ if E.Public(s.raceId) and type(s.raceId)=='number'then
+  if s.raceId==95 then return 4294967296 end
+  if s.raceId==96 then return 8589934592 end
+ end
  local rb=raceBits[s.race]
  if not rb and E.Public(s.raceId) and type(s.raceId)=='number' and s.raceId>=1 and s.raceId<=53 and s.raceId%1==0 then
   return 2^(s.raceId-1)
  end
  return rb
+end
+-- Character restrictions without prerequisite/completion gates, for walking a
+-- selected dungeon's complete chain before its final quest becomes available.
+function Q.CharacterAllows(id,s,ignoreLevel)
+ local q=D.quests[id]
+ if not q or isPvPQuest(q) or not Q.AllowsQuest(id,s.faction) then return false end
+ return mask(q.classes,classBits[s.class]) and mask(q.races,questRaceBit(s))
+  and (ignoreLevel or not q.min_level or q.min_level<=s.level)
 end
 function Q.Eligible(id,s)
  local q=D.quests[id];if not q or isPvPQuest(q) or not Q.AllowsQuest(id,s.faction) then return false end
@@ -4413,7 +4473,10 @@ local function questContact(id,kind,s)
  local q,evidence=D.quests[id] or {},locations[id] or {}
  if kind=='accept' then
   local itemStart=itemQuestStarts[id]
-  if not itemStart then return Q.NearestSource(q.starts,s,evidence.startPoints)end
+  if not itemStart then
+   local resolved=ns.ResolveQuestContact and ns.ResolveQuestContact(id,true)
+   return resolved or Q.NearestSource(q.starts,s,evidence.startPoints)
+  end
   if #itemStart.direct==0 then return end
   local points={}
   for _,loc in ipairs(evidence.startPoints or {})do
@@ -4427,6 +4490,8 @@ local function questContact(id,kind,s)
  local procedures=ns.QuestProcedures
  local site=procedures and procedures.TurnInSite(id)
  if site then return site end
+ local resolved=ns.ResolveQuestContact and ns.ResolveQuestContact(id,false)
+ if resolved then return resolved end
  return Q.NearestSource(q.ends,s,evidence.endPoints)
 end
 local liveKinds={monster='kill',kill='kill',item='item',object='object',event='event',explore='event',talk='talk'}
@@ -4494,6 +4559,12 @@ function Q.Anchor(s)
   return(next(D.zoneQuests[id]or{})or next(Q.zoneCandidates[id]or{}))~=nil
  end
  if not zone(anchor)and zone(current)then anchor=current;if E.db then E.db.questAnchor=current end end
+ -- The ordinary quest area follows a real zone move. An explicitly selected
+ -- travel leg remains intentional; an old automatic anchor is not an order.
+ local leg=E.db and E.db.questTravelLeg
+ if current~=anchor and zone(current) and not (leg and leg.explicit) then
+  anchor=current;if E.db then E.db.questAnchor=current end
+ end
  return anchor or current
 end
 local function travelEnabled()
@@ -4537,7 +4608,7 @@ function Q.SelectTravelStep(row)
  local mapID=travelDestination(row)
  local current=E.CurrentPosition()
  if mapID and current and current.mapID~=mapID and regionFor(current.mapID) then
-  E.db.questTravelLeg={mapID=mapID,stepID=row.id}
+  E.db.questTravelLeg={mapID=mapID,stepID=row.id,explicit=true}
  else
   Q.ClearTravelLeg()
  end
@@ -4565,7 +4636,14 @@ function Q.Build(s)
  local current=s.position and s.position.mapID or anchor
  local leg=Q.TravelLeg()
  local legMap=leg and leg.mapID
+ local travelID,travelKind
+ if leg and leg.stepID then travelID,travelKind=leg.stepID:match('^fq:(%d+):([^:]+):')end
+ local acceptedTravel=travelID and travelKind~='accept' and s.quests[tonumber(travelID)] and s.quests[tonumber(travelID)].inLog==true
+ local trustedTravel=leg and (leg.explicit or acceptedTravel)
  local candidates={}
+ local prep=ns.DungeonPrep
+ local prepPlan=prep and prep.Plan and prep.Plan(s)
+ local prepCandidates=prepPlan and prepPlan.frontier or {}
  local itemOffers=carriedStarterOffers()
  local function addZone(mapID)
   for _,id in ipairs(D.zoneQuests[mapID]or{})do candidates[id]=true end
@@ -4582,6 +4660,7 @@ function Q.Build(s)
  end
  if season.questMode=='offer' and season.questID and Q.seasonalQuests[season.questID] then candidates[season.questID]=true end
  if current==1458 then candidates[97583]=true end
+ for id in pairs(prepCandidates)do candidates[id]=true end
  local out,keys={},{}
  local procedures=ns.QuestProcedures
  if procedures then procedures.Sync(s) end
@@ -4602,6 +4681,9 @@ function Q.Build(s)
   out[#out+1]={id='fq:'..key,quest=id,kind=kind,slot=slot,title=title,body=title,category='Questing',destination=loc,zone=loc and loc.zone,mobIDs=mobs,
    level=q.level,minLevel=not live.inLog and q.min_level or nil,questStep=true,objectivePoints=points,objectiveEvidence=catalogObjective,
    areaTask=kind=='objective',source='Bundled quest facts',xp=q.xp}
+  if prepPlan and prepPlan.nodes[id] then
+   local row=out[#out];row.dungeonPrep=true;row.dungeonPrepPhase=prepPlan.stages[id] or 'Before'
+  end
  end
  local function addTurnIn(id,title)
   add(id,'turnin',nil,questContact(id,'turnin',s),'Turn in '..title)
@@ -4784,18 +4866,22 @@ function Q.Build(s)
     local row=out[#out]
     row.itemID,row.questStarterItem=itemID,itemID
     row.body='Right-click '..E.ItemName(itemID)..' in your bags to start the quest.'
-   elseif canSuggestPickup(id,q) then
+   elseif prepCandidates[id] or canSuggestPickup(id,q) then
     local loc=questContact(id,'accept',s)
+    local distance=loc and E.Distance(s.position,loc)
+    local explicit=trustedTravel and loc and loc.mapID==legMap
+    local reachable=prepCandidates[id] or explicit or distance and distance<=3000
+     or not distance and loc and loc.mapID==current
     if Q.seasonalQuests[id] and liveSeasonal(id)=='offer' then
      add(id,'accept',nil,loc and loc.mapID==current and loc or nil,'Accept '..q.title)
-    elseif loc and(remote or loc.mapID==current or loc.mapID==anchor or loc.mapID==legMap)then
+    elseif loc and reachable and(remote or loc.mapID==current or loc.mapID==anchor or loc.mapID==legMap)then
      add(id,'accept',nil,loc,'Accept '..q.title)
     end
    end
   end
  end
  local ids={};for id in pairs(candidates)do ids[#ids+1]=id end;table.sort(ids)
- for _,id in ipairs(ids)do emit(id,false)end
+ for _,id in ipairs(ids)do emit(id,prepCandidates[id]~=nil)end
  local localWork=false
  for _,r in ipairs(out)do
   local map=r.destination and r.destination.mapID
@@ -4807,7 +4893,9 @@ function Q.Build(s)
   for id,q in pairs(D.quests)do if not candidates[id]and canSuggestPickup(id,q) and q.min_level<=s.level and(q.level or q.min_level)>=s.level-3 and Q.Eligible(id,s)then
    local loc=questContact(id,'accept',s)
    local d=loc and E.Distance(s.position,loc)
-   if d and(not best or d<best)then nextZone,best=loc.mapID,d end
+   -- A fallback is a nearby next hub, not a continent-wide pickup tour.
+   -- Explicit dungeon goals and accepted quests are handled independently.
+   if d and d<=3000 and(not best or d<best)then nextZone,best=loc.mapID,d end
   end end
   if nextZone then
    local visited={}
@@ -5997,9 +6085,9 @@ function N.LayoutStepRows(visible,start)
     if route then point(status,row,10,by-4,width-20,24);by=by+26 end
     local prep=ns.DungeonPrep
     local dungeonRun=step.kind=='dungeonRun'
-    local preparing=prep and prep.active~=nil and not (ns.FarmingPlanner and ns.FarmingPlanner.route)
+    local preparing=dungeonRun and step.dungeonPrep and prep and prep.active~=nil and not (ns.FarmingPlanner and ns.FarmingPlanner.route)
     r.done.label:SetText('Done')
-    r.skip.label:SetText(preparing and 'Cancel Dungeon Prep' or dungeonRun and 'Stop Directions' or 'Skip')
+    r.skip.label:SetText(preparing and 'Stop Dungeon Prep' or dungeonRun and 'Stop Directions' or 'Skip')
     if preparing or dungeonRun then
      point(r.skip,row,math.max(4,(width-180)/2),by,180,30)
     else
@@ -6486,9 +6574,15 @@ local function refreshRouteButton()
 end
 function F.Plan(kind,item)
  local p=E.CurrentPosition();if not p then return nil,'Outdoor position unavailable.'end
+ F.LoadKnown()
  local candidates={};local rank=kind=='Cloth'and 1 or F.Skill(kind);if not rank then return nil,'Learn '..kind..' first.'end
  for zone,kinds in pairs(ns.ClassicGatheringLocations5 or{})do local info=ns.ForeverData.zones[zone];if info and info.mapID==p.mapID then for _,v in ipairs(kinds[kind]or{})do local meta=F.meta[v[3]];if meta and meta.item==item and meta.skill<=rank then candidates[#candidates+1]={mapID=p.mapID,x=v[1],y=v[2],name=meta.name}end end end end
  for _,site in ipairs(E.materialSites and E.materialSites[item]or{})do if site.mapID==p.mapID then candidates[#candidates+1]=site end end
+ if kind=='Fishing' and F.FishingPoolPoints then
+  for _,point in ipairs(F.FishingPoolPoints(p.mapID))do
+   if point.itemID==item then candidates[#candidates+1]=point end
+  end
+ end
  if kind=='Fishing' and item==21113 then
   for _,visit in ipairs(E.db and E.db.fishingPoolVisits or{})do
    local at=visit.position
@@ -6499,12 +6593,12 @@ function F.Plan(kind,item)
  end
  table.sort(candidates,function(a,b)return(E.Distance(a,p)or math.huge)<(E.Distance(b,p)or math.huge)end)
  if #candidates==0 then return nil,'No sourced local route yet; choose a supplied Classic route or record a gathering location.'end
- local out={};for i=1,math.min(12,#candidates)do local v=candidates[i];out[#out+1]={mapID=v.mapID,x=v.x,y=v.y,name=v.name or E.ItemName(item)}end;return out,nil,p
+ local out={};for i=1,math.min(12,#candidates)do local v=candidates[i];out[#out+1]={mapID=v.mapID,x=v.x,y=v.y,name=v.name or E.ItemName(item),objectID=v.objectID,source=v.source,sourceUrl=v.sourceUrl,evidence=v.evidence}end;return out,nil,p
 end
 function F.Start(kind,item,target,targetSkill)
  local nodes,why=F.Plan(kind,item,12);if not nodes then return false,why end
  F.route={nodes=nodes,steps={},cursor=1,item=item,target=target,skill=kind,targetSkill=targetSkill}
- for i,v in ipairs(nodes)do F.route.steps[i]={id='gf-route5:'..i,kind='farm',category='Gathering',title='Farm '..E.ItemName(item)..' - '..i..' / '..#nodes,body='Follow the farming route. Gather manually; Skip bypasses this waypoint.',destination={mapID=v.mapID,x=v.x,y=v.y,name=v.name},priority=10000}end
+ for i,v in ipairs(nodes)do F.route.steps[i]={id='gf-route5:'..i,kind='farm',category='Gathering',title='Farm '..E.ItemName(item)..' - '..i..' / '..#nodes,body='Follow the farming route. Gather manually; Skip bypasses this waypoint.'..(v.evidence and '\n'..v.evidence..'.' or ''),destination={mapID=v.mapID,x=v.x,y=v.y,name=v.name,objectID=v.objectID,source=v.source,evidence=v.evidence},priority=10000}end
  refreshRouteButton();return true
 end
 function F.Stop(message)F.route=nil;refreshRouteButton();if message then ns.Print(message)end end
@@ -6552,13 +6646,14 @@ end
 function M.Build(map,px,py,w,h)
  F.LoadKnown()
  local points,seen={},{}
- local function add(kind,x,y,name,item,source)
+ local function add(kind,x,y,name,item,source,site)
   if not valid(x)or not valid(y)then return end
   local key=kind..':'..math.floor(x*100)..':'..math.floor(y*100)
   if seen[key]then return end;seen[key]=true
   local dx,dy=(x-px*100)*w/100,(py*100-y)*h/100
   if dx*dx+dy*dy>350*350 then return end
-  points[#points+1]={x=x,y=y,kind=kind,name=name or kind,item=item,source=source,distance=dx*dx+dy*dy}
+  points[#points+1]={x=x,y=y,kind=kind,name=name or kind,item=item,source=source,distance=dx*dx+dy*dy,
+   poolObjectIDs=site and site.poolObjectIDs,alternatives=site and site.alternatives,evidence=site and site.evidence}
  end
  for _,node in pairs(G and G.data and G.data.nodes or{})do
   local p=node.position;local meta=F.meta[node.sourceNodeID]
@@ -6572,7 +6667,8 @@ function M.Build(map,px,py,w,h)
    -- Optional existing provider only; GF does not copy or require its database.
    for coord,id in pairs(F.known[kind]and F.known[kind][map]or{})do
     local meta=F.meta[id];local x,y=F.Decode(coord)
-    if meta and meta.kind==kind then add(kind,x,y,meta.name,meta.item,'GF historical gathering catalog')end
+    local site=kind=='Fishing' and F.FishingPoolSite and F.FishingPoolSite(map,coord)
+    if meta and meta.kind==kind then add(kind,x,y,site and site.name or meta.name,meta.item,site and site.source or 'GF historical gathering catalog',site)end
    end
   end
  end
@@ -6778,7 +6874,7 @@ local materialNames={[11370]='Dark Iron Ore',[248815]='Heavy Thorium Ore',[2770]
 for id,m in pairs(F.meta)do if m.item and(m.kind=='Mining'or m.kind=='Herbalism')then local name=read(GetItemInfo,m.item);material(m.item,materialNames[m.item]or name or F.names[id]or('Item '..m.item),m.kind,m.skill)end end
 material(11370,'Dark Iron Ore','Mining',230)
 material(248815,'Heavy Thorium Ore','Mining',300)
-for _,m in ipairs({{21071,'Sagefish Pool',75},{21153,'Greater Sagefish Pool',175},{6358,'Oily Blackmouth School',1},{6359,'Firefin Snapper School',100},{6522,'Deviate Fish School',1},{13422,'Stonescale Eel Swarm',205},{19807,'School of Tastyfish',1},{21113,'Floating Wreckage',1}})do material(m[1],m[2],'Fishing',m[3])end
+for _,m in ipairs({{21071,'Raw Sagefish',75},{21153,'Raw Greater Sagefish',175},{6358,'Oily Blackmouth',1},{6359,'Firefin Snapper',100},{6522,'Deviate Fish',1},{13422,'Stonescale Eel',205},{19807,'School of Tastyfish',1},{21113,'Floating Wreckage',1}})do material(m[1],m[2],'Fishing',m[3])end
 for _,m in ipairs({{2318,'Light Leather',1},{2319,'Medium Leather',75},{4234,'Heavy Leather',155},{4304,'Thick Leather',205},{8170,'Rugged Leather',260}})do material(m[1],m[2],'Skinning',m[3])end
 for _,cloth in ipairs({{2589,'Linen Cloth'},{2592,'Wool Cloth'},{4306,'Silk Cloth'},{4338,'Mageweave Cloth'},{14047,'Runecloth'},{14256,'Felcloth'}})do
  material(cloth[1],cloth[2],'Cloth',0)
@@ -7062,6 +7158,7 @@ function R.RecommendSelection(materials, ranks, scope)
  local level=read(UnitLevel,'player') or 1
  local faction=read(UnitFactionGroup,'player')
  local zones={}
+ F.LoadKnown()
  table.sort(materials,function(a,b)return a.id<b.id end)
  for _,ref in ipairs(R.references)do
   local matched={}
@@ -7121,9 +7218,19 @@ function R.RecommendSelection(materials, ranks, scope)
     for coord,id in pairs(points)do
      local meta=F.meta[id]
      local m=meta and selected[meta.item]
-     if m and m.kind==kind and ranks[m.id]>=(meta.skill or 1)then
+     if m and m.kind==kind and not meta.objectID and not (kind=='Fishing' and F.FishingPoolSite and F.FishingPoolSite(map,coord)) and ranks[m.id]>=(meta.skill or 1)then
       local x,y=F.Decode(coord);addMapped(m,map,x,y)
      end
+    end
+   end
+  end
+ end
+ if kinds.Fishing and F.FishingPoolPoints then
+  for map,points in pairs(F.FishingPoolPoints())do
+   if scope~='current' or map==p.mapID then
+    for _,point in ipairs(points)do
+     local m=point.itemID and selected[point.itemID]
+     if m and ranks[m.id] and ranks[m.id]>0 then addMapped(m,map,point.x,point.y)end
     end
    end
   end
@@ -7252,6 +7359,98 @@ function R.IsCraftingReagent(id)
  return craftingReagents[id]==true
 end
 
+-- Catalogue policy only: retain every raw source and recorded route for review.
+-- Incidental drops do not turn manufactured supplies or raid-only targets into
+-- useful outdoor farm offerings. Natural materials with other acquisition methods stay.
+local excludedFarmOfferings={
+ [118]=true,[159]=true,[929]=true,[1179]=true,[1205]=true,[1708]=true,[2455]=true,
+ [2840]=true,[2842]=true,[2997]=true,
+ [3385]=true,[3575]=true,[3577]=true,[3827]=true,[3857]=true,
+ [4231]=true,[4233]=true,[4236]=true,[4361]=true,[4363]=true,[4536]=true,
+ [6037]=true,[8172]=true,[9061]=true,[12359]=true,
+ [15407]=true,[15409]=true,[15410]=true,[16203]=true,[17010]=true,[17011]=true,[17012]=true,
+ [3013]=true,[4589]=true,[12811]=true,
+}
+function R.IsFarmOffering(value)
+ local id=type(value)=="table" and value.id or value
+ return type(id)=="number" and R.IsCraftingReagent(id) and not excludedFarmOfferings[id]
+end
+
+local creatureGroups={}
+for _,id in ipairs({723,729,730,731,769,1015,1080,1081,1468,2251,2672,2674,2675,2677,
+ 2886,2924,3172,3173,3404,3712,3730,3731,5051,5465,5466,5467,5469,5470,6889,
+ 12207,12223,20424,21024})do creatureGroups[id]="Meat" end
+for _,id in ipairs({1475,1288,19441,255645,3174})do creatureGroups[id]="Curatives" end
+for _,id in ipairs({814,5116,5498,7067,7068,7069,7070,7077,7078,7079,7080,7972,
+ 8150,12804,12938,17056,255007})do creatureGroups[id]="Specialty Reagents" end
+local fishPresentation={}
+for _,id in ipairs({6303,6361,4603,13755,6362,13760,13889,13754,13759,13893,13756,13890,8959,6317})do fishPresentation[id]=true end
+local silkPresentation={[3182]=true,[14227]=true,[4337]=true,[10285]=true}
+
+-- Launchers are presentation-only; their children keep independent sources and slots.
+R.FarmFamilies={
+ dragonScales={name="Dragon Scales",familyKey="dragon-scales",group="Leather",iconItemID=8165,
+  itemIDs={8165,15412,15414,15415,15416}},
+ elementals={name="Elementals",familyKey="elementals",group="Specialty Reagents",iconItemID=7070,
+  sortSkill=25,materialItemLevel=25,itemIDs={7067,7068,7069,7070}},
+ heartsGlobes={name="Hearts & Globes",familyKey="hearts-globes",group="Specialty Reagents",iconItemID=7079,
+  sortSkill=45,materialItemLevel=45,itemIDs={7077,7079}},
+ essences={name="Essences",familyKey="essences",group="Specialty Reagents",iconItemID=7080,
+  sortSkill=55,materialItemLevel=55,itemIDs={7078,7080}},
+ engineeringParts={name="Engineering Parts",familyKey="engineering-parts",group="Specialty Reagents",iconItemID=255007,
+  itemIDs={814,255007}},
+ spiderSilks={name="Spider Silks",familyKey="spider-silks",group="Cloth Drops",iconItemID=3182,
+  itemIDs={3182,14227,4337,10285}},
+}
+R.FarmFamilyOrder={"dragonScales","elementals","heartsGlobes","essences","engineeringParts","spiderSilks"}
+local farmFamilyChildren,farmFamilySet={},{}
+for _,key in ipairs(R.FarmFamilyOrder)do
+ local family=R.FarmFamilies[key];farmFamilySet[family]=true
+ family.isFarmFamily=true;family.skill=1;family.categories={};family.sourceKinds={}
+ for _,id in ipairs(family.itemIDs)do farmFamilyChildren[id]=true end
+end
+function R.FarmFamilyItems(family,zone,category)
+ local list={}
+ if not farmFamilySet[family]then return list end
+ for _,id in ipairs(family.itemIDs)do
+  local item=R.byID[id]
+  if item and R.IsFarmOffering(item) and (not zone or zone.items[id])
+   and (not category or item.categories and item.categories[category])then list[#list+1]=item end
+ end
+ return list
+end
+function R.IsFarmChild(m)
+ return m and (farmFamilyChildren[m.id] or R.IsByproduct(m))
+end
+function R.FarmLevelNote(m,children)
+ local metadata=ns.ForeverCatalog and ns.ForeverCatalog.materialFamilyMetadata or{}
+ local lines={}
+ if m.isFarmFamily then
+  lines[1]="Choose individual materials. Each uses one resource slot."
+  if m.materialItemLevel then lines[#lines+1]="Material tier: item level "..m.materialItemLevel.."." end
+  local minimum,maximum
+  for _,child in ipairs(children or{})do
+   local facts=metadata[child.id];local levels=facts and facts.recordedOutdoorMobLevels
+   if facts and facts.displayOnly and levels and type(levels.minimum)=="number"and type(levels.maximum)=="number"then
+    minimum=math.min(minimum or levels.minimum,levels.minimum);maximum=math.max(maximum or levels.maximum,levels.maximum)
+   end
+  end
+  if minimum then lines[#lines+1]="Recorded Forever outdoor mob levels: "..minimum.."-"..maximum.." across these choices." end
+ else
+  local facts=metadata[m.id];local levels=facts and facts.recordedOutdoorMobLevels
+  if facts and facts.displayOnly then
+   if facts.materialItemLevel then lines[#lines+1]="Material item level: "..facts.materialItemLevel.."." end
+   if levels and type(levels.minimum)=="number"and type(levels.maximum)=="number"then
+    local coverage=type(levels.knownNPCTypes)=="number"and type(levels.totalNPCTypes)=="number"
+     and (" ("..levels.knownNPCTypes.."/"..levels.totalNPCTypes.." known NPC types)")or""
+    lines[#lines+1]="Recorded Forever outdoor mob levels: "..levels.minimum.."-"..levels.maximum..coverage.."."
+   end
+  end
+  if m.fishingReferenceNote then lines[#lines+1]=m.fishingReferenceNote end
+ end
+ return table.concat(lines,"\n")
+end
+
 local specialty={[12938]=true}
 R.materialTier={[2770]=1,[2771]=2,[2775]=3,[2772]=4,[2776]=5,[3858]=6,[7911]=7,[11370]=8,[10620]=9,[248815]=10,
  [2318]=1,[2319]=2,[4234]=3,[4304]=4,[8170]=5,
@@ -7294,25 +7493,30 @@ for leather,hide in pairs(leatherHides) do
  if not R.byID[hide[1]] then material(hide[1],hide[2],"Skinning",R.byID[leather].skill) end
  byproductIDs[hide[1]]=true
 end
-local groupOrder={["Ore Veins"]=1,Herbs=2,Leather=3,Scales=4,["Cloth Drops"]=5,
- ["Fishing Pools"]=6,Fish=7,["Creature Drops"]=8,["Other Reagents"]=9,Specialty=10}
+local groupOrder={["Ore Veins"]=1,Herbs=2,Leather=3,["Cloth Drops"]=4,
+ Fish=5,Meat=6,Curatives=7,["Specialty Reagents"]=8,["Other Reagents"]=9}
 local gatheringPools={}
 for _,data in pairs(fish) do gatheringPools[data[1]]=true end
 gatheringPools[21113]=true
 
 function R.MaterialGroup(m)
- if m.categories.Specialty then return "Specialty" end
+ if m.isFarmFamily then return m.group end
+ if m.id==6470 or m.id==6471 then return "Leather" end
+ if fishPresentation[m.id]then return "Fish" end
+ if silkPresentation[m.id]then return "Cloth Drops" end
+ if creatureGroups[m.id]then return creatureGroups[m.id] end
+ if m.categories.Specialty then return "Specialty Reagents" end
  if veinYields[m.id] or (m.categories.Mining and m.name:find(" Ore$")) then return "Ore Veins" end
  if m.sourceKinds.herb or m.categories.Herbalism then return "Herbs" end
  if m.sourceKinds.skin or m.categories.Skinning then
   local name=m.name:lower()
-  if name:find("scale") then return "Scales" end
+  if name:find("scale") then return "Leather" end
   if name:find("leather") then return "Leather" end
  end
  if m.kind=="Cloth" and R.materialTier[m.id] then return "Cloth Drops" end
- if gatheringPools[m.id] then return "Fishing Pools" end
+ if gatheringPools[m.id] then return "Fish" end
  if m.sourceKinds.fish or m.categories.Fishing then return "Fish" end
- if m.sourceKinds.drop then return "Creature Drops" end
+ if m.sourceKinds.drop then return "Specialty Reagents" end
  return "Other Reagents"
 end
 
@@ -7325,7 +7529,7 @@ local function materialOrder(a,b)
 end
 
 function R.CompareMaterials(a,b)
- local ga,gb=groupOrder[R.MaterialGroup(a)],groupOrder[R.MaterialGroup(b)]
+ local ga,gb=groupOrder[R.MaterialGroup(a)]or 99,groupOrder[R.MaterialGroup(b)]or 99
  if ga~=gb then return ga<gb end
  return materialOrder(a,b)
 end
@@ -7335,15 +7539,23 @@ function R.IsByproduct(m)
 end
 
 function R.ByproductTitle(m)
+ if m.isFarmFamily then return m.name end
  return leatherHides[m.id] and (m.name.." hides") or ("From "..m.name.." veins")
 end
 
+-- Exact node-variant yield lookup for the shared typed coverage consumer.
+function R.CoverageVeinYields(item,nodeID)
+ local list={}
+ for id,row in pairs(veinYields[item]or{})do if row.nodes[nodeID]and R.IsFarmOffering(id)then list[#list+1]=id end end
+ table.sort(list);return list
+end
 function R.Byproducts(m,zone,category)
+ if m.isFarmFamily then return R.FarmFamilyItems(m,zone,category) end
  local list={}
  for id in pairs(veinYields[m.id] or {}) do
   local item=R.byID[id]
   local available=zone and zone.veinYields and zone.veinYields[m.id]
-  if R.IsCraftingReagent(id) and (not zone or available and available[id])
+  if R.IsFarmOffering(id) and (not zone or available and available[id])
     and (not category or m.categories[category] or item.categories[category]) then
    list[#list+1]=item
   end
@@ -7356,7 +7568,7 @@ function R.Byproducts(m,zone,category)
  local hide=leatherHides[m.id]
  if hide then
   local item=R.byID[hide[1]]
-  if R.IsCraftingReagent(item.id) and (not zone or zone.items[item.id])
+  if R.IsFarmOffering(item.id) and (not zone or zone.items[item.id])
     and (not category or m.categories[category] or item.categories[category]) then
    list[#list+1]=item
   end
@@ -7373,6 +7585,7 @@ function R.LoadCatalog()
  for _,m in ipairs(R.materials) do
   m.categories=m.categories or {[categoryFor(m.kind)]=true}
   m.sourceKinds={}
+  m.fishingReferenceNote=nil
  end
  for _,node in pairs(F.meta) do
   local m=R.byID[node.item]
@@ -7388,12 +7601,25 @@ function R.LoadCatalog()
   if entry.name and m.name:match("^Item %d+$") then m.name=entry.name end
   m.categories=m.categories or {}
   m.sourceKinds=m.sourceKinds or {}
+  local referenceFishOnly=entry.sources and #entry.sources>0
+  local referenceNotes,seenNotes={},{}
   for _,source in ipairs(entry.sources or {}) do
    m.sourceKinds[source.kind or "unknown"]=true
+   if source.kind~="fish"or source.referenceOnly~=true or source.routeEligible~=false then referenceFishOnly=false end
+   for _,condition in ipairs(source.referenceConditions or{})do
+    if type(condition.description)=="string"and condition.description~=""then
+     local note=condition.description.." (Classic reference; Forever schedule unconfirmed)."
+     if not seenNotes[note]then seenNotes[note]=true;referenceNotes[#referenceNotes+1]=note end
+    end
+   end
    local node=F.meta[source.nodeID]
    if source.kind=="herb" and node and node.kind=="Herbalism" and node.skill then
     m.sortSkill=math.min(m.sortSkill or node.skill,node.skill)
    end
+  end
+  if referenceFishOnly then
+   m.fishingReferenceNote="Classic fishing reference: zone-level only; no mapped fishing spots or routes."
+   if #referenceNotes>0 then m.fishingReferenceNote=m.fishingReferenceNote.."\n"..table.concat(referenceNotes,"\n")end
   end
   m.sortSkill=m.sortSkill or entry.skill
   for _,name in ipairs(entry.professions or {}) do
@@ -7510,11 +7736,21 @@ function R.BuildSourceIndex()
    for coord,id in pairs(points) do
     local meta=F.meta[id]
     local m=meta and R.byID[meta.item]
-    if m then
+    if m and not meta.objectID and not (meta.kind=='Fishing' and F.FishingPoolSite and F.FishingPoolSite(map,coord))then
      local x,y=F.Decode(coord)
      addSource(index,mapNames,m,map,nil,{x=x,y=y,name=meta.name,kind="mapped",provenance="Bundled gathering map"})
      if meta.kind=="Mining" then addVeinYields(m,map,nil,id,{x=x,y=y,name=meta.name}) end
     end
+   end
+  end
+ end
+ if F.FishingPoolPoints then
+  for map,points in pairs(F.FishingPoolPoints())do
+   for _,point in ipairs(points)do
+    local m=point.itemID and R.byID[point.itemID]
+    if m then addSource(index,mapNames,m,map,nil,{x=point.x,y=point.y,name=point.name,kind='mapped',
+     nodeID=point.objectID or point.nodeTypeID,objectID=point.objectID,nodeTypeID=point.nodeTypeID,native=point.native,
+     provenance=point.source,revision=point.revision,sourceUrl=point.sourceUrl,evidence=point.evidence,skillKnown=false})end
    end
   end
  end
@@ -7663,25 +7899,284 @@ local function pickStops(zone,materials,p,level,faction)
  return best
 end
 
+-- Saved route order is the backbone; mapped excursions never rewrite source facts.
+local hybridMetrics,hybridMetricProvider={},nil
+local function hybridFinite(value)
+ return type(value)=="number" and value==value and value>-math.huge and value<math.huge
+end
+local function hybridMetric(map)
+ if hybridMetricProvider~=C.WorldPosition then hybridMetrics={};hybridMetricProvider=C.WorldPosition end
+ if hybridMetrics[map] then return hybridMetrics[map] end
+ local a,x,y=read(C.WorldPosition,map,0,0)
+ local b,u,v=read(C.WorldPosition,map,100,0)
+ local c,s,t=read(C.WorldPosition,map,0,100)
+ local metric={native=false,unit="map-percent"}
+ if a~=nil and a==b and a==c and hybridFinite(x) and hybridFinite(y)
+  and hybridFinite(u) and hybridFinite(v) and hybridFinite(s) and hybridFinite(t)
+  and math.abs((u-x)*(t-y)-(v-y)*(s-x))>.000001 then
+  metric={native=true,unit="native-world",frame=a,x=x,y=y,xx=(u-x)/100,xy=(v-y)/100,yx=(s-x)/100,yy=(t-y)/100}
+ end
+ hybridMetrics[map]=metric
+ return metric
+end
+local function hybridXY(metric,point)
+ if metric.native then return metric.x+point[1]*metric.xx+point[2]*metric.yx,metric.y+point[1]*metric.xy+point[2]*metric.yy end
+ return point[1],point[2]
+end
+local function hybridLength(metric,a,b)
+ local x,y=hybridXY(metric,a);local u,v=hybridXY(metric,b)
+ return math.sqrt((x-u)^2+(y-v)^2)
+end
+local function hybridProjection(metric,point,a,b)
+ local x,y=hybridXY(metric,point);local u,v=hybridXY(metric,a);local s,t=hybridXY(metric,b)
+ local dx,dy=s-u,t-v;local squared=dx*dx+dy*dy
+ local fraction=squared>0 and math.max(0,math.min(1,((x-u)*dx+(y-v)*dy)/squared)) or 0
+ local anchor={a[1]+fraction*(b[1]-a[1]),a[2]+fraction*(b[2]-a[2])}
+ return hybridLength(metric,point,anchor),fraction,anchor
+end
+local function hybridDeclared(ref,m)
+ if not ref.materials then return false end
+ for _,name in ipairs(ref.materials) do if name==m.name then return true end end
+ if m.kind=="Mining" then
+  for ore,yields in pairs(veinYields) do
+   if yields[m.id] and R.byID[ore] then
+    for _,name in ipairs(ref.materials) do if name==R.byID[ore].name then return true end end
+   end
+  end
+ end
+ return false
+end
+local function hybridEligible(ref,m,level,faction)
+ local rank=math.max(m.skill or 1,ref.minSkill or 1)
+ if R.Eligible(ref,m,rank,level,faction) then return true end
+ if m.kind=="Mining" then
+  for ore,yields in pairs(veinYields) do
+   local base=R.byID[ore]
+   if yields[m.id] and base and R.Eligible(ref,base,math.max(base.skill or 1,ref.minSkill or 1),level,faction) then return true end
+  end
+ end
+ return false
+end
+local function hybridPoint(point)
+ return type(point)=="table" and coordinate(point[1]) and coordinate(point[2])
+end
+local function hybridCopy(point)
+ local copy={point[1],point[2]}
+ for key,value in pairs(point) do if key~=1 and key~=2 then copy[key]=value end end
+ return copy
+end
+local function hybridApproach(map,points,p,metric,mode)
+ local best,start,internal
+ if p then
+  local other=hybridMetric(p.mapID)
+  local px,py=hybridXY(other,{p.x*100,p.y*100})
+  for i,point in ipairs(points) do
+   local distance,rank
+   if metric.native and other.native and metric.frame==other.frame then
+    local x,y=hybridXY(metric,point);distance=math.sqrt((x-px)^2+(y-py)^2);rank=distance
+   elseif map==p.mapID then rank=pairDistance(point,{p.x*100,p.y*100})*100 end
+   if rank and (not internal or rank<internal) then best,start,internal=distance,i,rank end
+   if mode=="open" then break end
+  end
+ end
+ return start or 1,best,internal
+end
+function R.HybridChoice(zone,materials,p,level,faction)
+ if not zone or type(zone.mapID)~="number" or #materials==0 then return end
+ level=level or read(UnitLevel,"player") or 1
+ faction=faction or read(UnitFactionGroup,"player")
+ p=p or pos()
+ local metric=hybridMetric(zone.mapID)
+ local radius=metric.native and 100 or 2
+ local areas=deadEnds[zone.name] or {}
+ local best
+ for refIndex,ref in ipairs(R.references) do
+  local usable=ref.zone==zone.name and mapFor(ref.zone)==zone.mapID and type(ref.points)=="table" and #ref.points>0
+  local qualified=false
+  if usable then
+   for _,m in ipairs(materials) do if hybridEligible(ref,m,level,faction) then qualified=true;break end end
+   usable=qualified
+  end
+  local mode=ref.mode or "loop"
+  local base,baseLength={},0
+  if usable then
+   for _,point in ipairs(ref.points) do
+    if not hybridPoint(point) or not outsideDeadEnds(point,point,areas) then usable=false;break end
+    base[#base+1]=hybridCopy(point)
+   end
+  end
+  local segmentCount=mode=="loop" and #base or math.max(0,#base-1)
+  if usable then
+   for i=1,segmentCount do
+    local a,b=base[i],base[i%#base+1]
+    if not outsideDeadEnds(a,b,areas) then usable=false;break end
+    baseLength=baseLength+hybridLength(metric,a,b)
+   end
+  end
+  if usable then
+   local groups,groupKeys,coverage,requiredSkills={}, {}, {}, {}
+   local totalYield,measured=0,false
+   for _,m in ipairs(materials) do
+    requiredSkills[m.kind]=math.max(requiredSkills[m.kind] or 0,m.skill or 1)
+    local declared=hybridEligible(ref,m,level,faction) and hybridDeclared(ref,m)
+    local nearest,density
+    for _,source in ipairs(zone.items[m.id] or {}) do
+     if source.provenance~="Bundled route" and source.isInferredAssociation~=true
+      and (not source.faction or source.faction==faction) and source.routeEligible~=false
+      and coordinate(source.x) and coordinate(source.y) then
+      local point={source.x,source.y}
+      if outsideDeadEnds(point,point,areas) then
+       for i=1,segmentCount do
+        local gap,fraction,anchor=hybridProjection(metric,point,base[i],base[i%#base+1])
+        if gap<=radius and outsideDeadEnds(anchor,point,areas) then
+         local quality,isMeasured=sourceQuality(source,level)
+         if not nearest or gap<nearest.gap or (gap==nearest.gap and (quality>nearest.quality
+          or quality==nearest.quality and (point[1]<nearest.point[1] or point[1]==nearest.point[1] and point[2]<nearest.point[2]))) then
+          nearest={point=point,gap=gap,t=fraction,anchor=anchor,segment=i,source=source,quality=quality,measured=isMeasured}
+         end
+        end
+       end
+      end
+     end
+    end
+    if declared then
+     coverage[m.id]="spine"
+     requiredSkills[ref.kind]=math.max(requiredSkills[ref.kind] or 0,ref.minSkill or 1)
+    elseif nearest then
+     coverage[m.id]=nearest.gap<=.000001 and "spine" or "spur"
+     if nearest.gap>.000001 then
+      local key=("%.6f:%.6f"):format(nearest.point[1],nearest.point[2])
+      local group=groupKeys[key]
+      if not group then
+       group=nearest;group.itemIDs={};group.sourceByItem={};group.optional=true
+       groupKeys[key]=group;groups[#groups+1]=group
+      end
+      group.itemIDs[#group.itemIDs+1]=m.id;group.sourceByItem[m.id]=nearest.source
+     end
+    else usable=false;break end
+    local point=nearest and nearest.point or base[1]
+    density=0
+    for _,source in ipairs(zone.items[m.id] or {}) do
+     if source.routeEligible~=false and coordinate(source.x) and coordinate(source.y)
+      and (not source.faction or source.faction==faction) and pairDistance(point,{source.x,source.y})<=12 then density=density+1 end
+    end
+    local quality=nearest and nearest.quality or sourceQuality({kind="mapped"},level)
+    totalYield=totalYield+quality*(1+math.min(density,12)/12)
+    measured=measured or nearest and nearest.measured or false
+    if nearest then
+     local meta=nearest.source.nodeID and F.meta[nearest.source.nodeID]
+     if meta and meta.kind==m.kind and meta.skill then requiredSkills[m.kind]=math.max(requiredSkills[m.kind],meta.skill) end
+    end
+   end
+   if usable then
+    local factor=mode=="backtrack" and 2 or 1
+    local extra=0
+    for _,group in ipairs(groups) do extra=extra+2*group.gap*factor;table.sort(group.itemIDs) end
+    if extra>baseLength*factor*.25+.000001 then usable=false end
+    if usable then
+     table.sort(groups,function(a,b)
+      if a.segment~=b.segment then return a.segment<b.segment end
+      if a.t~=b.t then return a.t<b.t end
+      if a.point[1]~=b.point[1] then return a.point[1]<b.point[1] end
+      return a.point[2]<b.point[2]
+     end)
+     local points={}
+     local function append(point,source)
+      local previous=points[#points]
+      if previous and math.abs(previous[1]-point[1])<.000000001 and math.abs(previous[2]-point[2])<.000000001 then return end
+      local copy=hybridCopy(point);if source then copy.source=source end;points[#points+1]=copy
+     end
+     for i,point in ipairs(base) do
+      append(point)
+      for _,group in ipairs(groups) do if group.segment==i then append(group.anchor);append(group.point,group.source);append(group.anchor) end end
+     end
+     local start,cost,approach=hybridApproach(zone.mapID,points,p,metric,mode)
+     local travel=0
+     for i=1,(mode=="loop" and #points or #points-1) do travel=travel+pairDistance(points[i],points[i%#points+1]) end
+     travel=travel*factor
+     local reference={};for key,value in pairs(ref) do if key~="points" then reference[key]=value end end
+     local covered={};for _,m in ipairs(materials) do covered[#covered+1]=m.id end;table.sort(covered)
+     reference.points=points;reference.mode=mode;reference.traced=true;reference.preserveStops=true;reference.hybrid=true
+     reference.spine={points=base,mode=mode,provenance=ref.provenance}
+     reference.spurs=groups;reference.coverage=coverage;reference.coveredItemIDs=covered;reference.sourceReference=ref
+     reference.baseLength=baseLength*factor;reference.extraLength=extra;reference.lengthUnit=metric.unit
+     local style=mode=="loop" and "circuit" or #base==1 and "approach" or "path"
+     local choice={mapID=zone.mapID,materials=materials,start=start,cost=cost,measured=measured,reference=reference,
+      routeKind="hybrid",styleLabel=(#groups>0 and "Hybrid " or "Saved ")..style,requiredSkills=requiredSkills,
+      score=totalYield/(1+travel/24+(approach or 16000)/18000),sourceReferenceIndex=refIndex}
+     if not best or choice.score>best.score or choice.score==best.score and refIndex<best.sourceReferenceIndex then best=choice end
+    end
+   end
+  end
+ end
+ return best
+end
+function R.ValidateRouteChoice(choice,materials,level,faction)
+ for _,m in ipairs(materials)do if not R.IsFarmOffering(m)then return false,"This resource is no longer offered for farming." end end
+ if type(choice)~="table" or type(choice.mapID)~="number" or type(choice.reference)~="table" then return false,"Choose a mapped route again." end
+ local ref=choice.reference
+ if type(ref.zone)~="string" or type(ref.points)~="table" or #ref.points==0 or type(choice.start)~="number"
+  or choice.start%1~=0 or choice.start<1 or choice.start>#ref.points then return false,"This zone has no mapped route for the selection." end
+ local knownMap=mapFor(ref.zone)
+ local info=read(C_Map and C_Map.GetMapInfo,choice.mapID)
+ if knownMap and knownMap~=choice.mapID or info and info.mapType and info.mapType~=3
+  or info and info.name and info.name~=ref.zone then return false,"The route map changed. Choose the zone again." end
+ if ref.faction and ref.faction~=faction then return false,"This route is not available to your faction." end
+ if ref.hybrid and ref.minLevel and level<ref.minLevel then return false,"Requires level "..ref.minLevel.." for this saved route." end
+ local wanted,count={},0
+ for _,m in ipairs(materials) do wanted[m.id]=true;count=count+1 end
+ local actual,seen=0,{}
+ for _,m in ipairs(choice.materials or {}) do
+  if not wanted[m.id] or seen[m.id] then return false,"Selection changed. Choose a matching zone again." end
+  seen[m.id]=true;actual=actual+1
+ end
+ if actual~=count then return false,"Selection changed. Choose a matching zone again." end
+ if ref.coveredItemIDs then
+  local covered={};for _,id in ipairs(ref.coveredItemIDs) do covered[id]=true end
+  for id in pairs(wanted) do if not covered[id] then return false,"This route does not cover the full selection." end end
+ end
+ local areas=deadEnds[ref.zone] or {}
+ for _,point in ipairs(ref.points) do
+  if not hybridPoint(point) or not outsideDeadEnds(point,point,areas) then return false,"This route needs a new mapped choice." end
+  local source=point.source
+  if source and (source.routeEligible==false or source.faction and source.faction~=faction or source.mapID and source.mapID~=choice.mapID) then
+   return false,"Source access changed. Choose a matching zone again."
+  end
+ end
+ local mode=ref.mode or "loop"
+ if mode~="loop" and mode~="backtrack" and mode~="open" then return false,"This route mode is unavailable." end
+ for i=1,(mode=="loop" and #ref.points or #ref.points-1) do
+  if not outsideDeadEnds(ref.points[i],ref.points[i%#ref.points+1],areas) then return false,"This route needs a new mapped choice." end
+ end
+ return true
+end
+
 function R.MatchZones(index,materials,p,level,faction)
+ hybridMetrics={};hybridMetricProvider=C.WorldPosition
  if #materials==0 then return {},{} end
+ for _,m in ipairs(materials)do if not R.IsFarmOffering(m)then return {},{} end end
  p=p or pos()
  level=level or read(UnitLevel,"player") or 1
  faction=faction or read(UnitFactionGroup,"player")
  local choices,overlap={},{}
  for _,zone in pairs(index) do
   local available={}
-  for id,entries in pairs(zone.items) do
+   for id,entries in pairs(zone.items) do if R.IsFarmOffering(id)then
    for _,source in ipairs(entries) do
     if not source.faction or source.faction==faction then available[id]=true;break end
-   end
+   end end
   end
   local match=true
   for _,m in ipairs(materials) do if not available[m.id] then match=false;break end end
   if match then
    for id in pairs(available) do overlap[id]=true end
-   choices[#choices+1]=pickStops(zone,materials,p,level,faction)
-    or {mapID=zone.mapID,reference={zone=zone.name,points={}},materials=materials}
+   local choice=R.HybridChoice(zone,materials,p,level,faction)
+   if not choice then
+    choice=pickStops(zone,materials,p,level,faction)
+     or {mapID=zone.mapID,reference={zone=zone.name,points={}},materials=materials}
+    choice.routeKind="generated";choice.styleLabel=choice.reference.mode=="loop" and "Mapped circuit" or "Mapped route"
+   end
+   choices[#choices+1]=choice
   end
  end
  table.sort(choices,function(a,b)
@@ -7695,6 +8190,75 @@ function R.MatchZones(index,materials,p,level,faction)
  end
  if best then best.recommendation="Recommended" end
  return choices,overlap
+end
+
+-- Shortlist only complete, mapped choices. Existing route scores remain estimates;
+-- exact fishing-pool evidence can prefer a zone without inventing an exclusive yield.
+function R.RecommendRouteChoices(choices,materials,p,level,faction)
+ p=p or pos();level=level or read(UnitLevel,"player")or 1;faction=faction or read(UnitFactionGroup,"player")
+ if not p or #materials==0 then return {} end
+ local pools,selected={},{}
+ for _,m in ipairs(materials)do selected[m.id]=true end
+ for map,points in pairs(F.FishingPoolPoints and F.FishingPoolPoints()or{})do
+  local found={};pools[map]=found
+  for _,point in ipairs(points)do
+   if selected[point.itemID]and coordinate(point.x)and coordinate(point.y)then
+    local quality=point.native and 2 or 1
+    found[point.itemID]=math.max(found[point.itemID]or 0,quality)
+   end
+  end
+ end
+ local eligible={}
+ for _,choice in ipairs(choices or{})do
+  if choice.start and R.ValidateRouteChoice(choice,materials,level,faction)then
+   local native,reference=0,0
+   for id in pairs(selected)do
+    local quality=pools[choice.mapID]and pools[choice.mapID][id]
+    if quality==2 then native=native+1 elseif quality==1 then reference=reference+1 end
+   end
+   eligible[#eligible+1]={choice=choice,nativePoolFish=native,referencePoolFish=reference,
+    score=type(choice.score)=="number"and choice.score==choice.score and choice.score or -math.huge,
+    cost=type(choice.cost)=="number"and choice.cost==choice.cost and choice.cost or math.huge}
+  end
+ end
+ local function qualityBefore(a,b)
+  if a.nativePoolFish~=b.nativePoolFish then return a.nativePoolFish>b.nativePoolFish end
+  if a.referencePoolFish~=b.referencePoolFish then return a.referencePoolFish>b.referencePoolFish end
+ end
+ local function bestBefore(a,b)
+  local forward,backward=qualityBefore(a,b),qualityBefore(b,a)
+  if forward~=backward then return forward==true end
+  if a.score~=b.score then return a.score>b.score end
+  if a.cost~=b.cost then return a.cost<b.cost end
+  return a.choice.mapID<b.choice.mapID
+ end
+ table.sort(eligible,bestBefore)
+ local best=eligible[1];if not best then return {} end
+ local result,seen={best},{[best.choice.mapID]=true}
+ local alternatives={}
+ for i=2,#eligible do alternatives[#alternatives+1]=eligible[i]end
+ table.sort(alternatives,function(a,b)
+  local forward,backward=qualityBefore(a,b),qualityBefore(b,a)
+  if forward~=backward then return forward==true end
+  if a.cost~=b.cost then return a.cost<b.cost end
+  if a.score~=b.score then return a.score>b.score end
+  return a.choice.mapID<b.choice.mapID
+ end)
+ for _,candidate in ipairs(alternatives)do
+  if not seen[candidate.choice.mapID]then
+   result[#result+1]=candidate;seen[candidate.choice.mapID]=true
+   if #result==4 then break end
+  end
+ end
+ for i,row in ipairs(result)do
+  row.rank=i
+  if row.nativePoolFish>0 then row.reason="Recorded Forever pool sites for "..row.nativePoolFish.." selected fish."
+  elseif row.referencePoolFish>0 then row.reason="Recorded pool references for "..row.referencePoolFish.." selected fish."
+  elseif i==1 then row.reason="Estimated best fit for your materials."
+  elseif row.choice.mapID==p.mapID then row.reason="In your current zone."
+  else row.reason="Mapped route for all selected materials."end
+ end
+ return result
 end
 
 local oldPlan=F.Plan
@@ -8358,54 +8922,94 @@ function R.Fill()
  if K.resourceScroll then K.resourceScroll:SetVerticalScroll(0)end
  if K.resourceBar then K.resourceBar:SetShown(y>316)end
 end
-function R.StartSelection()
- local selectedCard=K.confirmed
- local materials={};for _,m in ipairs(R.materials)do if K.selected[m.id]then materials[#materials+1]=m end end
- table.sort(materials,function(a,b)return a.id<b.id end)
- if selectedCard then materials=selectedCard.materials end
- if #materials==0 then return false,'Select at least one resource.'end
- if read(IsInInstance)then return false,'Use an outdoor farming route.'end
+function R.ValidateStartMaterials(materials,choice,snapshotFresh)
+ if #materials==0 then return false,'Select at least one resource.' end
+ if #materials>8 then return false,'Select up to eight resources.' end
+ for _,m in ipairs(materials)do if not R.IsFarmOffering(m)then return false,'This resource is no longer offered for farming.' end end
+ if read(IsInInstance)then return false,'Use an outdoor farming route.' end
+ -- This runs only on an explicit Start, never while browsing or resizing.
+ local E=ns.Forever
+ if not snapshotFresh and E and E.Snapshot then E.Snapshot() end
+ local position=read(ns.Retail and ns.Retail.Client and ns.Retail.Client.PlayerPosition)
+ if type(position)~='table' or position.status~='available' or type(position.mapID)~='number' then return false,'Outdoor position unavailable.' end
  local ranks={}
- if not selectedCard then
  for _,m in ipairs(materials) do
   local rank=m.kind=='Cloth' and 1 or F.Skill(m.kind)
-  if not rank or rank<(m.skill or 0) then return false,'Requires '..m.kind..' '..tostring(m.skill or 1)..' for '..m.name..'.' end
+  local required=math.max(m.skill or 1,choice and choice.requiredSkills and choice.requiredSkills[m.kind] or 0)
+  if not rank or rank<required then return false,'Requires '..m.kind..' '..tostring(required)..' for '..m.name..'.' end
   ranks[m.id]=rank
   if m.kind=='Mining' and (read(C_Item and C_Item.GetItemCount or GetItemCount,2901,false) or 0)<1 then return false,'Carry a Mining Pick.' end
   if m.kind=='Skinning' and (read(C_Item and C_Item.GetItemCount or GetItemCount,7005,false) or 0)<1 then return false,'Carry a Skinning Knife.' end
  end
- end
- local choice,why=K.confirmed
+ return true,ranks
+end
+local startMaterialRoute=R.Start
+function R.Start(m,target)
+ if not m then return false,'Choose a resource.' end
+ local valid,why=R.ValidateStartMaterials({m})
+ if not valid then return false,why end
+ return startMaterialRoute(m,target)
+end
+function R.StartSelection()
+ local choice=K.confirmed
  K.confirmed=nil
- if not choice then choice,why=R.RecommendSelection(materials,ranks,K.scope)end
+ local materials={}
+ for _,m in ipairs(R.materials)do if K.selected[m.id]then materials[#materials+1]=m end end
+ table.sort(materials,function(a,b)return a.id<b.id end)
+ local valid,ranks=R.ValidateStartMaterials(materials,choice)
+ if not valid then return false,ranks end
+ local level=read(UnitLevel,'player') or 1
+ local faction=read(UnitFactionGroup,'player')
+ local why
+ if choice then
+  local ok,reason=R.ValidateRouteChoice(choice,materials,level,faction)
+  if not ok then return false,reason end
+ else
+  local position=read(ns.Retail.Client.PlayerPosition)
+  local choices=R.MatchZones(R.BuildSourceIndex(),materials,position,level,faction)
+  for _,candidate in ipairs(choices)do
+   if candidate.start and (K.scope~='current' or candidate.mapID==position.mapID) then
+    if not choice or candidate.recommendation=='Recommended' then choice=candidate end
+    if candidate.recommendation=='Recommended' then break end
+   end
+  end
+ end
  if not choice and #materials==1 then
   local m=materials[1]
-  local ok,err=F.Start(m.kind,m.id,math.huge)
-  if not ok then return false,err end
+  local previous=F.route
+  local called,ok,err=pcall(F.Start,m.kind,m.id,math.huge)
+  if not called then F.route=previous;error(ok,0) end
+  if not ok then F.route=previous;return false,err end
   if R.menu then R.menu:Hide()end
   K.age=1;K.SyncFooter()
   return true
  end
  if not choice then return false,why or (K.scope=='current' and 'No mapped trail for the selected resources in your current zone.' or 'No mapped trail for the selected resources on this continent.') end
- if #choice.materials<#materials and not choice.selectedCard then
-  return false,'No single trail covers all selected resources. Select resources that share a trail.'
- end
- local first=choice.materials[1]
- R.request=choice
- local called,ok,err=pcall(F.Start,first.kind,first.id,math.huge)
+ local ok,reason=R.ValidateRouteChoice(choice,materials,level,faction)
+ if not ok then return false,reason end
+ valid,ranks=R.ValidateStartMaterials(materials,choice,true)
+ if not valid then return false,ranks end
+ -- The confirmed view never substitutes a different or stale material list.
+ local activeChoice={};for key,value in pairs(choice)do activeChoice[key]=value end
+ activeChoice.materials=materials
+ local first=materials[1]
+ local previous=F.route
+ R.request=activeChoice
+ local called,started,err=pcall(F.Start,first.kind,first.id,math.huge)
  R.request=nil
- if not called then F.route=nil;error(ok,0) end
- if not ok then return false,err end
+ if not called then F.route=previous;error(started,0) end
+ if not started then F.route=previous;return false,err end
  local route=F.route
  route.traced=true
- route.reference=choice.reference
+ route.reference=activeChoice.reference
  route.item=nil
  route.target=nil
  local names={}
- for _,m in ipairs(choice.materials) do names[#names+1]=m.name end
+ for _,m in ipairs(materials) do names[#names+1]=m.name end
  for i,step in ipairs(route.steps) do
-  step.title=choice.reference.zone..' Farming Route'
-  step.body=choice.reference.targets and ((first.kind=='Skinning' and 'Skin ' or 'Farm ')..choice.reference.targets..' for '..table.concat(names,', ')..'.')
+  step.title=activeChoice.reference.zone..' Farming Route'
+  step.body=activeChoice.reference.hybrid and ('Collect '..table.concat(names,', ')..' along this route. Follow accessible terrain; Skip bypasses a waypoint.')
+   or activeChoice.reference.targets and ((first.kind=='Skinning' and 'Skin ' or 'Farm ')..activeChoice.reference.targets..' for '..table.concat(names,', ')..'.')
    or 'Gather '..table.concat(names,', ')..' along the trail.'
   step.destination.name='Trail Waypoint '..i..' / '..#route.steps
  end
@@ -8417,6 +9021,7 @@ function R.StartSelection()
  K.SyncFooter()
  return true
 end
+
 function K.SyncFooter()if N.farmButton then local label=F.route and'Stop Farming Route'or'Plan Farming Route';if N.farmButton.label:GetText()~=label then N.farmButton.label:SetText(label)end end end
 function R.Open()
  if F.route then F.Stop('Quest guide resumed.');K.SyncFooter();return end
@@ -8477,6 +9082,7 @@ end)(ADDON,GF)
 ;(function(...)
 local _,ns=...;local N,P,W,K,R,F=ns.NormalUI,ns.ProfessionGuide,ns.WindowWorkflow,ns.NavigationCompass,ns.MaterialRoutes,ns.FarmingPlanner
 local AS='Interface\\AddOns\\GrindingForever\\Media\\'
+local function read(fn,...)if type(fn)=='function'then local ok,a,b,c=pcall(fn,...);if ok then return a,b,c end end end
 local function text(p,size,value)local t=p:CreateFontString(nil,'OVERLAY');t:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',size);t:SetTextColor(.15,.09,.035);t:SetText(value or'');return t end
 local function tex(p,path,layer)local t=p:CreateTexture(nil,layer or'ARTWORK');t:SetTexture(AS..path);return t end
 local function icon(id)local fn=C_Item and C_Item.GetItemIconByID or GetItemIcon;return fn and fn(id)or'Interface\\Icons\\INV_Misc_Book_09'end
@@ -8515,512 +9121,629 @@ K.Sync=function(...)local v=sync(...);for _,b in ipairs(N.root and N.root.recipe
 local function farmPlace(widget,parent,x,y,w,h)
  widget:ClearAllPoints()
  widget:SetPoint("TOPLEFT",parent,"TOPLEFT",x,-y)
- widget:SetSize(w,h)
+ widget:SetSize(math.max(1,w),math.max(1,h))
 end
 
-local function setFarmFont(label, regularSize, compactPixels, pixelUnit, expansion)
+local function setFarmFont(label,regularSize,compactPixels,pixelUnit,expansion)
  local font,currentSize,flags=label:GetFont()
  local compactSize=math.min(regularSize,compactPixels*pixelUnit)
  local size=compactSize+(regularSize-compactSize)*expansion
  if math.abs(currentSize-size)>.01 then label:SetFont(font,size,flags) end
 end
 
-local function farmList(parent)
+local function farmCream(parent,role)
+ local frame=CreateFrame("Frame",nil,parent)
+ frame.gfFarmRole=role;frame:EnableMouse(false)
+ local cream=frame:CreateTexture(nil,"BACKGROUND")
+ cream:SetAllPoints();cream:SetColorTexture(.98,.90,.73,.88)
+ N.BronzeRectangle(frame,1)
+ return frame
+end
+
+local function farmHeader(parent,caption,role,onClick)
+ local button=N.WoodButton(parent,caption,200)
+ if onClick then button:SetScript("OnClick",onClick)end
+ button.gfFarmRole=role
+ button.label:SetJustifyH("LEFT");button.label:SetWordWrap(false)
+ button.label:ClearAllPoints();button.label:SetPoint("LEFT",button,"LEFT",8,0)
+ button.label:SetPoint("RIGHT",button,"RIGHT",-25,0)
+ button.arrow=N.ButtonArrow(button,"right","RIGHT")
+ button.arrow:ClearAllPoints();button.arrow:SetPoint("RIGHT",button,"RIGHT",-11,0)
+ return button
+end
+
+local function farmList(parent,changed)
  local scroll=CreateFrame("ScrollFrame",nil,parent)
  local contents=CreateFrame("Frame",nil,scroll)
- contents:SetSize(1,1)
- scroll:SetScrollChild(contents)
- scroll:SetClipsChildren(true)
- scroll:EnableMouseWheel(true)
- local function limit()
-  return scroll:IsShown() and math.max(0,contents:GetHeight()-scroll:GetHeight()) or 0
- end
- local sync=N.PanelScroll(parent,scroll,function()return scroll:GetVerticalScroll()end,
-  function(y)scroll:SetVerticalScroll(y)end,limit,64)
+ contents:SetSize(1,1);scroll:SetScrollChild(contents);scroll:SetClipsChildren(true)
+ local function limit() return math.max(0,contents:GetHeight()-scroll:GetHeight()) end
+ local sync=N.PanelScroll(parent,scroll,function()return scroll:GetVerticalScroll()or 0 end,
+  function(value)scroll:SetVerticalScroll(value);if changed then changed()end end,
+  function()return scroll:IsShown()and limit()or 0 end,64)
  return scroll,contents,function(reset)
-  scroll:SetVerticalScroll(reset and 0 or math.min(limit(),scroll:GetVerticalScroll()or 0))
-  sync()
+  local value=reset and 0 or math.min(limit(),scroll:GetVerticalScroll()or 0)
+  scroll:SetVerticalScroll(value);sync()
  end
 end
 
 local function tooltip(widget,title,detail,material,anchor)
  if not GameTooltip then return end
  GameTooltip:SetOwner(widget,anchor or "ANCHOR_RIGHT")
- if not ns.SetNativeItemTooltip(GameTooltip,material and (material.itemLink or material.id)) then
+ if not ns.SetNativeItemTooltip(GameTooltip,material and(material.itemLink or material.id))then
   GameTooltip:AddLine(title)
-  if material then ns.Forever.AddCookingRecipeTooltip(GameTooltip,material.id) end
+  if material and ns.Forever then ns.Forever.AddCookingRecipeTooltip(GameTooltip,material.id)end
  end
- if detail and detail~="" then GameTooltip:AddLine(detail,1,.9,.7,true) end
+ if detail and detail~=""then GameTooltip:AddLine(detail,1,.9,.7,true)end
  GameTooltip:Show()
 end
-
-local function hideTip()
- if GameTooltip then GameTooltip:Hide() end
-end
+local function hideTip()if GameTooltip then GameTooltip:Hide()end end
 
 local function buildResource(parent)
- local b=CreateFrame("Button",nil,parent)
- b.icon=b:CreateTexture(nil,"ARTWORK")
- b.tick=b:CreateTexture(nil,"OVERLAY");b.tick:SetPoint("BOTTOMRIGHT",b.icon,"BOTTOMRIGHT",4,-2);b.tick:SetSize(17,17)
- b.tick:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
- b.wash=b:CreateTexture(nil,"BACKGROUND");b.wash:SetAllPoints();b.wash:SetColorTexture(.03,.43,.38,.20)
- b.label=text(b,14)
- b.label:SetJustifyH("CENTER");b.label:SetJustifyV("TOP");b.label:SetWordWrap(true)
- b:SetScript("OnClick",function(self)
-  if not ns.HandleItemChatClick(self.material and (self.material.itemLink or self.material.id))then R.ToggleMaterial(self.material)end
+ local button=CreateFrame("Button",nil,parent)
+ button.gfFarmRole="resource"
+ button.icon=button:CreateTexture(nil,"ARTWORK")
+ button.tick=button:CreateTexture(nil,"OVERLAY")
+ button.tick:SetPoint("BOTTOMRIGHT",button.icon,"BOTTOMRIGHT",4,-2);button.tick:SetSize(17,17)
+ button.tick:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+ button.wash=button:CreateTexture(nil,"BACKGROUND");button.wash:SetAllPoints();button.wash:SetColorTexture(.03,.43,.38,.20)
+ button.label=text(button,14);button.label:SetJustifyH("CENTER");button.label:SetJustifyV("TOP");button.label:SetWordWrap(true)
+ button:SetScript("OnClick",function(self)
+  if self.material and self.material.isFarmFamily then if self.openYields then self.openYields(self)end;return end
+  if not ns.HandleItemChatClick(self.material and(self.material.itemLink or self.material.id))then R.ToggleMaterial(self.material)end
  end)
- b:SetScript("OnEnter",function(self)
-  local anchor=self.openYields and self.openYields(self)
-  tooltip(self,self.material.name,self.note,self.material,anchor or nil)
+ button:SetScript("OnEnter",function(self)
+  if self.material then
+   local anchor=self.openYields and self.openYields(self)
+   tooltip(self,self.material.name,self.note,not self.material.isFarmFamily and self.material or nil,anchor or nil)
+  end
  end)
- b:SetScript("OnLeave",hideTip)
- return b
+ button:SetScript("OnLeave",hideTip)
+ return button
 end
 
-local function fillResource(tile,m,height,unit,selected,choices,compatible)
+local function fillResource(tile,m,height,unit,selected,choices,compatible,familyItems)
  tile.material=m
- local checked=K.selected[m.id]==true
- local faded=#selected>0 and #choices>0 and not checked and not compatible[m.id]
- tile.note=faded and "No catalogued overlap with this selection." or nil
- local entry=ns.ForeverCatalog and ns.ForeverCatalog.reagents and ns.ForeverCatalog.reagents[m.id]
- tile.icon:SetTexture(entry and entry.icon or icon(m.id))
- tile.icon:SetSize(36*unit,36*unit);tile.icon:ClearAllPoints();tile.icon:SetPoint("TOP",0,-4*unit)
- tile.labelSize=(tile.isByproduct or #m.name>=18) and 12 or 14
+ local checked=not m.isFarmFamily and K.selected[m.id]==true
+ local faded=not m.isFarmFamily and #selected>0 and #choices>0 and not checked and not compatible[m.id]
+ local levelNote=R.FarmLevelNote(m,familyItems)
+ tile.note=faded and "No catalogued overlap with this selection."or nil
+ if levelNote~=""then tile.note=tile.note and(tile.note.."\n"..levelNote)or levelNote end
+ local iconID=m.id
+ if m.isFarmFamily then
+  iconID=familyItems and familyItems[1]and familyItems[1].id or m.iconItemID
+  for _,child in ipairs(familyItems or{})do if child.id==m.iconItemID then iconID=child.id;break end end
+ end
+ local entry=ns.ForeverCatalog and ns.ForeverCatalog.reagents and ns.ForeverCatalog.reagents[iconID]
+ tile.icon:SetTexture(entry and entry.icon or icon(iconID));tile.icon:SetSize(36*unit,36*unit)
+ tile.icon:ClearAllPoints();tile.icon:SetPoint("TOP",0,-4*unit)
  local font,_,flags=tile.label:GetFont()
- tile.label:SetFont(font,tile.labelSize*unit,flags)
- tile.label:ClearAllPoints()
- tile.label:SetPoint("TOPLEFT",3*unit,-43*unit);tile.label:SetPoint("TOPRIGHT",-3*unit,-43*unit)
- tile.label:SetText(m.name);tile.label:SetHeight(height-47*unit)
+ tile.label:SetFont(font,((tile.isByproduct or #m.name>=18)and 12 or 14)*unit,flags)
+ tile.label:ClearAllPoints();tile.label:SetPoint("TOPLEFT",3*unit,-43*unit);tile.label:SetPoint("TOPRIGHT",-3*unit,-43*unit)
+ tile.label:SetText(m.name);tile.label:SetHeight(math.max(1,height-47*unit))
  tile.wash:SetShown(checked);tile.tick:SetShown(checked);tile:SetAlpha(faded and .44 or 1)
 end
 
 local function lineBetween(line,plot,a,b,w,h)
  local x,y=a[1]*w/100,-a[2]*h/100
  local u,v=b[1]*w/100,-b[2]*h/100
- if line.SetStartPoint then
-  line:SetStartPoint("TOPLEFT",plot,x,y);line:SetEndPoint("TOPLEFT",plot,u,v)
+ if line.SetStartPoint then line:SetStartPoint("TOPLEFT",plot,x,y);line:SetEndPoint("TOPLEFT",plot,u,v)
  else
-  line:ClearAllPoints()
-  line:SetPoint("CENTER",plot,"TOPLEFT",(x+u)/2,(y+v)/2)
-  line:SetSize(math.max(1,math.sqrt((u-x)^2+(v-y)^2)),2)
-  line:SetRotation(math.atan2(v-y,u-x))
+  line:ClearAllPoints();line:SetPoint("CENTER",plot,"TOPLEFT",(x+u)/2,(y+v)/2)
+  line:SetSize(math.max(1,math.sqrt((u-x)^2+(v-y)^2)),2);line:SetRotation(math.atan2(v-y,u-x))
  end
  line:Show()
 end
 
-local function buildRouteCard(parent,openRoute)
- local card=CreateFrame("Button",nil,parent)
- N.BronzeRectangle(card)
- local base=card:CreateTexture(nil,"BACKGROUND");base:SetAllPoints();base:SetColorTexture(.19,.108,.052,1)
- local over=card:CreateTexture(nil,"HIGHLIGHT");over:SetAllPoints();over:SetColorTexture(.99,.85,.53,.12)
+local function buildRouteDetail(parent,start)
+ local card=farmCream(parent,"routeDetail")
  card.plot=CreateFrame("Frame",nil,card);card.plot:EnableMouse(false)
  card.map=card.plot:CreateTexture(nil,"BACKGROUND");card.map:SetAllPoints()
- card.title=text(card,15);card.title:SetTextColor(1,.88,.60);card.title:SetWordWrap(false)
- card.subtitle=text(card,12);card.subtitle:SetTextColor(.99,.91,.73);card.subtitle:SetWordWrap(false)
- card.lines={}
- card.dot=card.plot:CreateTexture(nil,"OVERLAY");card.dot:SetSize(6,6);card.dot:SetColorTexture(.98,.72,.36,1)
- card:SetScript("OnEnter",function(self)
-  local choice=self.choice
-  local selected={}
-  for _,m in ipairs(choice.materials) do selected[#selected+1]=m.name end
-  tooltip(self,choice.reference.zone,table.concat(selected,", ").."\n"..(self.note or ""))
- end)
- card:SetScript("OnLeave",hideTip)
- card:SetScript("OnClick",function(self)
-  if self.choice.start then hideTip();openRoute(self.choice) end
- end)
+ card.lines={};card.dot=card.plot:CreateTexture(nil,"OVERLAY");card.dot:SetSize(6,6);card.dot:SetColorTexture(.98,.72,.36,1)
+ card.description=text(card,12);card.description:SetWordWrap(true);card.description:SetJustifyH("LEFT")
+ card.start=N.WoodButton(card,"Start Route",130,function()if card.choice then start(card.choice)end end)
+ card.start.gfFarmRole="startRoute"
  return card
 end
 
-local function fillRouteCard(card,choice,width)
- card.choice=choice
- local pad=N.PixelSize(card,8)
+local function routeNote(choice)
  local ref=choice.reference
- local art=ns.ForeverFacts.maps[ref.zone]
- local height=0
- if art then
-  local w=width-2*pad
-  height=w*683/1024
-  farmPlace(card.plot,card,pad,pad,w,height);card.plot:Show()
-  card.map:SetTexture(art.path);card.map:SetTexCoord(0,art.u,0,art.v)
-  for _,line in ipairs(card.lines) do line:Hide() end
-  card.dot:SetShown(#ref.points==1)
-  if #ref.points==1 then
-   card.dot:ClearAllPoints()
-   card.dot:SetPoint("CENTER",card.plot,"TOPLEFT",ref.points[1][1]*w/100,-ref.points[1][2]*height/100)
-  end
-  local count=ref.mode=="loop" and #ref.points or #ref.points-1
-  for i=1,count do
-   if not card.lines[i] then
-    local line=card.plot.CreateLine and card.plot:CreateLine(nil,"ARTWORK") or card.plot:CreateTexture(nil,"ARTWORK")
-    N.BronzeWire(line)
-    if line.SetThickness then line:SetThickness(2) end
-    card.lines[i]=line
-   end
-   lineBetween(card.lines[i],card.plot,ref.points[i],ref.points[i%#ref.points+1],w,height)
-  end
- else card.plot:Hide() end
- local caption=choice.recommendation or (choice.cost and string.format("%.1fk yd",choice.cost/1000)) or "Distance unavailable"
  local classic,measured=false,false
- for _,point in ipairs(ref.points) do
+ for _,point in ipairs(ref.points or{})do
   local source=point.source
-  if source then
-   classic=classic or source.classicFallback==true
-   measured=measured or point.measured
-  end
+  if source then classic=classic or source.classicFallback==true;measured=measured or point.measured end
  end
- local evidence=classic and "Includes Classic fallback" or measured and "Includes measured loot rates" or "Yield estimated from mapped sources"
- card.note=choice.start and evidence or "Known in this zone. The catalog has insufficient mapped stops for a route."
- card.title:ClearAllPoints();card.title:SetPoint("TOPLEFT",card,"TOPLEFT",pad,-height-pad*(art and 2 or 1))
- card.title:SetWidth(width-2*pad);card.title:SetText(ref.zone)
- card.subtitle:ClearAllPoints();card.subtitle:SetPoint("TOPLEFT",card.title,"BOTTOMLEFT",0,-2)
- card.subtitle:SetWidth(width-2*pad)
- card.subtitle:SetText(choice.start and (caption..(classic and " · Classic" or "")) or "No mapped route")
- local fullHeight=height+card.title:GetStringHeight()+card.subtitle:GetStringHeight()+pad*(art and 3 or 2)+2
- card:SetSize(width,fullHeight)
- return fullHeight
+ local evidence=classic and "Includes Classic fallback"or measured and "Includes measured loot rates"or "Yield estimated from mapped sources"
+ if not choice.start then return "Known in this zone. There are not enough mapped stops for a route."end
+ if ref.spine then
+  return "Approximate saved circuit; nearby stops use mapped sources."..(classic and " Includes Classic fallback."or "")
+ end
+ return evidence
 end
 
 function R.ToggleMaterial(m)
- if not m or not R.IsCraftingReagent(m.id) then return end
- if K.selected[m.id] then
-  K.selected[m.id]=nil
+ if not m or not R.IsFarmOffering(m)then return end
+ if K.selected[m.id]then K.selected[m.id]=nil
  else
-  local count=0
-  for _ in pairs(K.selected) do count=count+1 end
+  local count=0;for _ in pairs(K.selected)do count=count+1 end
   if count>=8 then ns.Print("Select up to eight resources.");return end
   K.selected[m.id]=true
  end
- K.confirmed=nil
- R.selectionChanged=true
- R.Fill()
+ K.confirmed=nil;R.selectionChanged=true;R.Fill()
 end
 
 function R.Open()
  if not N.root then return end
  if not K.gridMenu then
-  if K.resourceMenu then K.resourceMenu:Hide() end
-  local f=CreateFrame("Frame",nil,UIParent)
-  f:Hide()
-  K.gridMenu=f;K.resourceMenu=f;R.menu=f
-  f:SetSize(480,720);f:SetPoint("CENTER",UIParent,"CENTER");f:EnableMouse(true)
-  N.ApplyWindowLayer(f,"farming")
-  local mode,category,zoneID,resultsOnly="reagent",nil,nil,false
-  local index,choices,compatible,selected
-  local fontExpansion=1
-  local resources,reagents,syncResources=farmList(f)
-  local matches,results,syncMatches=farmList(f)
+  if K.resourceMenu then K.resourceMenu:Hide()end
+  local f=CreateFrame("Frame",nil,UIParent);f:Hide();f:SetSize(480,720);f:SetPoint("CENTER",UIParent,"CENTER")
+  f:EnableMouse(true);N.ApplyWindowLayer(f,"farming")
+  local popup=CreateFrame("Frame","GrindingForeverRouteOptions",UIParent);popup:Hide();popup:SetSize(480,720);popup:SetPoint("CENTER",UIParent,"CENTER")
+  popup:EnableMouse(true);N.ApplyWindowLayer(popup,"farming");popup:SetFrameLevel(f:GetFrameLevel()+20)
+  local B={frame=f,routePopup=popup,groupOpen={},models={},recommendations={},
+   selected={},choices={},compatible={},resourceEntries={},routeEntries={},resourceSpans={},
+   resourceHeaders={},resourceTiles={},resourceBodies={},zoneHeaders={},routeDetails={},tray={},
+   routeDescriptions={},counters={models=0,drawResources=0,drawRoutes=0,maps=0}}
+  ns.FarmingBrowser=B;R.UI=B;K.gridMenu=f;K.resourceMenu=f;R.menu=f
+  local resources,reagents,syncResources=farmList(f,function()if B.DrawResources then B.CloseYields();B.DrawResources()end end)
+  local matches,results,syncMatches=farmList(popup,function()if B.DrawRoutes then B.DrawRoutes()end end)
+  B.resources,B.resourceContent,B.matches,B.resultContent=resources,reagents,matches,results
+  local controls=farmCream(f,"browseControls")
+  local filterLabel=text(controls,12,"Category")
+  local resourceTitle=farmHeader(f,"Choose Reagents","resourceTitle");resourceTitle:EnableMouse(false);resourceTitle.arrow:Hide()
+  local selection=farmCream(f,"selectedCard")
+  local selectedHeader=farmHeader(f,"Selected Reagents · 0/8","selectedHeader");selectedHeader:EnableMouse(false);selectedHeader.arrow:Hide()
+  local selectionEmpty=text(selection,12,"Choose reagents from the catalogue.")
+  local active=farmCream(f,"activeRoute")
+  local activeHeader=farmHeader(f,"Active Route","activeRouteHeader");activeHeader:EnableMouse(false);activeHeader.arrow:Hide()
+  local activeText=text(active,12)
+  local message=text(f,13);message:SetJustifyH("LEFT");message:SetWordWrap(true)
+  local empty=text(results,13);empty:SetWordWrap(true)
+  B.controls,B.selectedCard,B.activeCard,B.selectedHeader,B.activeHeader=controls,selection,active,selectedHeader,activeHeader
+  B.resourceTitle,B.status=resourceTitle,message
+  B.routeSummary=text(popup,13);B.routeSummary:SetWordWrap(true);B.routeSummary:SetJustifyH("LEFT")
+  B.routeStatus=text(popup,13);B.routeStatus:SetWordWrap(true);B.routeStatus:SetJustifyH("LEFT")
   local menuHost=CreateFrame("Frame",nil,f);menuHost:SetFrameStrata("TOOLTIP");menuHost:Hide()
+  local menuDismiss=CreateFrame("Button",nil,f);menuDismiss:SetAllPoints(UIParent)
+  menuDismiss:SetFrameStrata("TOOLTIP");menuDismiss:SetFrameLevel(math.max(0,menuHost:GetFrameLevel()-1));menuDismiss:Hide()
+  menuDismiss:SetScript("OnClick",function()menuHost:Hide();hideTip()end)
+  menuHost:HookScript("OnShow",function()menuDismiss:Show()end)
+  menuHost:HookScript("OnHide",function()menuDismiss:Hide()end)
   local menu,options,syncMenu=farmList(menuHost);menu:SetAllPoints(menuHost)
-  local yieldPanel=CreateFrame("Frame",nil,f)
-  yieldPanel:SetFrameStrata("TOOLTIP");yieldPanel:EnableMouse(true);yieldPanel:SetClampedToScreen(true);yieldPanel:Hide()
-  local yieldBase=yieldPanel:CreateTexture(nil,"BACKGROUND");yieldBase:SetAllPoints();yieldBase:SetColorTexture(.20,.11,.051,1)
-  N.BronzeRectangle(yieldPanel)
+  local menuBase=menu:CreateTexture(nil,"BACKGROUND");menuBase:SetAllPoints();menuBase:SetColorTexture(.20,.11,.051,1);N.BronzeRectangle(menu)
+  local menuButtons={}
+  local yieldPanel=CreateFrame("Frame",nil,f);yieldPanel:SetFrameStrata("TOOLTIP");yieldPanel:EnableMouse(true);yieldPanel:SetClampedToScreen(true);yieldPanel:Hide()
+  local yieldBase=yieldPanel:CreateTexture(nil,"BACKGROUND");yieldBase:SetAllPoints();yieldBase:SetColorTexture(.20,.11,.051,1);N.BronzeRectangle(yieldPanel)
   local yieldTitle=text(yieldPanel,14);yieldTitle:SetTextColor(.98,.85,.62);yieldTitle:SetJustifyH("LEFT")
   local yieldTiles={}
-  local function closeYields()
-   yieldPanel.anchor=nil
-   yieldPanel:Hide()
+  function B.CloseYields()yieldPanel.anchor=nil;yieldPanel:Hide()end
+  local function context()
+   return tostring(B.category or "all")
+  end
+  local function model()
+   local key=context();local cached=B.models[key]
+   if cached then B.model=cached;return cached end
+   local zone
+   local category=B.category
+   cached={key=key,groups={},yields={},zone=zone,category=category}
+   local names={}
+   for _,m in ipairs(R.materials)do
+    if R.IsFarmOffering(m)and not R.IsFarmChild(m)then
+     local include
+     if not category then include=true
+     else
+      include=m.categories[category]
+      if not include then
+       local values=R.Byproducts(m,nil,category);cached.yields[m.id]=values;include=#values>0
+      end
+     end
+     if include then names[#names+1]=m end
+    end
+   end
+   for _,key in ipairs(R.FarmFamilyOrder)do
+    local family=R.FarmFamilies[key]
+    local familyItems=R.FarmFamilyItems(family,zone,category)
+    if #familyItems>0 then
+     names[#names+1]=family;cached.yields[family.familyKey]=familyItems
+    end
+   end
+   table.sort(names,R.CompareMaterials)
+   local group
+   for _,m in ipairs(names)do
+    local name=R.MaterialGroup(m)
+    if not group or group.name~=name then group={name=name,materials={}};cached.groups[#cached.groups+1]=group end
+    group.materials[#group.materials+1]=m
+   end
+   B.models[key]=cached;B.model=cached;B.counters.models=B.counters.models+1
+   return cached
+  end
+  local function yieldsFor(m)
+   local current=B.model or model()
+   local key=m.familyKey or m.id
+   local values=current.yields[key]
+   if not values then values=R.Byproducts(m,current.zone,current.category);current.yields[key]=values end
+   return values
   end
   local function drawYields(anchor)
-   local list=anchor.byproducts
-   if not list or #list==0 then closeYields();return false end
+   local list=yieldsFor(anchor.material)
+   if #list==0 then B.CloseYields();return false end
    menuHost:Hide()
-   local unit=N.PixelSize(f,1)
-   local cols=math.min(3,#list)
+   local unit=N.PixelSize(f,1);local cols=math.min(3,#list)
    local tileWidth,tileHeight=90*unit,74*unit
    local width=math.max(172*unit,tileWidth*cols+12*unit)
    local gutter=(width-cols*tileWidth)/2
    local rootScale=f:GetEffectiveScale()/UIParent:GetEffectiveScale()
-   local right=(anchor:GetRight() or 0)*rootScale
-   yieldPanel.anchor=anchor
-   yieldPanel.scroll=resources:GetVerticalScroll()
-   yieldPanel.grace=.14
-   yieldPanel:ClearAllPoints()
+   local right=(anchor:GetRight()or 0)*rootScale
+   yieldPanel.anchor=anchor;yieldPanel.scroll=resources:GetVerticalScroll();yieldPanel.grace=.14;yieldPanel:ClearAllPoints()
    local opensLeft=right+width*rootScale>UIParent:GetWidth()
-   if opensLeft then
-    yieldPanel:SetPoint("TOPRIGHT",anchor,"TOPLEFT",0,0)
-   else
-    yieldPanel:SetPoint("TOPLEFT",anchor,"TOPRIGHT",0,0)
-   end
+   yieldPanel:SetPoint(opensLeft and "TOPRIGHT"or "TOPLEFT",anchor,opensLeft and "TOPLEFT"or "TOPRIGHT",0,0)
    yieldPanel:SetSize(width,(32+math.ceil(#list/cols)*74)*unit)
-   farmPlace(yieldTitle,yieldPanel,10*unit,8*unit,width-20*unit,20*unit)
-   setFarmFont(yieldTitle,14,14,unit,fontExpansion)
-   yieldTitle:SetText(R.ByproductTitle(anchor.material))
-   for i,m in ipairs(list) do
+   farmPlace(yieldTitle,yieldPanel,10*unit,8*unit,width-20*unit,20*unit);yieldTitle:SetText(R.ByproductTitle(anchor.material))
+   for i,m in ipairs(list)do
     local tile=yieldTiles[i]
-    if not tile then
-     tile=buildResource(yieldPanel)
-     tile.isByproduct=true
-     tile.label:SetTextColor(.98,.90,.73)
-     yieldTiles[i]=tile
-    end
-    fillResource(tile,m,tileHeight,unit,selected,choices,compatible)
-    farmPlace(tile,yieldPanel,gutter+((i-1)%cols)*tileWidth,28*unit+math.floor((i-1)/cols)*tileHeight,tileWidth,tileHeight)
-    tile:Show()
+    if not tile then tile=buildResource(yieldPanel);tile.isByproduct=true;tile.label:SetTextColor(.98,.90,.73);yieldTiles[i]=tile end
+    fillResource(tile,m,tileHeight,unit,B.selected,B.choices,B.compatible)
+    farmPlace(tile,yieldPanel,gutter+((i-1)%cols)*tileWidth,28*unit+math.floor((i-1)/cols)*tileHeight,tileWidth,tileHeight);tile:Show()
    end
-   for i=#list+1,#yieldTiles do yieldTiles[i]:Hide() end
-   yieldPanel:Show()
-   return opensLeft and "ANCHOR_RIGHT" or "ANCHOR_LEFT"
+   for i=#list+1,#yieldTiles do yieldTiles[i]:Hide()end
+   yieldPanel:Show();return opensLeft and "ANCHOR_RIGHT"or "ANCHOR_LEFT"
   end
   yieldPanel:SetScript("OnUpdate",function(self,elapsed)
    local anchor=self.anchor
-   if not anchor or not anchor:IsVisible() or self.scroll~=resources:GetVerticalScroll() then closeYields();return end
-   if anchor:IsMouseOver() or self:IsMouseOver() then
-    self.grace=.14
-   else
-    self.grace=self.grace-elapsed
-    if self.grace<=0 then closeYields() end
-   end
+   if not anchor or not anchor:IsVisible()or self.scroll~=resources:GetVerticalScroll()then B.CloseYields();return end
+   if anchor:IsMouseOver()or self:IsMouseOver()then self.grace=.14
+   else self.grace=self.grace-elapsed;if self.grace<=0 then B.CloseYields()end end
   end)
-
-  menu:EnableMouse(true)
-  local menuBase=menu:CreateTexture(nil,"BACKGROUND");menuBase:SetAllPoints();menuBase:SetColorTexture(.20,.11,.051,1)
-  N.BronzeRectangle(menu)
-  local modeButton,zoneButton,filterButton,action,stop
-  local tiles,zoneCards,menuButtons,tray,groupLabels={},{},{},{},{}
-  local heading=text(f,16)
-  local message=text(f,14);message:SetJustifyH("LEFT");message:SetWordWrap(true)
-  local resultsHeading=text(f,15)
-  local status
-  local function selectFrom(anchor,entries,current,selectValue)
-   closeYields()
-   if menuHost:IsShown() and menu.anchor==anchor then menuHost:Hide();return end
-   menu.anchor=anchor
-   menuHost:ClearAllPoints();menuHost:SetPoint("TOPLEFT",anchor,"BOTTOMLEFT",0,-4)
-   local width=math.max(N.PixelSize(f,234),anchor:GetWidth())
-   menuHost:SetSize(width,math.min(#entries,8)*32+8)
-   options:SetSize(width,math.max(1,#entries*32+8))
-   for i,entry in ipairs(entries) do
-    local b=menuButtons[i]
-    if not b then
-     b=N.PlainButton(options,"",width,nil,true)
-     b.label:SetTextColor(.98,.85,.62)
-     b:SetScript("OnEnter",function(self)tooltip(self,self.label:GetText())end)
-     b:SetScript("OnLeave",hideTip)
-     menuButtons[i]=b
+  B.yieldPanel=yieldPanel
+  local function hidePools(pool)for _,widget in ipairs(pool)do widget:Hide()end end
+  local function inView(entry,top,bottom)return entry.y+entry.height>=top and entry.y<=bottom end
+  function B.DrawResources()
+   B.counters.drawResources=B.counters.drawResources+1
+   hidePools(B.resourceHeaders);hidePools(B.resourceTiles);hidePools(B.resourceBodies)
+   if not resources:IsShown()then return end
+   local top=resources:GetVerticalScroll()or 0;local bottom=top+resources:GetHeight()
+   local headerCount,tileCount,bodyCount=0,0,0
+   for _,span in ipairs(B.resourceSpans)do
+    local a,b=math.max(span.y,top),math.min(span.y+span.height,bottom)
+    if b>a then
+     bodyCount=bodyCount+1;local body=B.resourceBodies[bodyCount]
+     if not body then body=farmCream(resources,"resourceBody");body:SetFrameLevel(resources:GetFrameLevel());B.resourceBodies[bodyCount]=body end
+     farmPlace(body,resources,span.x,a-top,span.width,b-a);body:Show()
     end
-    b.label:SetText((entry.value==current and "✓ " or "")..entry.label)
-    local unit=N.PixelSize(f,1)
-    setFarmFont(b.label,14*unit,13,unit,fontExpansion)
-    b.label:SetJustifyH("LEFT");b.label:SetWordWrap(false)
-    b.label:ClearAllPoints();b.label:SetPoint("LEFT",b,"LEFT",8,0);b.label:SetPoint("RIGHT",b,"RIGHT",-8,0)
-    b:SetScript("OnClick",function()hideTip();menuHost:Hide();selectValue(entry.value);R.Fill(true)end)
-    farmPlace(b,options,4,4+(i-1)*32,width-24,30);b:Show()
    end
-   for i=#entries+1,#menuButtons do menuButtons[i]:Hide() end
-   menuHost:Show();syncMenu(true)
+   for _,entry in ipairs(B.resourceEntries)do if inView(entry,top,bottom)then
+    if entry.kind=="group"then
+     headerCount=headerCount+1;local header=B.resourceHeaders[headerCount]
+     if not header then
+      header=farmHeader(reagents,"","resourceGroup",function(self)
+       B.CloseYields();local states=B.groupOpen[context()]or{};B.groupOpen[context()]=states
+       states[self.group.name]=not self.group.open;R.Fill()
+      end);B.resourceHeaders[headerCount]=header
+     end
+     header.group=entry.group;header.record=entry.group
+      local selectedCount=0
+      for _,m in ipairs(entry.group.materials)do
+       if m.isFarmFamily then
+        for _,child in ipairs(yieldsFor(m))do if K.selected[child.id]then selectedCount=selectedCount+1;break end end
+       elseif K.selected[m.id]then selectedCount=selectedCount+1 end
+      end
+     header.label:SetText(entry.group.name.." · "..(selectedCount>0 and(selectedCount.."/")or "")..#entry.group.materials)
+     setFarmFont(header.label,14,13,B.unit,B.fontExpansion)
+     header.arrow:SetRotation(entry.group.open and -math.pi/2 or 0)
+     farmPlace(header,reagents,entry.x,entry.y,entry.width,entry.height-B.unit*4);header:Show()
+    else
+     tileCount=tileCount+1;local tile=B.resourceTiles[tileCount]
+     if not tile then
+      tile=buildResource(reagents);tile.openYields=drawYields
+      tile.yieldArrow=text(tile,16,"›");tile.yieldArrow:SetPoint("TOPRIGHT",tile,"TOPRIGHT",-3,-8);B.resourceTiles[tileCount]=tile
+     end
+      tile.byproducts=yieldsFor(entry.material)
+      fillResource(tile,entry.material,entry.height,B.unit,B.selected,B.choices,B.compatible,tile.byproducts)
+      tile.yieldArrow:SetShown(#tile.byproducts>0)
+     farmPlace(tile,reagents,entry.x,entry.y,entry.width,entry.height);tile:Show()
+    end
+   end end
   end
-  modeButton=N.WoodButton(f,"Farm by Reagent",120,function()
-   mode="reagent";resultsOnly=false;menuHost:Hide();R.Fill(true)
-  end)
-  zoneButton=N.WoodButton(f,"Farm by Zone",125,function()
-   mode="zone";resultsOnly=false;menuHost:Hide()
-   if not zoneID then
-    local p=ns.Retail.Client.PlayerPosition()
-    if p and p.status=="available" and index[p.mapID]then zoneID=p.mapID end
-   end
-   R.Fill(true)
-  end)
-  filterButton=N.WoodButton(f,"All Reagents",140,function()
-   local list={}
-   if mode=="zone" then
-    for map,zone in pairs(index) do list[#list+1]={label=zone.name,value=map} end
-    table.sort(list,function(a,b)return a.label<b.label end)
-    selectFrom(filterButton,list,zoneID,function(id)zoneID=id end)
-   else
-    list[1]={label="All Reagents",value=false}
-    for _,name in ipairs(R.categories) do list[#list+1]={label=name,value=name} end
-    selectFrom(filterButton,list,category,function(name)category=name or nil end)
-   end
-  end)
-  N.UnderlineControl(modeButton,true);N.UnderlineControl(zoneButton,true)
-  filterButton.label:SetJustifyH("LEFT")
-  N.ButtonArrow(filterButton,"down")
-  action=N.WoodButton(f,"Show Matching Zones",180,function()
-   if #selected==0 then return end
-   resultsOnly=not resultsOnly;menuHost:Hide();R.Fill(true)
-  end)
-  stop=N.WoodButton(f,"Stop Route",112,function()
-   if F.route then F.Stop("Farming route stopped.") end
-   K.SyncFooter();R.Fill()
-  end)
-  local function openRoute(choice)
-   K.confirmed=choice
-   local ok,why=R.StartSelection()
-   K.confirmed=nil
-   if not ok then status=why or "Route unavailable.";R.Fill();return end
+  local function startChoice(choice)
+   B.CloseYields();menuHost:Hide();K.confirmed=choice
+   local ok,why=R.StartSelection();K.confirmed=nil
+   if not ok then B.routeError=why or "Route unavailable.";B.LayoutRoutes();return end
+   B.suppressRouteReturn=true;popup:Hide();B.suppressRouteReturn=nil
    K.ShowRouteMap()
   end
-  local function refreshSelection()
-   selected={}
-   for id in pairs(K.selected) do
-    local m=R.byID[id]
-    if m and R.IsCraftingReagent(id) then selected[#selected+1]=m else K.selected[id]=nil end
-   end
-   table.sort(selected,function(a,b)return a.name<b.name end)
-   choices,compatible=R.MatchZones(index,selected)
-   status=nil
+  local function routeLayout(recommendation,width,mapCap,sideBySide)
+   local unit=B.routeUnit;local pad=8*unit
+   local art=ns.ForeverFacts.maps[recommendation.choice.reference.zone]
+   local mapHeight=art and math.min(mapCap,(width-2*pad)*683/1024)or 0
+   local mapWidth=mapHeight*1024/683
+   local label=recommendation.reason
+   if not art then label=label.." Map preview unavailable." end
+   local textWidth=width-2*pad-(sideBySide and mapHeight>0 and(mapWidth+pad)or 0)
+   B.measure:SetFont(AS.."Naowh.ttf",12*unit,"");B.measure:SetWidth(textWidth);B.measure:SetText(label)
+   local textHeight=math.max(16*unit,B.measure:GetStringHeight())
+   local bodyHeight=sideBySide and math.max(mapHeight,textHeight+8*unit+29*unit)
+    or mapHeight+(mapHeight>0 and pad or 0)+textHeight+8*unit+29*unit
+   return {height=29*unit+pad+bodyHeight+pad,sideBySide=sideBySide,textWidth=textWidth,
+    mapHeight=mapHeight,mapWidth=mapWidth,text=label,textHeight=textHeight,pad=pad}
   end
-  function R.Fill(reset)
-   if not index then return end
-   if reset then closeYields() end
-   local changed=R.selectionChanged
-   if changed then R.selectionChanged=false;refreshSelection() end
-   local unit=N.PixelSize(f,1)
-   -- Match compact Steps at the 400px minimum and restore the regular type by the 480px default.
-   fontExpansion=math.max(0,math.min(1,(f:GetWidth()/unit-400)/80))
-   for _,button in ipairs({modeButton,zoneButton,filterButton,action,stop}) do
-    setFarmFont(button.label,15,13,unit,fontExpansion)
+  local function drawRouteDetail(card,entry)
+   local choice,layout=entry.choice,entry.layout;local ref=choice.reference;local unit=B.routeUnit;local pad=layout.pad
+   card.choice=choice;card.start.choice=choice;card.recommendation=entry.recommendation
+   farmPlace(card,results,entry.x,entry.y,entry.width,entry.height)
+   if not card.header then
+    card.header=farmHeader(card,"","routeRecommendationHeader",function(self)B.FocusRoute(self.recommendation)end)
+    card.plot:EnableMouse(true);card.plot:SetScript("OnMouseDown",function(_,button)if button=="LeftButton"then B.FocusRoute(card.recommendation)end end)
    end
-   if menuHost:IsShown() then
-    for _,button in ipairs(menuButtons) do setFarmFont(button.label,14*unit,13,unit,fontExpansion) end
-   end
-   setFarmFont(heading,16,15,unit,fontExpansion)
-   setFarmFont(resultsHeading,15,15,unit,fontExpansion)
-   setFarmFont(message,14,14,unit,fontExpansion)
-   local inset,gap=14*unit,8*unit
-   local width=f:GetWidth()-2*inset
-   local header=(N.HeaderSize and N.HeaderSize(f) or 40*unit)+10*unit
-   local usable=width-24*unit
-   local buttonHeight=29*unit
+   card.header.recommendation=entry.recommendation
+   card.header.arrow:SetRotation(B.focusedRoute==entry.recommendation and -math.pi/2 or 0)
+   card.header.label:SetText(entry.recommendation.rank..". "..ref.zone..(entry.recommendation.rank==1 and " - Recommended"or ""))
+   setFarmFont(card.header.label,14,12,unit,B.routeFontExpansion)
+   farmPlace(card.header,card,0,0,entry.width,29*unit)
+   if layout.mapHeight>0 then
+    local art=ns.ForeverFacts.maps[ref.zone];local w=layout.mapWidth
+     farmPlace(card.plot,card,layout.sideBySide and pad or(entry.width-w)/2,29*unit+pad,w,layout.mapHeight);card.plot:Show()
+    card.map:SetTexture(art.path);card.map:SetTexCoord(0,art.u,0,art.v)
+    for _,line in ipairs(card.lines)do line:Hide()end
+    card.dot:SetShown(#ref.points==1)
+    if #ref.points==1 then card.dot:ClearAllPoints();card.dot:SetPoint("CENTER",card.plot,"TOPLEFT",ref.points[1][1]*w/100,-ref.points[1][2]*layout.mapHeight/100)end
+    local count=ref.mode=="loop"and #ref.points or #ref.points-1
+    for i=1,math.max(0,count)do
+     if not card.lines[i]then
+      local line=card.plot.CreateLine and card.plot:CreateLine(nil,"ARTWORK")or card.plot:CreateTexture(nil,"ARTWORK")
+      N.BronzeWire(line);if line.SetThickness then line:SetThickness(2)end;card.lines[i]=line
+     end
+     lineBetween(card.lines[i],card.plot,ref.points[i],ref.points[i%#ref.points+1],w,layout.mapHeight)
+    end
+    B.counters.maps=B.counters.maps+1
+   else card.plot:Hide()end
+   local y=29*unit+pad+(not layout.sideBySide and(layout.mapHeight+(layout.mapHeight>0 and pad or 0))or 0)
+   local x=pad+(layout.sideBySide and layout.mapHeight>0 and(layout.mapWidth+pad)or 0)
+   card.description:SetFont(AS.."Naowh.ttf",12*unit,"");card.description:SetText(layout.text)
+   farmPlace(card.description,card,x,y,layout.textWidth,layout.textHeight)
+   farmPlace(card.start,card,x,y+layout.textHeight+8*unit,math.min(layout.textWidth,140*unit),29*unit)
+   card.start.label:SetText("Start Route");card.start:Show();card:Show()
+  end
+  function B.DrawRoutes()
+   B.counters.drawRoutes=B.counters.drawRoutes+1
+   hidePools(B.routeDetails)
+   if not popup:IsShown()then empty:Hide();return end
+   local top=matches:GetVerticalScroll()or 0;local bottom=top+matches:GetHeight()
+   for i,entry in ipairs(B.routeEntries)do if inView(entry,top,bottom)then
+    local card=B.routeDetails[i]
+    if not card then card=buildRouteDetail(results,startChoice);B.routeDetails[i]=card end
+    drawRouteDetail(card,entry)
+   end end
+   empty:SetShown(#B.recommendations==0)
+  end
+  B.measure=text(results,12);B.measure:Hide()
+  function B.LayoutRoutes()
+   if not popup:IsShown()or B.layingOutRoutes then return end
+   B.layingOutRoutes=true
+   local unit=N.PixelSize(popup,1);B.routeUnit=unit
+   local designWidth=popup:GetWidth()/unit
+   B.routeFontExpansion=math.max(0,math.min(1,(designWidth-400)/80))
+   local inset,gap=14*unit,10*unit;local width=popup:GetWidth()-2*inset-12*unit
+   local header=(N.HeaderSize and N.HeaderSize(popup)or 40*unit)+10*unit
+   B.routeSummary:SetFont(AS.."Naowh.ttf",13*unit,"");B.routeSummary:SetWidth(width)
+   B.routeSummary:SetText("Routes for "..table.concat(B.routeSelectionNames or{},", "))
+   local summaryHeight=math.max(22*unit,B.routeSummary:GetStringHeight()+3*unit)
+   farmPlace(B.routeSummary,popup,inset,header,width,summaryHeight)
+   B.routeStatus:SetFont(AS.."Naowh.ttf",13*unit,"");B.routeStatus:SetWidth(width)
+   B.routeStatus:SetText(B.routeError or(#B.recommendations==0 and "Edit your selection to compare other materials."or "Choose a route, or edit your selection."))
+   local statusHeight=math.max(22*unit,B.routeStatus:GetStringHeight()+3*unit)
+   local footerTop=popup:GetHeight()-14*unit-29*unit-statusHeight-7*unit
+   farmPlace(B.routeStatus,popup,inset,footerTop,width,statusHeight)
    local half=(width-gap)/2
-   farmPlace(modeButton,f,inset,header,half,buttonHeight)
-   farmPlace(zoneButton,f,inset+half+gap,header,half,buttonHeight)
-   modeButton:SetSelected(mode=="reagent")
-   zoneButton:SetSelected(mode=="zone")
-   local control=header+buttonHeight+gap
-   farmPlace(filterButton,f,inset,control,half,buttonHeight)
-   local activeZone=zoneID and index[zoneID]
-   local activeCategory=mode=="reagent" and category or nil
-   filterButton.label:SetText(mode=="zone" and (activeZone and activeZone.name or "Select a Zone") or (category or "All Reagents"))
-   filterButton:SetShown(not resultsOnly)
-   local contentTop=control+buttonHeight+gap*2
-   local footer=96*unit
-   local height=math.max(1,f:GetHeight()-contentTop-footer)
-   local resourceWidth=math.floor((usable-gap)*.54/unit)*unit
-   local matchX=inset+resourceWidth+gap+12*unit
-   local matchWidth=width-resourceWidth-gap-24*unit
-   if resultsOnly then matchX=inset;matchWidth=width-14*unit end
-   farmPlace(heading,f,inset,contentTop,resourceWidth,20*unit)
-   heading:SetText(mode=="zone" and "Zone Reagents" or "Resources")
-   heading:SetShown(not resultsOnly)
-   farmPlace(resultsHeading,f,matchX,contentTop,matchWidth,20*unit)
-   resultsHeading:SetText("Matching Zones"..(#selected>0 and " ("..#choices..")" or ""))
-   farmPlace(resources,f,inset,contentTop+23*unit,resourceWidth,height-23*unit)
-   farmPlace(matches,f,matchX,contentTop+23*unit,matchWidth,height-23*unit)
-   resources:SetShown(not resultsOnly)
-   reagents:SetWidth(resourceWidth);results:SetWidth(matchWidth)
-   local names={}
-   local tileYields={}
-   if not resultsOnly then
-    for _,m in ipairs(R.materials) do
-     if R.IsCraftingReagent(m.id) and not R.IsByproduct(m) then
-      local yields=R.Byproducts(m,mode=="zone" and activeZone or nil,activeCategory)
-      if (mode=="zone" and activeZone and activeZone.items[m.id])
-        or (mode=="reagent" and (activeCategory and (m.categories[activeCategory] or #yields>0)
-          or not activeCategory and R.MaterialGroup(m)~="Specialty")) then
-       names[#names+1]=m
-       tileYields[m.id]=yields
-      end
+   farmPlace(B.routeEdit,popup,inset,footerTop+statusHeight+7*unit,half,29*unit)
+   farmPlace(B.routeClose,popup,inset+half+gap,footerTop+statusHeight+7*unit,half,29*unit)
+   for _,button in ipairs({B.routeEdit,B.routeClose})do setFarmFont(button.label,15,13,unit,B.routeFontExpansion)end
+   local top=header+summaryHeight+8*unit
+   B.routeBack:SetShown(B.focusedRoute~=nil)
+   if B.focusedRoute then farmPlace(B.routeBack,popup,inset,top,width,29*unit);top=top+36*unit end
+   farmPlace(matches,popup,inset,top,width,math.max(80*unit,footerTop-top-8*unit));matches:Show()
+   results:SetWidth(width)
+   local columns=not B.focusedRoute and designWidth>=620 and 2 or 1
+   local cardWidth=(width-(columns-1)*gap)/columns
+   local shortlist=B.focusedRoute and{B.focusedRoute}or B.recommendations
+   local sideBySide=not B.focusedRoute and columns==1
+   local mapCap
+   if B.focusedRoute then mapCap=math.max(72*unit,math.min(360*unit,matches:GetHeight()-118*unit))
+   elseif columns==2 then mapCap=math.max(72*unit,math.min(160*unit,(matches:GetHeight()-gap)/2-118*unit))
+   else mapCap=math.max(36*unit,math.min(72*unit,(matches:GetHeight()-math.max(0,#shortlist-1)*gap)/math.max(1,#shortlist)-45*unit))end
+   local entries,y={},0
+   for first=1,#shortlist,columns do
+    local rowHeight=0
+    for column=1,columns do
+     local recommendation=shortlist[first+column-1]
+     if recommendation then
+      local layout=routeLayout(recommendation,cardWidth,mapCap,sideBySide)
+      entries[#entries+1]={choice=recommendation.choice,recommendation=recommendation,x=(column-1)*(cardWidth+gap),y=y,width=cardWidth,height=layout.height,layout=layout}
+      rowHeight=math.max(rowHeight,layout.height)
      end
     end
-    table.sort(names,R.CompareMaterials)
+    y=y+rowHeight+gap
    end
-   local columns=math.max(2,math.floor(resourceWidth/(72*unit)))
-   local tileWidth=(resourceWidth-(columns-1)*5*unit)/columns
-   local tileHeight=80*unit
-   local group,y,column,groupCount=nil,0,0,0
-   for i,m in ipairs(names) do
-    local nextGroup=R.MaterialGroup(m)
-    if group~=nextGroup then
-     if column>0 then y=y+tileHeight end
-     if group then y=y+6*unit end
-     column=0;group=nextGroup;groupCount=groupCount+1
-     local label=groupLabels[groupCount]
-     if not label then label=text(reagents,14);label:SetJustifyH("LEFT");groupLabels[groupCount]=label end
-     setFarmFont(label,14,14,unit,fontExpansion)
-     label:SetText(group);farmPlace(label,reagents,0,y,resourceWidth,22*unit);label:Show()
-     y=y+24*unit
-    end
-    local tile=tiles[i]
-    if not tile then
-     tile=buildResource(reagents)
-     tile.openYields=drawYields
-     tile.yieldArrow=text(tile,16,"›");tile.yieldArrow:SetPoint("TOPRIGHT",tile,"TOPRIGHT",-3,-8)
-     tiles[i]=tile
-    end
-    fillResource(tile,m,tileHeight,unit,selected,choices,compatible)
-    tile.byproducts=tileYields[m.id]
-    tile.yieldArrow:SetShown(#tile.byproducts>0)
-    farmPlace(tile,reagents,column*(tileWidth+5*unit),y,tileWidth,tileHeight)
-    column=column+1
-    if column==columns then column=0;y=y+tileHeight end
-    tile:Show()
-   end
-   for i=#names+1,#tiles do tiles[i]:Hide() end
-   for i=groupCount+1,#groupLabels do groupLabels[i]:Hide() end
-   reagents:SetHeight(math.max(1,y+(column>0 and tileHeight or 0)))
-   local y=0
-   for i,choice in ipairs(choices) do
-    local card=zoneCards[i]
-    if not card then card=buildRouteCard(results,openRoute);zoneCards[i]=card end
-    setFarmFont(card.title,15,15,unit,fontExpansion)
-   setFarmFont(card.subtitle,12,12,unit,fontExpansion)
-   card:ClearAllPoints();card:SetPoint("TOPLEFT",results,"TOPLEFT",0,-y)
-    y=y+fillRouteCard(card,choice,matchWidth)+gap
-    card:Show()
-   end
-   for i=#choices+1,#zoneCards do zoneCards[i]:Hide() end
-   results:SetHeight(math.max(1,y))
-   syncResources(reset);syncMatches(reset or changed)
-   if yieldPanel:IsShown() and yieldPanel.anchor then
-    local anchor=yieldPanel.anchor
-    if anchor:IsShown() and yieldPanel.scroll==resources:GetVerticalScroll() then drawYields(anchor) else closeYields() end
-   end
-   local trayTop=f:GetHeight()-footer+2*unit
-   for i,m in ipairs(selected) do
-    local b=tray[i]
-    if not b then
-     b=CreateFrame("Button",nil,f)
-     b.icon=b:CreateTexture(nil,"ARTWORK");b.icon:SetAllPoints()
-     N.BronzeRectangle(b)
-     b:SetScript("OnClick",function(self)
-      if ns.HandleItemChatClick(self.material and (self.material.itemLink or self.material.id))then return end
-      hideTip();R.ToggleMaterial(self.material)
-     end)
-     b:SetScript("OnEnter",function(self)tooltip(self,self.material.name,"Click to remove",self.material)end)
-     b:SetScript("OnLeave",hideTip)
-     tray[i]=b
-    end
-    b.material=m;b.icon:SetTexture(icon(m.id))
-    farmPlace(b,f,inset+(i-1)*29*unit,trayTop,25*unit,25*unit);b:Show()
-   end
-   for i=#selected+1,#tray do tray[i]:Hide() end
-   farmPlace(message,f,inset,trayTop+30*unit,width,25*unit)
-   message:SetText(status or (#selected==0 and "Choose reagents to see matching zones.")
-    or (#choices==0 and "No catalogued zone covers the whole selection.")
-    or (mode=="zone" and #names==0 and not resultsOnly and "Choose a zone to browse its reagents.")
-    or "Choose a zone card to start its route.")
-   farmPlace(action,f,inset,trayTop+56*unit,half+15*unit,buttonHeight)
-   action.label:SetText(resultsOnly and "Back to Reagents" or "Show Matching Zones")
-   action:SetShown(#selected>0)
-   farmPlace(stop,f,inset+half+gap+15*unit,trayTop+56*unit,half-15*unit,buttonHeight)
-   stop:SetShown(F.route~=nil)
+   B.routeEntries=entries;results:SetHeight(math.max(1,y-gap))
+   empty:SetText("No mapped outdoor route is available for the complete selection.")
+   farmPlace(empty,results,8*unit,8*unit,width-16*unit,80*unit)
+   syncMatches();B.DrawRoutes();B.layingOutRoutes=nil
   end
-  R.body=reagents;K.resourceScroll=resources;K.recommendButton=action;K.count=message
-  f:HookScript("OnHide",function()closeYields();menuHost:Hide();syncMenu();hideTip();K.confirmed=nil end)
-  N.PanelChrome(f,{"Farming","Routes"},490,460,R.Fill)
-  N.LiveLayout(f,R.Fill)
+  local function refreshSelection()
+   B.routeDescriptions={}
+   B.selected={}
+   local removed=false
+   for id in pairs(K.selected)do
+    local m=R.byID[id]
+    if m and R.IsFarmOffering(m)then B.selected[#B.selected+1]=m else K.selected[id]=nil;removed=true end
+   end
+   if removed then K.confirmed=nil end
+   table.sort(B.selected,function(a,b)return a.name<b.name end)
+   B.choices,B.compatible=R.MatchZones(B.index,B.selected)
+   B.error=nil
+  end
+  local function changeContext()
+   B.CloseYields();menuHost:Hide();B.error=nil
+   resources:SetVerticalScroll(0);R.Fill()
+  end
+  local function selectFrom(anchor,entries,selectValue)
+   B.CloseYields()
+   if menuHost:IsShown()and menu.anchor==anchor then menuHost:Hide();return end
+   menu.anchor=anchor
+   local unit=N.PixelSize(f,1);local width=math.max(234*unit,anchor:GetWidth())
+   menuHost:ClearAllPoints();menuHost:SetPoint("TOPLEFT",anchor,"BOTTOMLEFT",0,-4*unit);menuHost:SetSize(width,math.min(#entries,8)*32*unit+8*unit)
+   options:SetSize(width,math.max(1,#entries*32*unit+8*unit))
+   for i,entry in ipairs(entries)do
+    local button=menuButtons[i]
+    if not button then button=N.PlainButton(options,"",width,nil,true);button.label:SetTextColor(.98,.85,.62);menuButtons[i]=button end
+    button.label:SetText(entry.label);button.label:SetFont(AS.."Naowh.ttf",14*unit,"");button.label:SetJustifyH("LEFT");button.label:SetWordWrap(false)
+    button.label:ClearAllPoints();button.label:SetPoint("LEFT",button,"LEFT",8*unit,0);button.label:SetPoint("RIGHT",button,"RIGHT",-8*unit,0)
+    button:SetScript("OnClick",function()hideTip();menuHost:Hide();selectValue(entry.value);changeContext()end)
+    farmPlace(button,options,4*unit,(4+(i-1)*32)*unit,width-24*unit,30*unit);button:Show()
+   end
+   for i=#entries+1,#menuButtons do menuButtons[i]:Hide()end
+   menuHost:Show();syncMenu(true)
+  end
+  B.menu,B.menuHost,B.menuButtons,B.menuDismiss=menu,menuHost,menuButtons,menuDismiss
+  B.filterButton=N.WoodButton(controls,"All Reagents",140,function()
+   local entries={{label="All Reagents",value=false}}
+   for _,name in ipairs(R.categories)do entries[#entries+1]={label=name,value=name}end
+   selectFrom(B.filterButton,entries,function(name)B.category=name or nil end)
+  end)
+  N.ButtonArrow(B.filterButton,"down");B.filterButton.label:SetJustifyH("LEFT")
+  function B.CloseRoutes()B.focusedRoute=nil;popup:Hide()end
+  function B.FocusRoute(recommendation)
+   local valid=false;for _,row in ipairs(B.recommendations)do if row==recommendation then valid=true;break end end
+   if not valid then return false end
+   if B.focusedRoute==recommendation then B.focusedRoute=nil else B.focusedRoute=recommendation end
+   matches:SetVerticalScroll(0);B.LayoutRoutes();return true
+  end
+  B.routeBack=N.WoodButton(popup,"Back to recommendations",240,function()B.focusedRoute=nil;matches:SetVerticalScroll(0);B.LayoutRoutes()end)
+  B.routeBack.gfFarmRole="backToRouteOptions";B.routeBack:Hide()
+  B.routeEdit=N.WoodButton(popup,"Edit selection",150,B.CloseRoutes)
+  B.routeClose=N.WoodButton(popup,"Close",100,B.CloseRoutes)
+  B.routeEdit.gfFarmRole="editRouteSelection";B.routeClose.gfFarmRole="closeRouteOptions"
+  function B.FindRoutes()
+   if #B.selected==0 then B.error="Choose at least one material.";R.Fill();return false end
+   B.CloseYields();menuHost:Hide();K.confirmed=nil;B.routeError=nil;B.focusedRoute=nil
+   B.routeSelectionNames={};for _,m in ipairs(B.selected)do B.routeSelectionNames[#B.routeSelectionNames+1]=m.name end
+   local p=read(ns.Retail.Client.PlayerPosition)
+   if read(IsInInstance)then B.recommendations={};B.routeError="Use an outdoor farming route."
+   elseif not p or p.status~="available"or type(p.mapID)~="number"then B.recommendations={};B.routeError="Outdoor position unavailable."
+   else
+    local level=read(UnitLevel,"player")or 1;local faction=read(UnitFactionGroup,"player")
+    B.choices,B.compatible=R.MatchZones(B.index,B.selected,p,level,faction)
+    B.recommendations=R.RecommendRouteChoices(B.choices,B.selected,p,level,faction)
+   end
+   if not B.popupSized then popup:SetSize(f:GetWidth(),f:GetHeight());B.popupSized=true end
+   matches:SetVerticalScroll(0);f:Hide();popup:Show();B.LayoutRoutes();return true
+  end
+  B.action=N.WoodButton(f,"Find routes",200,B.FindRoutes);B.action.gfFarmRole="findRoutes"
+  B.stop=N.WoodButton(active,"Stop Route",110,function()
+   if F.route then F.Stop("Farming route stopped.")end
+   K.SyncFooter();R.Fill()
+  end)
+  function R.Fill()
+   if not B.index or B.filling then return end
+   B.filling=true
+   if R.selectionChanged then
+    if popup:IsShown()then popup:Hide()end
+    R.selectionChanged=false;refreshSelection()
+   end
+   local unit=N.PixelSize(f,1);B.unit=unit;B.fontExpansion=math.max(0,math.min(1,(f:GetWidth()/unit-400)/80))
+   B.wide=f:GetWidth()/unit>=520
+   local inset=14*unit;local width=f:GetWidth()-2*inset-12*unit
+   local header=(N.HeaderSize and N.HeaderSize(f)or 40*unit)+10*unit
+   farmPlace(controls,f,inset,header,width,37*unit)
+   filterLabel:SetText("Category");farmPlace(filterLabel,controls,8*unit,8*unit,68*unit,22*unit)
+   farmPlace(B.filterButton,controls,80*unit,4*unit,width-88*unit,29*unit)
+   B.filterButton.label:SetText(B.category or "All Reagents")
+   local activeHeight=F.route and 72*unit or 0
+   local activeExcluded=F.route and F.route.item and not R.IsFarmOffering(F.route.item)
+   for _,id in ipairs(F.route and F.route.reference and F.route.reference.coveredItemIDs or{})do
+    if not R.IsFarmOffering(id)then activeExcluded=true;break end
+   end
+   local statusText=B.error or(activeExcluded and "This active target is no longer in the catalogue. Stop Route remains available."
+    or #B.selected==0 and "Choose materials, then find routes."or "Ready to compare mapped routes.")
+   setFarmFont(message,13,12,unit,B.fontExpansion);message:SetWidth(width);message:SetText(statusText)
+   local messageHeight=math.max(25*unit,message:GetStringHeight()+3*unit)
+   local footerTop=f:GetHeight()-14*unit-activeHeight-29*unit-messageHeight-7*unit
+   local selectionTop=header+45*unit
+   farmPlace(selectedHeader,f,inset,selectionTop,width,27*unit);selectedHeader.label:SetText("Selected Reagents · "..#B.selected.."/8")
+   farmPlace(selection,f,inset,selectionTop+25*unit,width,43*unit)
+   farmPlace(selectionEmpty,selection,8*unit,10*unit,width-16*unit,22*unit);selectionEmpty:SetShown(#B.selected==0)
+   for i,m in ipairs(B.selected)do
+    local button=B.tray[i]
+    if not button then
+     button=CreateFrame("Button",nil,selection);button.gfFarmRole="selectedReagent"
+     button.icon=button:CreateTexture(nil,"ARTWORK");button.icon:SetAllPoints();N.BronzeRectangle(button)
+     button:SetScript("OnClick",function(self)if not ns.HandleItemChatClick(self.material and(self.material.itemLink or self.material.id))then hideTip();R.ToggleMaterial(self.material)end end)
+     button:SetScript("OnEnter",function(self)tooltip(self,self.material.name,"Click to remove",self.material)end);button:SetScript("OnLeave",hideTip);B.tray[i]=button
+    end
+    button.material=m;button.icon:SetTexture(icon(m.id));farmPlace(button,selection,(8+(i-1)*32)*unit,9*unit,26*unit,26*unit);button:Show()
+   end
+   for i=#B.selected+1,#B.tray do B.tray[i]:Hide()end
+   local contentTop=header+125*unit
+   farmPlace(resourceTitle,f,inset,contentTop,width,27*unit);resourceTitle.label:SetText("Choose Reagents");resourceTitle:Show()
+   farmPlace(resources,f,inset,contentTop+29*unit,width,math.max(64*unit,footerTop-contentTop-37*unit));resources:Show()
+   reagents:SetWidth(width)
+   local current=model();local states=B.groupOpen[current.key]or{};B.groupOpen[current.key]=states
+   local entries,spans={},{};local y=0
+   local columns=math.max(2,math.floor((width-16*unit)/(78*unit)))
+   local tileWidth=(width-16*unit-(columns-1)*5*unit)/columns
+   for _,group in ipairs(current.groups)do
+    local opened=states[group.name]
+    if opened==nil then opened=B.category~=nil end
+    group.open=opened
+    entries[#entries+1]={kind="group",group=group,x=0,y=y,width=width,height=31*unit};y=y+31*unit
+    if opened then
+     local rows=math.ceil(#group.materials/columns);local bodyHeight=rows*80*unit+8*unit
+     spans[#spans+1]={x=0,y=y-4*unit,width=width,height=bodyHeight+4*unit}
+     for i,m in ipairs(group.materials)do entries[#entries+1]={kind="tile",material=m,x=8*unit+((i-1)%columns)*(tileWidth+5*unit),y=y+4*unit+math.floor((i-1)/columns)*80*unit,width=tileWidth,height=80*unit}end
+     y=y+bodyHeight+5*unit
+    end
+   end
+   B.resourceEntries,B.resourceSpans=entries,spans;reagents:SetHeight(math.max(1,y))
+   farmPlace(message,f,inset,footerTop,width,messageHeight)
+   local actionTop=footerTop+messageHeight+7*unit
+   farmPlace(B.action,f,inset,actionTop,width,29*unit);B.action:Show()
+   if B.action.SetEnabled then B.action:SetEnabled(#B.selected>0)end
+   B.action:EnableMouse(#B.selected>0);B.action:SetAlpha(#B.selected>0 and 1 or .55)
+   if F.route then
+    local top=actionTop+36*unit
+    farmPlace(activeHeader,f,inset,top,width,26*unit);farmPlace(active,f,inset,top+24*unit,width,43*unit)
+    local zone=F.route.reference and F.route.reference.zone
+    activeText:SetText(zone or "Farming route in progress");farmPlace(activeText,active,8*unit,9*unit,width-132*unit,25*unit)
+    farmPlace(B.stop,active,width-119*unit,7*unit,110*unit,29*unit);activeHeader:Show();active:Show()
+   else activeHeader:Hide();active:Hide()end
+   for _,button in ipairs({B.filterButton,B.action,B.stop})do setFarmFont(button.label,15,13,unit,B.fontExpansion)end
+   for _,label in ipairs({filterLabel,selectionEmpty,message,activeText})do setFarmFont(label,13,12,unit,B.fontExpansion)end
+   for _,button in ipairs({resourceTitle,selectedHeader,activeHeader})do setFarmFont(button.label,14,13,unit,B.fontExpansion)end
+   syncResources();B.DrawResources();B.filling=nil
+  end
+  R.body=reagents;K.resourceScroll=resources;K.recommendButton=B.action;K.count=message
+  f:HookScript("OnHide",function()B.CloseYields();menuHost:Hide();hideTip();K.confirmed=nil end)
+  f:HookScript("OnMouseDown",function()B.CloseYields();menuHost:Hide()end)
+  popup:HookScript("OnHide",function()
+   hideTip();K.confirmed=nil
+   if not B.suppressRouteReturn then f:Show();R.Fill()end
+  end)
+  popup:SetScript("OnKeyDown",function(self,key)
+   if self.SetPropagateKeyboardInput then self:SetPropagateKeyboardInput(key~="ESCAPE")end
+   if key=="ESCAPE"then self:Hide()end
+  end)
+  if popup.EnableKeyboard then popup:EnableKeyboard(true)end
+  UISpecialFrames=UISpecialFrames or{}
+  local registered=false;for _,name in ipairs(UISpecialFrames)do if name=="GrindingForeverRouteOptions"then registered=true;break end end
+  if not registered then table.insert(UISpecialFrames,"GrindingForeverRouteOptions")end
+  N.PanelChrome(f,{"Farming","Routes"},400,560,R.Fill);N.LiveLayout(f,R.Fill)
+  N.PanelChrome(popup,{"Route","Options"},400,560,B.LayoutRoutes);N.LiveLayout(popup,B.LayoutRoutes)
   R.RefreshCatalog=function()
-   index=R.BuildSourceIndex()
-   refreshSelection()
+   B.index=R.BuildSourceIndex();B.models={};B.model=nil;refreshSelection();R.selectionChanged=false
   end
+
  end
- R.menu=K.gridMenu
- R.RefreshCatalog()
- R.menu:Show()
- R.Fill()
+ local browser=ns.FarmingBrowser
+ if browser.routePopup:IsShown()then browser.suppressRouteReturn=true;browser.routePopup:Hide();browser.suppressRouteReturn=nil end
+ R.menu=K.gridMenu;R.RefreshCatalog();R.menu:Show();R.Fill()
 end
 
 local function clickThrough()
@@ -9136,6 +9859,7 @@ local function activeQuestPoints()
  end
  return locations
 end
+V.ResourceQuestPoints=activeQuestPoints
 function V.DrawQuestPoints(canvas,map,locations)
  local pins=V.questPoints or {}
  V.questPoints=pins
@@ -9192,10 +9916,11 @@ function V.UpdateWorld(elapsed)
  local skills='';for _,kind in ipairs({'Mining','Herbalism','Fishing'})do local rank=F.Skill(kind);skills=skills..kind..':'..tostring(rank or 0)..';'end
  V.age=(V.age or 5)+.5;if V.map==map and V.skills==skills and V.age<5 then return end;V.map,V.skills,V.age=map,skills,0
  F.LoadKnown();local points,seen={},{}
- local function add(kind,x,y,name,item,observed)
+ local function add(kind,x,y,name,item,observed,site)
   if type(x)~='number'or type(y)~='number'or x<0 or x>100 or y<0 or y>100 then return end
   local key=kind..':'..math.floor(x*100+.5)..':'..math.floor(y*100+.5);if seen[key]then return end;seen[key]=true
-  points[#points+1]={x=x,y=y,kind=kind,name=name,item=item,key=key,observed=observed==true}
+  points[#points+1]={x=x,y=y,kind=kind,name=name,item=item,key=key,observed=observed==true,
+   poolObjectIDs=site and site.poolObjectIDs,alternatives=site and site.alternatives,source=site and site.source,evidence=site and site.evidence}
  end
  local observer=ns.GatheringObserver
  for _,node in pairs(observer and observer.data and observer.data.nodes or{})do
@@ -9206,7 +9931,10 @@ function V.UpdateWorld(elapsed)
  end
  for _,kind in ipairs({'Mining','Herbalism','Fishing'})do local skill=F.Skill(kind)
   if skill then
-   for coord,id in pairs(F.known[kind]and F.known[kind][map]or{})do local meta=F.meta[id];if meta and(meta.skill or 0)<=skill then local x,y=F.Decode(coord);add(kind,x,y,meta.name or F.names[id],meta.item)end end
+   for coord,id in pairs(F.known[kind]and F.known[kind][map]or{})do
+    local meta=F.meta[id];local site=kind=='Fishing' and F.FishingPoolSite and F.FishingPoolSite(map,coord)
+    if meta and(site or (meta.skill or 0)<=skill) then local x,y=F.Decode(coord);add(kind,x,y,site and site.name or meta.name or F.names[id],meta.item,false,site)end
+   end
   end
  end
  table.sort(points,function(a,b)if a.observed~=b.observed then return a.observed end;return a.key<b.key end)
@@ -9217,8 +9945,8 @@ function V.RenderBatch()
  if V.Mode()~='Both'and V.Mode()~='World Map'then V.pending=nil;return end
  local canvas,points,width,height,count=batch.canvas,batch.points,batch.width,batch.height,batch.count
  for i=batch.cursor,math.min(count,batch.cursor+19)do local v=points[i];local p=V.pins[i]
-  if not p then p=CreateFrame('Button',nil,canvas);p:SetSize(13,13);p.icon=p:CreateTexture(nil,'ARTWORK');p.icon:SetAllPoints();p:SetAlpha(.8);p:SetScript('OnEnter',function(self)if GameTooltip then GameTooltip:SetOwner(self,'ANCHOR_RIGHT');GameTooltip:AddLine(self.node.name or self.node.kind,1,.82,.3);GameTooltip:AddLine('Known gathering location; possible spawn.',.3,.85,.8);GameTooltip:Show()end end);p:SetScript('OnLeave',function()if GameTooltip then GameTooltip:Hide()end end);V.pins[i]=p end
-  p:SetParent(canvas);p:SetFrameLevel(canvas:GetFrameLevel()+8);p.node=v;p.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,v.item)or'Interface\\Icons\\Trade_Mining');p:ClearAllPoints();p:SetPoint('CENTER',canvas,'TOPLEFT',v.x*width/100,-v.y*height/100);p:Show()
+  if not p then p=CreateFrame('Button',nil,canvas);p:SetSize(13,13);p.icon=p:CreateTexture(nil,'ARTWORK');p.icon:SetAllPoints();p:SetAlpha(.8);p:SetScript('OnEnter',function(self)if GameTooltip then GameTooltip:SetOwner(self,'ANCHOR_RIGHT');GameTooltip:AddLine(self.node.name or self.node.kind,1,.82,.3);GameTooltip:AddLine(self.node.evidence or 'Known gathering location; possible spawn.',.3,.85,.8,true);if self.node.source then GameTooltip:AddLine(self.node.source,.7,.7,.7,true)end;GameTooltip:Show()end end);p:SetScript('OnLeave',function()if GameTooltip then GameTooltip:Hide()end end);V.pins[i]=p end
+  p:SetParent(canvas);p:SetFrameLevel(canvas:GetFrameLevel()+8);p.node=v;p.icon:SetTexture(read(C_Item and C_Item.GetItemIconByID or GetItemIcon,v.item)or(v.kind=='Fishing'and'Interface\\Icons\\Trade_Fishing'or'Interface\\Icons\\Trade_Mining'));p:ClearAllPoints();p:SetPoint('CENTER',canvas,'TOPLEFT',v.x*width/100,-v.y*height/100);p:Show()
  end
  batch.cursor=batch.cursor+20;if batch.cursor>count then for i=count+1,#V.pins do V.pins[i]:Hide()end;V.pending=nil end
 end
@@ -9277,7 +10005,7 @@ local dungeonAreas={
  ["Ruins of Ahn'Qiraj"]=3429,["Ahn'Qiraj"]=3428,Naxxramas=3456,
 }
 local questsByArea
-local function dungeonQuestRows(d,zone)
+local function dungeonQuestRows(d,zone,unfiltered)
  if not questsByArea then
   questsByArea={}
   local wanted={}
@@ -9292,10 +10020,12 @@ local function dungeonQuestRows(d,zone)
   end
  end
  local rows,seen={},{}
+ local wing=ns.DungeonWingContext and ns.DungeonWingContext(zone)
  local faction=UnitFactionGroup('player')
  local policy=ns.ForeverQuestPlanner
  local function add(q)
   if policy and not policy.AllowsQuest(q.id,faction,q) then return end
+  if not unfiltered and wing and ns.DungeonQuestWingMembership and ns.DungeonQuestWingMembership(wing,q.id)==false then return end
   local name=q.title or q.name
   if not name or seen[q.id or name]then return end
   seen[q.id or name]=true
@@ -9479,12 +10209,12 @@ end)(ADDON,GF)
 ;(function(...)
 local _,ns=...;local N=ns.NormalUI;local E=ns.SharedExplorer or ns.Forever;local U=ns.SharedUI or ns.ForeverUI
 if not N or not E or not U then return end
-local maps={["Ragefire Chasm"]={{file="RagefireChasmEntrance.tga", label="Ragefire Chasm", u0=0, v0=0, u1=0.8193359375, v1=0.99609375, aspect=0.822549019607843, legacyLandmarks=false, curatedPins=true}},["The Deadmines"]={{["file"]="291.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="292.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Wailing Caverns"]={{["file"]="ClassicWailingCaverns.tga",["u0"]=0,["v0"]=0,["u1"]=0.978515625,["v1"]=0.65234375,["aspect"]=1.5}},["Shadowfang Keep"]={{u0=0,u1=1,v0=0,v1=0.6669921875,file="310.blp",label="The Courtyard",aspect=1.49926793558,pinKey="shadowfang-keep:310",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="311.blp",label="Dining Hall",aspect=1.49926793558,pinKey="shadowfang-keep:311",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="316.blp",label="The Wall Walk",aspect=1.49926793558,pinKey="shadowfang-keep:316",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="312.blp",label="The Vacant Den",aspect=1.49926793558,pinKey="shadowfang-keep:312",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="313.blp",label="Lower Observatory",aspect=1.49926793558,pinKey="shadowfang-keep:313",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="314.blp",label="Upper Observatory",aspect=1.49926793558,pinKey="shadowfang-keep:314",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="315.blp",label="Arugal's Chamber",aspect=1.49926793558,pinKey="shadowfang-keep:315",legacyLandmarks=false,curatedPins=true}},["The Stockade"]={{["file"]="225.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.654296875,["aspect"]=1.528358208955224}},["Blackfathom Deeps"]={{["file"]="221.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="222.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="223.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Gnomeregan"]={{["file"]="226.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="227.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="228.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="229.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Razorfen Kraul"]={{["file"]="301.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Scarlet Monastery"]={{["file"]="302.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="303.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="304.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="305.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Razorfen Downs"]={{["file"]="300.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Uldaman"]={{["file"]="230.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="231.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Zul'Farrak"]={{["file"]="219.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Maraudon"]={{["file"]="280.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="281.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Temple of Atal'Hakkar"]={
+local maps={["Ragefire Chasm"]={{file="RagefireLandscape.tga", label="Ragefire Chasm", u0=0, v0=0, u1=0.75, v1=1, aspect=1.5, legacyLandmarks=false, curatedPins=true}},["The Deadmines"]={{["file"]="291.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="292.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Wailing Caverns"]={{["file"]="ClassicWailingCaverns.tga",["u0"]=0,["v0"]=0,["u1"]=0.978515625,["v1"]=0.65234375,["aspect"]=1.5}},["Shadowfang Keep"]={{u0=0,u1=1,v0=0,v1=0.6669921875,file="310.blp",label="The Courtyard",aspect=1.49926793558,pinKey="shadowfang-keep:310",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="311.blp",label="Dining Hall",aspect=1.49926793558,pinKey="shadowfang-keep:311",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="316.blp",label="The Wall Walk",aspect=1.49926793558,pinKey="shadowfang-keep:316",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="312.blp",label="The Vacant Den",aspect=1.49926793558,pinKey="shadowfang-keep:312",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="313.blp",label="Lower Observatory",aspect=1.49926793558,pinKey="shadowfang-keep:313",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="314.blp",label="Upper Observatory",aspect=1.49926793558,pinKey="shadowfang-keep:314",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="315.blp",label="Arugal's Chamber",aspect=1.49926793558,pinKey="shadowfang-keep:315",legacyLandmarks=false,curatedPins=true}},["The Stockade"]={{["file"]="225.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.654296875,["aspect"]=1.528358208955224}},["Blackfathom Deeps"]={{["file"]="221.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="222.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="223.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Gnomeregan"]={{["file"]="226.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="227.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="228.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="229.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Razorfen Kraul"]={{["file"]="301.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Scarlet Monastery"]={{["file"]="302.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="303.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="304.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="305.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Razorfen Downs"]={{["file"]="300.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Uldaman"]={{["file"]="230.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="231.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Zul'Farrak"]={{["file"]="219.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Maraudon"]={{["file"]="280.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="281.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["The Temple of Atal'Hakkar"]={
     startFloor=3,
     {file="SantiagoTemplePitOfRefuse.tga", label="Pit of Refuse", u0=0, v0=0, u1=1, v1=0.66650390625, aspect=1.5003663003663, legacyLandmarks=false, curatedPins=true},
     {file="SantiagoTempleHallOfSerpents.tga", label="Hall of Serpents", u0=0, v0=0, u1=1, v1=0.66650390625, aspect=1.5003663003663, legacyLandmarks=false, curatedPins=true},
     {file="SantiagoTempleEntrance.tga", label="Entrance Hall", u0=0, v0=0, u1=1, v1=0.66650390625, aspect=1.5003663003663, legacyLandmarks=false, curatedPins=true},
-    {file="ForeverTemplePitOfSacrifice.tga", label="Pit of Sacrifice", u0=0, v0=0, u1=0.951171875, v1=1, aspect=0.951171875, legacyLandmarks=false, curatedPins=true},
+    {file="ForeverTemplePitOfSacrificeLandscape.tga", label="Pit of Sacrifice", u0=0, v0=0, u1=1, v1=0.6669921875, aspect=1.499267935578331, legacyLandmarks=false, curatedPins=true},
     {file="SantiagoTempleHallOfTheCursed.tga", label="Hall of the Cursed", u0=0, v0=0, u1=1, v1=0.66650390625, aspect=1.5003663003663, legacyLandmarks=false, curatedPins=true}
 },["Blackrock Depths"]={{["file"]="242.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="243.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Lower Blackrock Spire"]={{["file"]="250.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="251.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="252.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="253.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="254.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="255.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Upper Blackrock Spire"]={{u0=0.216796875,u1=0.470703125,v0=0.064453125,v1=0.234375,file="254.blp",label="Dragonspire Hall",aspect=1.49425287356,pinKey="upper-blackrock-spire:1002295",legacyLandmarks=false,curatedPins=true},{u0=0.21875,u1=0.5419921875,v0=0.0771484375,v1=0.29296875,file="255.blp",label="Hall of Binding",aspect=1.49773755656,pinKey="upper-blackrock-spire:1002296",legacyLandmarks=false,curatedPins=true},{u0=0,u1=0.978515625,v0=0,v1=0.65234375,file="ForeverUpperBlackrockSpire1002297.tga",label="Blackrock Stadium",aspect=1.5,pinKey="upper-blackrock-spire:1002297",legacyLandmarks=false,curatedPins=true}},["Molten Core"]={{u0=0,u1=1,v0=0,v1=0.6669921875,file="232.blp",label="Molten Core",aspect=1.49926793558,pinKey="molten-core:232",legacyLandmarks=false,curatedPins=true}},["Blackwing Lair"]={{u0=0,u1=1,v0=0,v1=0.6669921875,file="287.blp",label="Dragonmaw Garrison",aspect=1.49926793558,pinKey="blackwing-lair:287",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="288.blp",label="Halls of Strife",aspect=1.49926793558,pinKey="blackwing-lair:288",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="289.blp",label="Crimson Laboratories",aspect=1.49926793558,pinKey="blackwing-lair:289",legacyLandmarks=false,curatedPins=true},{u0=0,u1=1,v0=0,v1=0.6669921875,file="290.blp",label="Nefarian's Lair",aspect=1.49926793558,pinKey="blackwing-lair:290",legacyLandmarks=false,curatedPins=true}},["Dire Maul"]={{["file"]="234.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="235.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="236.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="237.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="238.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="239.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="240.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Scholomance"]={{["file"]="306.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="307.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="308.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="309.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Stratholme"]={{["file"]="317.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="318.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Zul'Gurub"]={{["file"]="233.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Onyxia's Lair"]={{["file"]="248.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ruins of Ahn'Qiraj"]={{["file"]="247.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ahn'Qiraj"]={{["file"]="319.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="320.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="321.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Naxxramas"]={{["file"]="166.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="162.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="163.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="164.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="165.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331},{["file"]="167.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Ruins of Lordaeron"]={{["file"]="2999.blp",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Hall of Thanes"]={{u0=0,u1=1,v0=0,v1=0.6669921875,file="3065.blp",label="Hall of Thanes",aspect=1.49926793558,pinKey="hall-of-thanes:1030651",legacyLandmarks=false,curatedPins=true}},["Excavation Site: Wetlands"]={{["file"]="cb7b0553-92ce-471d-a208-76fc7d080e66.tga",["u0"]=0.00732421875,["u1"]=0.63037109375,["v0"]=0.00732421875,["v1"]=0.42333984375,["aspect"]=1.4976525821596245}},["City of Dalaran"]={{u0=0.0107421875,u1=0.6337890625,v0=0.01611328125,v1=0.43505859375,file="29df9463-6295-4e49-9751-de8b833f2436.tga",label="The Underbelly",aspect=1.48717948718,pinKey="city-of-dalaran:1029592",legacyLandmarks=false,curatedPins=true},{u0=0.0146484375,u1=0.6376953125,v0=0.01416015625,v1=0.43017578125,file="4ea62afb-de93-4c9d-b051-834461d56c75.tga",label="City",aspect=1.49765258216,pinKey="city-of-dalaran:1029591",legacyLandmarks=false,curatedPins=true}},["The Drowned City"]={{file="SantiagoDrownedCity.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false},{file="DrownedCityAtalByzalMap.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false}},["Krol'dok Stronghold"]={{["file"]="SantiagoKroldok.tga",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331}},["Alcaz Prison"]={{file="SantiagoAlcaz.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false},{file="AlcazPrisonMap2.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false}},["The Shaper's Terrace"]={{["file"]="SantiagoShapers.tga",["u0"]=0,["u1"]=1,["v0"]=0,["v1"]=0.6669921875,["aspect"]=1.499267935578331,label="Surface"},{file="SantiagoPrismaticTalus.tga", label="Prismatic Talus", u0=0, v0=0, u1=1, v1=0.66650390625, aspect=1.5003663003663, legacyLandmarks=false, curatedPins=true}},["Blackmaw Hold"]={{file="BlackmawHoldGroveMap.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false},{file="BlackmawHoldFesteringGrottoMap.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false},{file="BlackmawHoldFallenGroveMap.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false},{file="BlackmawHoldEldersMap.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false},{file="BlackmawHoldBurrowMap.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false},{file="BlackmawHoldForbiddenMagicMap.tga",u0=0,v0=0,u1=1.0,v1=0.6669921875,aspect=1.499267935578331,legacyLandmarks=false}}};ns.BundledDungeonMaps=maps
 local function key(name)return(name or''):lower():gsub('[^%w]',''):gsub('^the','')end
@@ -10117,7 +10847,15 @@ function R.ZoneNodes(pos)
  for kind,maps in pairs(F.known or{})do
   for coord,id in pairs(maps[pos.mapID]or{})do
    local meta=F.meta and F.meta[id];local x,y=read(F.Decode,coord)
-   if meta and meta.item and x and y then nodes[#nodes+1]={item=meta.item,kind=kind,skill=meta.skill or 0,location={mapID=pos.mapID,x=x,y=y,name=meta.name}}end
+   if meta and meta.item and not meta.objectID and not (kind=='Fishing' and F.FishingPoolSite and F.FishingPoolSite(pos.mapID,coord)) and x and y then nodes[#nodes+1]={item=meta.item,kind=kind,skill=meta.skill or 0,location={mapID=pos.mapID,x=x,y=y,name=meta.name}}end
+  end
+ end
+ if F.FishingPoolPoints then
+  for _,point in ipairs(F.FishingPoolPoints(pos.mapID))do
+   if point.itemID then nodes[#nodes+1]={item=point.itemID,kind='Fishing',skill=0,skillKnown=false,
+    objectID=point.objectID,nodeTypeID=point.nodeTypeID,native=point.native,source=point.source,revision=point.revision,evidence=point.evidence,
+    location={mapID=pos.mapID,x=point.x,y=point.y,name=point.name,objectID=point.objectID,nodeTypeID=point.nodeTypeID,
+     native=point.native,source=point.source,revision=point.revision,evidence=point.evidence}}end
   end
  end
  local observer=ns.GatheringObserver
@@ -10466,7 +11204,7 @@ end)(ADDON,GF)
  end
  local fresh=Q.Fresh
  Q.Fresh=function(...)cached=nil;revision=revision+1;return fresh(...)end
- Q.InvalidateRefreshCache=function()cached=nil;revision=revision+1 end
+ Q.InvalidateRefreshCache=function()cached=nil;revision=revision+1;Q.stateOwner=nil;Q.states={} end
 end)(ADDON,GF)
 
 -- GF_QUEST_SHARED_SPACE_25: live objectives own completion; resources are optional.
@@ -10710,330 +11448,1210 @@ end)(ADDON,GF)
  N.WorkflowLayout=W.Layout
 end)(ADDON,GF)
 
+-- A selected dungeon is a durable character goal, not a nearby-offer session.
 ;(function(_,ns)
 local E,P,N=ns.Forever,ns.ProfessionGuide,ns.NormalUI
 if not E or not P or not N then return end
 local prep={dismissed={prep={},run={}}}
 ns.DungeonPrep=prep
-local raid={["onyxias lair"]=true,["barrow deeps"]=true,["hyjal summit"]=true,
- ["molten core"]=true,["blackwing lair"]=true,["zulgurub"]=true,["ahnqiraj"]=true,
- ["temple of ahnqiraj"]=true,["ruins of ahnqiraj"]=true,naxxramas=true}
-local function allowed(quest,level,state)
- local record=quest.reference or quest.record or {}
- local side=record.faction or record.side
- local faction,class
- if state then
-  faction,class=state.faction,state.class
- else
-  faction=E.Call(UnitFactionGroup,'player')
-  local _,token=E.Call(UnitClass,'player')
-  class=token
+local D=ns.ForeverQuestData
+local function key(name)return ns.DungeonNameKey and ns.DungeonNameKey(name or '') or (name or ''):lower()end
+local function goal()return E.db and E.db.dungeonPrepGoal end
+local function copy(row)local out={};for k,v in pairs(row or {})do out[k]=v end;return out end
+local function resolve(value)
+ local name=type(value)=='table' and value.name or value
+ if type(name)~='string' or name=='' then return end
+ if type(value)=='table' then return value end
+ if prep.instance and key(prep.instance.name)==key(name)then return prep.instance end
+ for label,instance in pairs(E.dungeons)do
+  if key(label)==key(name) or key(instance.name)==key(name)then return instance end
  end
- local required=record.min_level or (type(record.requires)=='number' and record.requires) or 1
- return level>=required and (not record.classOnly or record.classOnly==class)
-  and ((side~='Alliance' and side~='Horde') or side==faction)
-  and (not ns.ForeverQuestPlanner or ns.ForeverQuestPlanner.AllowsQuest(quest.id,faction,record))
+ for label in pairs(ns.DungeonReference or {})do if key(label)==key(name)then return {name=label}end end
 end
-local function dungeonQuests(instance,level,state)
- local rows,seen,references={},{},{}
- local data=ns.ForeverQuestData.quests
- local function add(row)
-  if row.id and not seen[row.id] and allowed(row,level,state) then
-   seen[row.id]=row
-   rows[#rows+1]=row
+local function selected()
+ local g=goal();if not g or type(g.name)~='string' then prep.active=nil;return end
+ local instance=resolve(g.name);prep.instance=instance
+ prep.active=not g.paused and instance or nil
+ return instance,g
+end
+local function progress(id,s)
+ if s.completed and s.completed[id]==true then return {rewarded=true}end
+ return s.quests and s.quests[id] or E.QuestState(id) or {}
+end
+local function completed(id,s)
+ local p=progress(id,s);return p.rewarded==true or p.rewarded==1
+end
+local function ready(id,p,s)
+ local q=ns.ForeverQuestPlanner
+ if q and type(q.Ready)=='function'then return q.Ready(p,id,s)end
+ return p.ready==true or p.ready==1
+end
+local function compatible(id,ref,s)
+ local q=D.quests[id];local planner=ns.ForeverQuestPlanner
+ if q and planner and planner.CharacterAllows and not planner.CharacterAllows(id,s,true)then return false end
+ if planner and not planner.AllowsQuest(id,s.faction,ref)then return false end
+ return not ref or not ref.classOnly or ref.classOnly==s.class
+end
+local function localPoint(point)
+ if not point then return end
+ return {mapID=point[1],x=point[2],y=point[3],name=point[4]}
+end
+local function inside(instance)
+ if E.Call(IsInInstance)~=true then return false end
+ local name=E.Call(GetInstanceInfo)
+ if not name then return true end -- Some supported mock/legacy clients omit the name API.
+ if key(name)==key(instance.name)then return true end
+ local context=ns.DungeonWingContext and ns.DungeonWingContext(instance)
+ return context and key(name)==key(context.family) or false
+end
+local function dungeonQuests(instance,s)
+ local roots,refs,seen,candidates={},{},{},{}
+ local candidateCount=0
+ local function add(id,ref,row)
+  if type(id)~='number'then return end
+  if not candidates[id]then candidates[id]=true;candidateCount=candidateCount+1 end
+  local q=D.quests[id]
+  local publication=D.publication and D.publication.quests and D.publication.quests[id]
+  if q and q.catalogOnly and publication and publication.autoOfferAllowed==false and not ref then
+   local live=progress(id,s)
+   if live.inLog~=true and not completed(id,s)then return end
+  end
+  if not compatible(id,ref,s)then return end
+  if ns.DungeonQuestWingMembership and ns.DungeonQuestWingMembership(instance,id)==false then return end
+  if ref then refs[id]=ref end
+  if not seen[id]then seen[id]=true;roots[#roots+1]=row or {id=id,name=ref and ref.name or D.quests[id] and D.quests[id].title,record=D.quests[id],reference=ref}end
+ end
+ for _,row in ipairs(ns.DungeonQuestRows(instance,instance.name,true) or {})do add(row.id,row.reference,row)end
+ for _,reference in ipairs(ns.DungeonReferencesFor(instance.name) or {})do
+  for _,ref in ipairs(reference.quests or {})do add(ref.id,ref)end
+ end
+ table.sort(roots,function(a,b)return a.id<b.id end)
+ return roots,refs,candidateCount
+end
+local function itemStarter(id)
+ local items={}
+ for _,source in ipairs(D.quests[id] and D.quests[id].starts or {})do
+  if source.kind=='item'then items[#items+1]=source.id end
+ end
+ return items
+end
+local function carried(id)
+ local count=E.Call(C_Item and C_Item.GetItemCount or GetItemCount,id,false)
+ return E.Public(count) and type(count)=='number' and count>0
+end
+local function hasStarter(id,ref)
+ for _,item in ipairs(itemStarter(id))do if carried(item)then return item end end
+ if ref and ref.startItem and carried(ref.startItem[1])then return ref.startItem[1]end
+end
+local function startsInside(id,ref)
+ if not ref or not ref.startsInDungeon then return false end
+ if ref.startPoint and #itemStarter(id)==0 then
+  local info=E.Call(C_Map and C_Map.GetMapInfo,ref.startPoint[1])
+  if info and info.mapType==3 then return false end
+ end
+ return true
+end
+local function reverseIndex()
+ if prep.data==D.quests and prep.children then return prep.children end
+ local children={}
+ local function edge(parent,id)
+  if type(parent)=='number' and parent>0 and parent~=id then
+   children[parent]=children[parent] or {};children[parent][id]=true
   end
  end
- for _,row in ipairs(ns.DungeonQuestRows(instance,instance.name))do add(row)end
- for _,ref in ipairs(ns.DungeonReferencesFor(instance.name))do
-  for _,fact in ipairs(ref.quests or {})do
-   references[fact.id]=fact
-   local row=seen[fact.id]
-   if row then row.reference=fact
-   else add({id=fact.id,name=fact.name,reference=fact,record=data[fact.id] or {}})end
+ for id,q in pairs(D.quests)do
+  for _,pre in ipairs(q.prerequisites or {})do if not pre.breadcrumb and pre.pre and pre.pre>0 then edge(pre.pre,id)end end
+  edge(q.availableStartingWith,id)
+  if q.nextQuestInChain then edge(id,q.nextQuestInChain)end
+ end
+ prep.data,prep.children=D.quests,children
+ return children
+end
+function prep.Invalidate()
+ prep.data,prep.children,prep.planState,prep.planGoal,prep.plan=nil,nil,nil,nil,nil
+ local planner=ns.ForeverQuestPlanner
+ if planner and planner.InvalidateRefreshCache then planner.InvalidateRefreshCache()end
+end
+local function restrictions(id,s,ref)
+ local q=D.quests[id] or {}
+ return compatible(id,ref,s) and not (q.availableUntilCompleted and completed(q.availableUntilCompleted,s))
+  and not (q.disabledByQuest and progress(q.disabledByQuest,s).inLog==true)
+end
+local function sourceLocation(id,s,ref)
+ local q=D.quests[id] or {};local evidence=ns.QuestLocationEvidence and ns.QuestLocationEvidence[id]
+ local points=evidence and evidence.startPoints
+ if ref and ref.startPoint then points={localPoint(ref.startPoint)}end
+ local planner=ns.ForeverQuestPlanner
+ return planner and planner.NearestSource(q.starts,s,points) or points and points[1]
+end
+function prep.Plan(s,instance)
+ local override=instance~=nil
+ local g
+ if not instance then
+  instance,g=selected();if not instance or g.paused then return end
+  if prep.planState==s and prep.planGoal==g then return prep.plan end
+ elseif goal() and key(goal().name)==key(instance.name)then
+  g=goal()
+ end
+ local roots,refs,candidateCount=dungeonQuests(instance,s)
+ local children=reverseIndex()
+ local edges,parents={},{}
+ local function edge(parent,id)
+  if not parent or parent==id then return end
+  edges[parent]=edges[parent] or {};edges[parent][id]=true
+  parents[id]=parents[id] or {};parents[id][#parents[id]+1]={pre=parent,mode='all'}
+ end
+ -- Curated chains fill missing relationships, while canonical all/any gates
+ -- remain authoritative when the catalog already supplies them.
+ for _,root in ipairs(roots)do
+  local ref=refs[root.id] or root.reference
+  local previous
+  for _,link in ipairs(ref and ref.chain or {})do
+   local id=link.id or link[1]
+   if id then
+    refs[id]=refs[id] or {name=link.name or link[2],startPoint=link.startPoint or link[3]}
+    if previous then edge(previous,id)end
+    previous=id
+   end
+  end
+  if previous and previous~=root.id then edge(previous,root.id)end
+  for _,later in ipairs(ref and ref.followups or {})do
+   refs[later.id]=later;edge(later.after or root.id,later.id)
   end
  end
- return rows,references
+ local nodes,stages,run,after={},{},{},{}
+ local function followupAllowed(id)
+  -- Legacy908 duplicates the trusted active6921 record. Its old6563 edge
+  -- alone cannot assign another BFD task after6921 has actually been rewarded.
+  if id~=908 or s.faction~='Horde' or key(instance.name)~=key('Blackfathom Deeps')
+   or not completed(6921,s)then return true end
+  if progress(id,s).inLog==true or completed(id,s)then return true end
+  for _,offer in ipairs(E.Call(C_GossipInfo and C_GossipInfo.GetAvailableQuests)or{})do
+   if E.Public(offer.questID) and offer.questID==id then return true end
+  end
+  return false
+ end
+ local function descendants(id,seen)
+  if seen[id]then return end;seen[id]=true
+  for child in pairs(children[id] or {})do
+   if compatible(child,refs[child],s) and followupAllowed(child)then nodes[child]=true;after[child]=true;descendants(child,seen)end
+  end
+  for child in pairs(edges[id] or {})do
+   if compatible(child,refs[child],s) and followupAllowed(child)then nodes[child]=true;after[child]=true;descendants(child,seen)end
+  end
+ end
+ for _,root in ipairs(roots)do
+  local q=D.quests[root.id] or {};local ref=refs[root.id] or root.reference
+  nodes[root.id]=true
+  run[root.id]=(q.type==81 or startsInside(root.id,ref)) and true or nil
+  descendants(root.id,{})
+ end
+ -- An item whose actual sources include a selected-wing encounter also
+ -- establishes dungeon work even when its legacy quest tag is not Dungeon.
+ local bosses={}
+ for _,reference in ipairs(ns.DungeonReferencesFor(instance.name) or {})do
+  for _,npc in ipairs(reference.encounters or {})do if npc.npcID then bosses[npc.npcID]=true end end
+ end
+ for _,root in ipairs(roots)do
+  for _,objective in ipairs(D.quests[root.id] and D.quests[root.id].objectives or {})do
+   if objective.kind=='kill' and bosses[objective.target]then run[root.id]=true end
+   if objective.kind=='item'then
+    for _,source in ipairs(D.itemSources[objective.target] or {})do
+     if source.kind=='npc' and bosses[source.id]then run[root.id]=true end
+    end
+   end
+  end
+ end
+ local outside={}
+ local function exteriorSource(source)
+  if type(source.kind)~='string' or type(source.id)~='number'then return false end
+  if source.kind=='npc' and bosses[source.id]then return false end
+  for _,point in ipairs(D.spawns[source.kind..':'..source.id] or {})do
+   local info=E.Call(C_Map and C_Map.GetMapInfo,point.mapID)
+   if info and info.mapType==3 then return true end
+  end
+  return false
+ end
+ for _,root in ipairs(roots)do
+  local objectives=D.quests[root.id] and D.quests[root.id].objectives or {}
+  local known=#objectives>0
+  for _,objective in ipairs(objectives)do
+   if objective.kind=='kill' or objective.kind=='talk' then
+    known=known and exteriorSource({kind='npc',id=objective.target})
+   elseif objective.kind=='object' then
+    known=known and exteriorSource({kind='object',id=objective.target})
+   elseif objective.kind=='item' then
+    local sources=D.itemSources[objective.target] or {}
+    if #sources==0 then known=false end
+    for _,source in ipairs(sources)do if not exteriorSource(source)then known=false end end
+   else known=false end
+  end
+  outside[root.id]=known or nil
+ end
+ for id in pairs(nodes)do
+  local q=D.quests[id] or {}
+  stages[id]=after[id] and q.type~=81 and not startsInside(id,refs[id]) and 'After'
+   or run[id] and 'During' or 'Before'
+ end
+ local plan={instance=instance,roots=roots,references=refs,nodes=nodes,stages=stages,frontier={},runPending={},blocked={},superseded={},rewarded=0,done=0,total=#roots}
+ local function rewardedSuccessor(id)
+  return type(id)=='number' and D.quests[id] and compatible(id,refs[id],s) and completed(id,s)
+ end
+ local function supersedingQuest(id)
+  local q=D.quests[id] or {}
+  if rewardedSuccessor(q.availableUntilCompleted)then return q.availableUntilCompleted,'availableUntilCompleted'end
+  -- This optional referral reaches Thaelrid before either faction's Villainy.
+  -- Resolve only the BFD preparation entry; never invent a rewarded quest flag.
+  if id==1198 and s.faction=='Horde' and key(instance.name)==key('Blackfathom Deeps')
+   and rewardedSuccessor(6561)then return 6561,'dungeon-referral'end
+  local planner=ns.ForeverQuestPlanner
+  for _,later in ipairs(planner and planner.breadcrumbs and planner.breadcrumbs[id] or {})do
+   if rewardedSuccessor(later)then return later,'breadcrumb'end
+  end
+ end
+ for _,root in ipairs(roots)do
+  if completed(root.id,s)then plan.done=plan.done+1;plan.rewarded=plan.rewarded+1
+  elseif progress(root.id,s).inLog~=true then
+   local later,reason=supersedingQuest(root.id)
+   if later then plan.superseded[root.id]={questID=later,reason=reason};plan.done=plan.done+1 end
+  end
+ end
+ local visited,visiting={},{}
+ local function satisfied(pre)
+  local p=progress(math.abs(pre),s)
+  return pre<0 and p.inLog==true or pre>0 and completed(pre,s)
+ end
+ local function requirements(id)
+  local q=D.quests[id] or {};local mandatory,alternatives={},{}
+  for _,pre in ipairs(q.prerequisites or {})do if not pre.breadcrumb and type(pre.pre)=='number' then
+   local group=pre.mode=='all' and mandatory or alternatives;group[#group+1]=pre.pre
+  end end
+  local evidence=ns.QuestLocationEvidence and ns.QuestLocationEvidence[id]
+  for _,pre in ipairs(evidence and evidence.requiredQuests or {})do mandatory[#mandatory+1]=pre end
+  if q.availableStartingWith then
+   local p=progress(q.availableStartingWith,s)
+   if p.inLog~=true and not completed(q.availableStartingWith,s)then mandatory[#mandatory+1]=q.availableStartingWith end
+  end
+  if #mandatory==0 and #alternatives==0 then
+   for _,pre in ipairs(parents[id] or {})do mandatory[#mandatory+1]=pre.pre end
+  end
+  return mandatory,alternatives
+ end
+ local function choose(alternatives)
+  local best,bestScore
+  for _,pre in ipairs(alternatives)do
+   local id=math.abs(pre)
+   if restrictions(id,s,refs[id])then
+    local q=D.quests[id] or {};local p=progress(id,s)
+    local location=sourceLocation(id,s,refs[id]);local distance=location and E.Distance(s.position,location)
+    local score=(p.inLog==true and -1e9 or 0)+(distance or 1e7)
+    if q.min_level and q.min_level>s.level then score=score+1e8 end
+    if #itemStarter(id)>0 and not hasStarter(id,refs[id])then score=score+1e6 end
+    if not best or score<bestScore or score==bestScore and id<math.abs(best)then best,bestScore=pre,score end
+   end
+  end
+  return best
+ end
+ local walk
+ walk=function(id,phase)
+  if completed(id,s)then return true end
+  if plan.superseded[id]then return false end
+  if visited[id]then return false end
+  if visiting[id]then plan.blocked[id]='Quest chain needs verification.';return false end
+  local p=progress(id,s)
+  if not restrictions(id,s,refs[id]) and not(p.inLog==true and compatible(id,refs[id],s))then return false end
+  visiting[id]=true;nodes[id]=true;stages[id]=stages[id] or phase or 'Before'
+  local q=D.quests[id] or {};local ref=refs[id]
+  if p.inLog~=true then
+   local mandatory,alternatives=requirements(id);local blocked=false
+   for _,pre in ipairs(mandatory)do if not satisfied(pre)then
+    walk(math.abs(pre),stages[math.abs(pre)] or 'Before');blocked=true
+   end end
+   if #alternatives>0 then
+    local met=false;for _,pre in ipairs(alternatives)do if satisfied(pre)then met=true end end
+    if not met then
+     local pre=choose(alternatives)
+     if pre then walk(math.abs(pre),stages[math.abs(pre)] or 'Before')
+     else plan.blocked[id]='No prerequisite branch is confirmed for this character.'end
+     blocked=true
+    end
+   end
+   if blocked then
+    plan.blocked[id]=plan.blocked[id] or 'Finish the prerequisite quests first.'
+    visiting[id]=nil;visited[id]=true;return false
+   end
+  end
+  local minimum=q.min_level or ref and ref.min_level or 1
+  if minimum>s.level then plan.blocked[id]='Requires level '..minimum..'.'
+  elseif p.inLog==true then
+   if outside[id] then stages[id]=(startsInside(id,ref) or after[id]) and 'After' or 'Before'end
+   if ready(id,p,s)then
+    if stages[id]=='During'then stages[id]='After'end
+    plan.frontier[id]=true
+   else plan.frontier[id]=true;if stages[id]=='During'then plan.runPending[id]=true end end
+  elseif startsInside(id,ref) and not hasStarter(id,ref)then
+   stages[id]='During';plan.runPending[id]=true
+   if inside(instance) and #itemStarter(id)==0 then plan.frontier[id]=true end
+  else
+   local planner=ns.ForeverQuestPlanner
+   if not D.quests[id] or not planner or planner.Eligible(id,s)then
+    if stages[id]=='During'then stages[id]='Before'end
+    plan.frontier[id]=true
+   else plan.blocked[id]='Availability is not confirmed yet.'end
+  end
+  visiting[id]=nil;visited[id]=true;return false
+ end
+ local ids={};for id in pairs(nodes)do ids[#ids+1]=id end;table.sort(ids)
+ for _,id in ipairs(ids)do walk(id,stages[id])end
+ local before,post=0,0
+ for id in pairs(plan.frontier)do
+  if stages[id]=='Before'then before=before+1 elseif stages[id]=='After'then post=post+1 end
+ end
+ plan.phase=g and g.seenInside and post>0 and 'After' or before>0 and 'Before'
+  or next(plan.runPending) and 'During' or post>0 and 'After'
+  or next(plan.blocked) and 'Before' or 'Complete'
+ if inside(instance) and next(plan.runPending)then plan.phase='During'end
+ if plan.total==0 then
+  plan.phase='Unavailable'
+  plan.availability=candidateCount>0 and 'no-eligible' or 'unrecorded'
+  plan.message=candidateCount>0 and 'No eligible dungeon quests are recorded for this character and wing.'
+   or 'Dungeon quest preparation has not been recorded for this dungeon.'
+ elseif plan.phase=='Complete' and plan.done<plan.total then
+  plan.phase='Unavailable';plan.availability='blocked'
+  plan.message='No unfinished quest is currently confirmed as available. Check the quest requirements before continuing.'
+ elseif next(plan.blocked) and not next(plan.frontier) and not next(plan.runPending)then
+  plan.availability='blocked';plan.message='The recorded quests need a prerequisite or character requirement before preparation can continue.'
+ end
+ if not g or override then return plan end
+ if g.mode=='run' and not g.seenInside and next(plan.runPending)then plan.phase='During'end
+ prep.planState,prep.planGoal,prep.plan=s,g,plan
+ if plan.phase=='Complete' or plan.phase=='Unavailable'then prep.active=nil end
+ return plan
 end
-function prep.QuestTargets(state)
- local targets,seen={},{}
- if not N.model or not N.model.goals.Dungeons or not ns.DungeonQuestRows then return targets end
- local function add(instance)
-  local key=ns.DungeonNameKey(instance.name)
-  if raid[key] or seen[key] then return end
-  seen[key]=true
-  local rows=dungeonQuests(instance,state.level,state)
-  for _,quest in ipairs(rows)do targets[quest.id]=quest.reference or targets[quest.id] or true end
+function prep.QuestTargets(s)
+ local instance,g=selected()
+ local targets={}
+ local function add(d)
+  local roots,refs=dungeonQuests(d,s)
+  for _,q in ipairs(roots)do targets[q.id]=refs[q.id] or q.reference or true end
  end
- for name,instance in pairs(E.dungeons)do
-  add(instance.name and instance or {name=name,quests=instance.quests})
+ if instance and not g.paused then add(instance)
+ elseif N.model and N.model.goals.Dungeons then
+  for _,d in pairs(E.dungeons)do if d.name then add(d)end end
  end
- for name in pairs(ns.DungeonReference or {})do add({name=name})end
  return targets
 end
-local function startsInside(quest)
- local reference=quest.reference or {}
- if not reference.startsInDungeon then return false end
- -- Some chain records flag an earlier instance pickup, while this quest has an exterior giver.
- local record=ns.ForeverQuestData.quests[quest.id] or quest.record or {}
- local point=reference.startPoint
- local map=point and E.Call(C_Map and C_Map.GetMapInfo,point[1])
- if E.Public(map) and map and E.Public(map.mapType) and map.mapType==3 then
-  for _,source in ipairs(record.starts or {})do if source.kind=='npc' then return false end end
- end
- return true
-end
-local function questState(id)
- local state=E.QuestState(id)
- if state.inLog or state.rewarded then return state end
- if state.status~='available' then return end
- local rewarded=E.Call(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted or IsQuestFlaggedCompleted,id)
- if E.Public(rewarded) and (rewarded==false or rewarded==0) then return state end
- if E.Public(rewarded) and (rewarded==true or rewarded==1) then return {rewarded=true} end
-end
-local function playerState(level)
- local _,race,raceId=E.Call(UnitRace,'player')
- local _,class=E.Call(UnitClass,'player')
- return {level=level,faction=E.Call(UnitFactionGroup,'player'),race=race,raceId=raceId,class=class,
-  quests={},completed={},skills=E.state and E.state.skills or {}}
-end
-local function mayAccept(quest,state)
+local function resync()
+ prep.planState=nil;P.dirty=true
  local planner=ns.ForeverQuestPlanner
- if planner and ns.ForeverQuestData.quests[quest.id] then return planner.Eligible(quest.id,state) end
+ if planner and planner.InvalidateRefreshCache then planner.InvalidateRefreshCache()end
+ if N.Resync then N.Resync()end
+end
+function prep.Start(value)
+ local instance=resolve(value)
+ if not instance or not ns.DungeonQuestRows then return false,'Dungeon quest facts are unavailable.'end
+ if not E.db then return false,'Character settings are not loaded yet.'end
+ local previous=goal()
+ E.db.dungeonPrepGoal={name=instance.name,paused=false,savedIndex=previous and previous.savedIndex or N.model and N.model.index}
+ E.db.questTravelLeg=nil;prep.instance=instance;prep.active=instance;prep.offer=nil
+ if N.model then N.model.goals.Dungeons=true end
+ resync()
+ if ns.WindowWorkflow and ns.WindowWorkflow.OpenSteps then ns.WindowWorkflow.OpenSteps()end
  return true
 end
-local function makeStep(quest,kind,loc,hint)
- local verb=kind=='accept' and 'Accept ' or kind=='turnin' and 'Turn In ' or ''
- local record=quest.record or {}
- local body=kind=='objective' and (record.objective or 'Complete the prerequisite in your quest log.')
-  or hint or (loc and loc.name) or 'Location unavailable. Check the quest journal.'
- return {id='gf-dungeon-prep:'..kind..':'..quest.id,quest=quest.id,kind=kind,
-  category='Dungeons',title=verb..quest.name,body=body,destination=loc}
+function prep.Stop()
+ local g=goal();if not g then return false,'No dungeon preparation is selected.'end
+ E.db.dungeonPrepGoal=nil;prep.active,prep.navigation,prep.instance,prep.offer=nil,nil,nil,nil
+ if N.model and g.savedIndex then N.model.index=g.savedIndex end
+ resync();return true
 end
-local function stepsFor(quests,references,level,normal,state)
- local steps,seen={},{}
- local data=ns.ForeverQuestData.quests
- local activeObjectives={}
- for _,row in ipairs(normal or {})do
-  if row.quest and row.kind=='objective' then activeObjectives[row.quest]=row end
- end
- local function step(quest,progress)
-  if seen[quest.id] or not allowed(quest,level) or startsInside(quest) then return end
-  local start=not progress.inLog
-  if start and not mayAccept(quest,state) then return end
-  local planner=ns.ForeverQuestPlanner
-  if not start and not (planner and planner.Ready(progress) or progress.ready) then
-   local row=makeStep(quest,'objective')
-   local objective=activeObjectives[quest.id]
-   if objective then
-    for key,value in pairs(objective)do
-     if key~='id' and key~='category' then row[key]=value end
-    end
-   end
-   steps[#steps+1]=row;seen[quest.id]=true
-   return
-  end
-  local hint,points=ns.DungeonQuestLocations(quest,start)
-  local loc=E.Nearest(points,E.state) or points[1]
-  if start and not loc then
-   for _,source in ipairs(quest.record and quest.record.starts or {})do
-    -- An item name without a verified exterior location is not a pickup direction.
-    if source.kind=='item' then return end
-   end
-  end
-  if not loc and not hint then return end
-  steps[#steps+1]=makeStep(quest,start and 'accept' or 'turnin',loc,hint);seen[quest.id]=true
- end
- for _,quest in ipairs(quests)do
-  local progress=questState(quest.id)
-  if progress and not progress.inLog and not progress.rewarded and allowed(quest,level) and not startsInside(quest) then
-   local blocked=false
-   for _,link in ipairs(quest.reference and quest.reference.chain or {})do
-    local id=link[1]
-    if id==quest.id then break end
-    if data[id] then
-     local prior=questState(id)
-     if not prior or not prior.rewarded then
-      if prior then step({id=id,name=data[id].title or link[2],record=data[id],
-        reference=references[id] or (link[3] and {startPoint=link[3]})},prior) end
-      blocked=true;break
-     end
-    end
-   end
-   if not blocked then step(quest,progress) end
-  end
- end
- return steps
+function prep.Pause()
+ local _,g=selected();if not g then return false,'No dungeon preparation is selected.'end
+ g.paused=true;prep.active,prep.navigation=nil,nil;resync();return true
 end
-local function hasRunObjective(quest,progress)
- local record=ns.ForeverQuestData.quests[quest.id] or quest.record or {}
- local hasTypedObjective=false
- for _,objective in ipairs(progress.objectives or {})do
-  local kind=objective.type
-  if kind=='monster' or kind=='item' or kind=='object' then
-   hasTypedObjective=true
-   if objective.finished~=true then return true end
-  end
- end
- if hasTypedObjective then return false end
- -- Live event and log types also cover outdoor introductions. Use recorded objectives for those.
- for _,objective in ipairs(record.objectives or {})do
-  if objective.kind~='talk' then return true end
- end
- return false
+function prep.Resume()
+ local instance,g=selected();if not instance then return false,'No dungeon preparation is selected.'end
+ g.paused=false;prep.active=instance;E.db.questTravelLeg=nil;resync()
+ if ns.WindowWorkflow and ns.WindowWorkflow.OpenSteps then ns.WindowWorkflow.OpenSteps()end
+ return true
 end
-local function runObjectives(quests,level,state)
- local accepted,inside=0,0
- for _,quest in ipairs(quests)do
-  local progress=questState(quest.id)
-  if progress and not progress.rewarded and allowed(quest,level) then
-   if progress.inLog then
-    local planner=ns.ForeverQuestPlanner
-    if not (planner and planner.Ready(progress) or progress.ready) and hasRunObjective(quest,progress) then accepted=accepted+1 end
-   elseif startsInside(quest) and mayAccept(quest,state) then inside=inside+1 end
-  end
- end
- return accepted,inside
+function prep.Status(value)
+ local instance,g=selected();if not instance then return end
+ local plan=prep.Plan(E.Snapshot(),instance)
+ return {instance=instance,name=instance.name,paused=g.paused==true,active=not g.paused and plan.phase~='Complete' and plan.phase~='Unavailable',
+  phase=plan.phase,done=plan.done,total=plan.total,message=plan.message,availability=plan.availability,matches=not value or key(type(value)=='table' and value.name or value)==key(instance.name)}
 end
 local function canOffer()
- local model=N.model
- return model and model.goals.Dungeons and (model.view=='All' or model.view=='Questing' or model.view=='Dungeons')
-  and ns.DungeonQuestRows and ns.DungeonQuestLocations and not (ns.FarmingPlanner and ns.FarmingPlanner.route)
-  and not E.Call(IsInInstance)
+ return N.model and N.model.goals.Dungeons and not goal() and not E.Call(IsInInstance)
+  and not (ns.FarmingPlanner and ns.FarmingPlanner.route)
+  and (N.model.view=='All' or N.model.view=='Questing' or N.model.view=='Dungeons')
 end
-local function offer(level)
- local here=E.CurrentPosition()
- if not here then return end
- local best
- local state=playerState(level)
+function prep.VisibleOffer()if canOffer()then return prep.offer end end
+function prep.UpdateOffer(force,level)
+ local previous=prep.offer and prep.offer.key..':'..prep.offer.mode
+ if not canOffer()then prep.offer=nil;return previous~=nil end
+ local now=E.Time();if not force and prep.checked and now-prep.checked<5 then return false end
+ prep.checked=now;prep.offer=nil
+ local s=E.Snapshot();s.level=level or s.level or 1
  for name,instance in pairs(E.dungeons)do
-  local key=ns.DungeonNameKey(name)
-  if not raid[key] and instance.minimum and instance.maximum and level>=instance.minimum and level<=instance.maximum then
-   local entrance=ns.DungeonEntrance(instance)
-   local distance=entrance and E.Distance(entrance,here)
-   if distance and distance<3000 then
-    local quests,references=dungeonQuests(instance,level)
-    local midpoint=math.ceil((instance.minimum+instance.maximum)/2)
-    local accepted,inside=0,0
-    if level>=midpoint and not prep.dismissed.run[key] then accepted,inside=runObjectives(quests,level,state) end
-    local run=accepted+inside>0
-    local pickups=(run or not prep.dismissed.prep[key]) and #stepsFor(quests,references,level,nil,state) or 0
-    if run or pickups>0 then
-     local rank=run and 2 or 1
-     if not best or rank>best.rank or (rank==best.rank and (distance<best.distance or (distance==best.distance and key<best.key))) then
-      local title,body
-      if run then
-       title='Run '..name
-       local detail={}
-       if accepted>0 then detail[#detail+1]=accepted==1 and '1 dungeon quest to finish.' or accepted..' dungeon quests to finish.' end
-       if inside>0 then detail[#detail+1]=inside==1 and '1 quest starts inside.' or inside..' quests start inside.' end
-       body=table.concat(detail,' ')
-      else
-       title='Get Quests for '..name
-       body='Gather the quests before your run.'
-      end
-      best={instance=instance,entrance=entrance,key=key,mode=run and 'run' or 'prep',rank=rank,distance=distance,
-       title=title,body=body,pickups=pickups}
-     end
+  if instance.minimum and instance.maximum and s.level>=instance.minimum and s.level<=instance.maximum then
+   local entrance=ns.DungeonEntrance(instance);local distance=entrance and E.Distance(s.position,entrance)
+   if distance and distance<=3000 then
+    local plan=prep.Plan(s,instance);local pickups=0
+    for id in pairs(plan.frontier)do if plan.stages[id]=='Before'then pickups=pickups+1 end end
+    local mode=next(plan.runPending) and 'run' or 'prep';local k=key(name)
+    if (pickups>0 or mode=='run') and not prep.dismissed[mode][k]
+     and (not prep.offer or distance<prep.offer.distance)then
+     prep.offer={instance=instance,entrance=entrance,key=k,mode=mode,distance=distance,pickups=pickups,
+      title=(mode=='run' and 'Run ' or 'Get Quests for ')..name,body=mode=='run' and 'Dungeon quests are ready for the run.' or 'Follow the quest prerequisites before your run.'}
     end
    end
   end
  end
- return best
-end
-local function finish()
- prep.active,prep.navigation=nil,nil
- prep.resume=prep.saved
- prep.saved=nil
- prep.offer=nil
- prep.checked=nil
-end
-local function offerSignature(candidate)
- return candidate and (candidate.mode..':'..candidate.key..':'..candidate.body..':'..candidate.pickups)
-end
-function prep.VisibleOffer()
- if canOffer() and not prep.active and not prep.navigation then return prep.offer end
-end
-function prep.UpdateOffer(force,level)
- local previous=offerSignature(prep.offer)
- if not canOffer() or prep.active or prep.navigation then
-  prep.offer=nil;prep.checked=nil
-  return previous~=nil
- end
- level=level or E.Call(UnitLevel,'player') or 1
- local clock=E.Call(GetTime) or 0
- if not force and prep.checked and clock-prep.checked<5 and prep.level==level then return false end
- prep.checked,prep.level=clock,level
- prep.offer=offer(level)
- return previous~=offerSignature(prep.offer)
+ return previous~=(prep.offer and prep.offer.key..':'..prep.offer.mode)
 end
 function prep.Choose(mode)
- local candidate=prep.VisibleOffer()
- if not candidate or (mode=='prep' and candidate.pickups<1) or (mode=='run' and candidate.mode~='run') then return false end
- prep.saved=N.model.index;prep.offer=nil
- if mode=='prep' then prep.active=candidate.instance else prep.navigation=candidate end
- N.Resync()
- return true
+ local offer=prep.VisibleOffer();if not offer then return false end
+ local ok,reason=prep.Start(offer.instance)
+ if ok and mode=='run'then goal().mode='run';resync()end
+ return ok,reason
 end
 function prep.DismissOffer()
- local candidate=prep.VisibleOffer()
- if candidate then prep.dismissed[candidate.mode][candidate.key]=true;prep.UpdateOffer(true) end
+ local offer=prep.VisibleOffer();if offer then prep.dismissed[offer.mode][offer.key]=true;prep.offer=nil;prep.UpdateOffer(true)end
+end
+local priority=E.Priority
+E.Priority=function(row,s)
+ local value=priority(row,s)
+ if not row.dungeonPrep then
+  if prep.active and row.questStep and row.kind=='objective' and row._questDistance and row._questDistance<=180 then
+   return math.max(value or 0,1140)
+  end
+  return value
+ end
+ if row.kind=='information'then return value end
+ if row.dungeonPrepDeferred then return math.min(value or 200,200)end
+ if row.dungeonPrepPhase=='During' then return math.max(value or 0,780)end
+ return math.max(value or 0,1120)+(row.dungeonPrepPhase=='After' and 5 or 0)
+end
+local function prepMissingLocationRow(id,ref,phase,action,location,instance)
+ local name=D.quests[id] and D.quests[id].title or ref and ref.name or ('Quest '..id)
+ local body=action=='accept' and location and ('Pickup is recorded at '..(location.name or 'this location')..'. Availability and requirements are not fully recorded yet. Speak to this contact to check.')
+  or action=='accept' and 'Pickup location is not recorded yet. Use a confirmed guide or quest giver to find this quest.'
+  or action=='turnin' and 'Turn-in location is not recorded yet. Check the contact named in your quest log.'
+  or 'Objective location is not recorded yet. Follow this quest\'s instructions in your quest log.'
+ local deferred=phase=='After' and instance and inside(instance)
+ local priority=deferred and 200 or phase=='During' and (location and 780 or 770) or (location and 1120 or 1110)
+ return {id='gf-dungeon-guidance:'..id..':'..action,quest=id,kind='information',category='Dungeons',
+  title='Prepare: '..name,body=body,dungeonPrep=true,dungeonPrepPhase=phase or 'Before',
+  destination=location,dungeonPrepDeferred=deferred,dungeonPrepNeedsData=true,dungeonPrepAction=action,priority=priority}
+end
+local function prepObjectiveCopy(base)
+ local row=copy(base)
+ local typed=row.slot~=nil or row.objectiveEvidence~=nil or row.procedure~=nil or row.materialBoard~=nil
+ local instruction=row.procedure~=nil or row.materialBoard~=nil
+ local points={}
+ for _,point in ipairs(row.objectivePoints or {})do points[#points+1]=point end
+ if row.procedure and row.procedure.destination then points[#points+1]=row.procedure.destination
+ elseif row.materialBoard and row.destination then points[#points+1]=row.destination end
+ if row.objectives then
+  row.objectives={}
+  for _,child in ipairs(base.objectives)do
+   local item,childTyped,childPoint,childInstruction=prepObjectiveCopy(child)
+   row.objectives[#row.objectives+1]=item
+   typed,instruction=typed or childTyped,instruction or childInstruction
+   if childPoint then points[#points+1]=childPoint end
+  end
+ end
+ local location
+ for _,point in ipairs(points)do
+  if not location then location=point end
+  local old=base.destination
+  if old and point.mapID==old.mapID and point.x==old.x and point.y==old.y then location=old;break end
+ end
+ row.destination,row.questDestination=location,location
+ row.zone=location and location.zone or nil
+ return row,typed,location,instruction
 end
 local refresh=P.Refresh
 function P.Refresh(...)
+ local instance,g=selected()
+ if instance and not g.paused and inside(instance)then g.seenInside=true end
+ prep.planState=nil
  local normal=refresh(...)
- if not canOffer() then
-  if (prep.active or prep.navigation) and E.Call(IsInInstance) then finish() end
-  prep.UpdateOffer(true)
-  return normal
- end
- local level=E.Call(UnitLevel,'player') or 1
- if prep.active then
-  local quests,references=dungeonQuests(prep.active,level)
-  local steps=stepsFor(quests,references,level,normal,playerState(level))
-  if #steps>0 then P.steps=steps;P.firstPending=steps[1].id;return steps end
-  finish()
- end
- if prep.navigation then
-  local run=prep.navigation
-  local accepted,inside=runObjectives(dungeonQuests(run.instance,level),level,playerState(level))
-  if accepted+inside>0 and level<=run.instance.maximum then
-   local rows={{id='gf-dungeon-run:'..run.key,kind='dungeonRun',category='Dungeons',
-    title=run.title,body=run.body,destination=run.entrance}}
-   for _,row in ipairs(normal or {})do rows[#rows+1]=row end
-   P.steps=rows;P.firstPending=rows[1].id;return rows
+ if not instance or g.paused or ns.FarmingPlanner and ns.FarmingPlanner.route then prep.UpdateOffer(false);return normal end
+ local s=P.character or E.Snapshot();local plan=prep.Plan(s);if not plan then return normal end
+ local rows,seen={},{}
+ local objectiveGuidance={}
+ local entrance=ns.DungeonEntrance(instance)
+ for _,base in ipairs(normal or {})do
+  local row=copy(base)
+  if row.quest and plan.nodes[row.quest]then
+   row.dungeonPrep=true;row.dungeonPrepPhase=plan.stages[row.quest] or 'Before'
+   if not D.quests[row.quest] and row.kind=='objective'then
+    local ref=plan.references[row.quest]
+    local typed,location,instruction
+    row,typed,location,instruction=prepObjectiveCopy(row)
+    if not location and not instruction and ref and ref.objectivePoint then
+     local point=localPoint(ref.objectivePoint)
+     row.destination,row.questDestination,row.objectivePoints=point,point,{point}
+     row.body=ref.objective or row.body
+    elseif not location and not instruction then
+     -- Grouped native objectives keep their slots/progress and gain a separate
+     -- location notice; generic contact fallbacks become only that notice.
+     if typed then
+      row.dungeonPrepNeedsData=true
+      objectiveGuidance[row.quest]=prepMissingLocationRow(row.quest,ref,row.dungeonPrepPhase,'objective',nil,instance)
+     else row=prepMissingLocationRow(row.quest,ref,row.dungeonPrepPhase,'objective',nil,instance)end
+    end
+   end
+   if row.dungeonPrepPhase=='During' and row.kind=='objective' and not inside(instance)then
+    -- Keep every canonical objective and procedure row, but do not mistake an
+    -- outside turn-in fallback for the location of an inside-only objective.
+    row.destination,row.questDestination=entrance,entrance
+   end
+   if row.dungeonPrepPhase=='After' and inside(instance)then row.dungeonPrepDeferred=true end
   end
-  finish()
+  rows[#rows+1]=row;seen[row.id]=true
  end
- prep.UpdateOffer(true,level)
- return normal
+ for _,row in pairs(objectiveGuidance)do rows[#rows+1]=row end
+ for id in pairs(plan.frontier)do
+  local found=false;for _,row in ipairs(rows)do if row.quest==id then found=true;break end end
+  if not found then
+   local ref=plan.references[id];local p=progress(id,s);local q=D.quests[id] or {}
+   local item=hasStarter(id,ref)
+   local kind=p.inLog and (ready(id,p,s) and 'turnin' or 'objective') or 'accept'
+   local quest={id=id,name=q.title or ref and ref.name or ('Quest '..id),record=q,reference=ref}
+   local hint,points=ns.DungeonQuestLocations(quest,kind=='accept')
+   local planner=ns.ForeverQuestPlanner
+   local location=planner and planner.NearestSource and planner.NearestSource(nil,s,points) or E.Nearest(points or {},s)
+   if kind=='objective'then
+    -- Contact endpoints can route a pickup or turn-in, never an objective.
+    location=ref and localPoint(ref.objectivePoint) or nil
+    hint=ref and ref.objective
+   end
+   if item or location or startsInside(id,ref) and inside(instance)then
+    local row={id='gf-dungeon-goal:'..id..':'..kind,quest=id,kind=kind,questStep=true,
+     title=(kind=='accept' and 'Accept ' or kind=='turnin' and 'Turn in ' or '')..quest.name,
+     body=item and ('Right-click '..E.ItemName(item)..' in your bags to start the quest.')
+      or kind=='objective' and ref and ref.objective or hint or ('Continue '..quest.name..'.'),
+     destination=not item and location or nil,questStarterItem=item,itemID=item,
+     category='Dungeons',dungeonPrep=true,dungeonPrepPhase=plan.stages[id]}
+    if not D.quests[id] and kind=='accept'then
+     -- A recorded pickup can guide the player without asserting unknown
+     -- eligibility or bypassing the ordinary quest-acceptance checks.
+     if item or startsInside(id,ref) and inside(instance)then
+      row.kind,row.questStep='information',nil
+      row.priority=1120;row.dungeonPrepAction='accept'
+     else row=prepMissingLocationRow(id,ref,plan.stages[id],'accept',location,instance)end
+    end
+    rows[#rows+1]=row
+   else
+    rows[#rows+1]=prepMissingLocationRow(id,ref,plan.stages[id],kind,nil,instance)
+   end
+  end
+ end
+ if next(plan.runPending) and not inside(instance) and plan.phase=='During' then
+  local names={};for id in pairs(plan.runPending)do
+   local ref=plan.references[id];names[#names+1]=(D.quests[id] and D.quests[id].title or ref and ref.name or ('Quest '..id))
+  end;table.sort(names)
+  rows[#rows+1]={id='gf-dungeon-run:'..key(instance.name),kind='dungeonRun',category='Dungeons',
+   title='Run '..instance.name,body='During the dungeon: '..table.concat(names,'; ')..'.',destination=entrance,
+   dungeonPrep=true,dungeonPrepPhase='During',priority=1130}
+ end
+ if plan.phase=='Unavailable' or #rows==0 or plan.phase=='Before' and not next(plan.frontier) and not next(plan.runPending)then
+  local reasons={};if plan.message then reasons[#reasons+1]=plan.message end
+  for id,reason in pairs(plan.blocked)do reasons[#reasons+1]=(D.quests[id] and D.quests[id].title or ('Quest '..id))..': '..reason end
+  table.sort(reasons)
+  if #reasons>0 then rows[#rows+1]={id='gf-dungeon-goal:waiting',kind='information',category='Dungeons',
+   title='Preparing '..instance.name,body=table.concat(reasons,'\n'),dungeonPrep=true,dungeonPrepPhase='Before'}end
+ end
+ P.steps=E.Order(rows,s);P.firstPending=P.steps[1] and P.steps[1].id
+ return P.steps
 end
 local skip=P.Skip
 function P.Skip(...)
- if canOffer() then
-  if prep.active then
-   prep.dismissed.prep[ns.DungeonNameKey(prep.active.name)]=true;finish();return true
-  end
-  if prep.navigation and P.selected and P.selected.kind=='dungeonRun' then
-   prep.dismissed.run[prep.navigation.key]=true;finish();return true
-  end
- end
+ if prep.active and P.selected and P.selected.kind=='dungeonRun' and P.selected.dungeonPrep then return prep.Stop()end
  return skip(...)
 end
 local tick=N.Tick
 function N.Tick(...)
- if (prep.active or prep.navigation) and E.Call(IsInInstance) then N.Resync();return end
  local result=tick(...)
- if prep.UpdateOffer(false) then N.Refresh(true) end
+ if prep.UpdateOffer(false)then N.Refresh(true)end
  return result
 end
-local resync=N.Resync
-function N.Resync(...)
- local value=resync(...)
- if prep.resume and N.model then
-  N.model.index=prep.resume;prep.resume=nil
-  N.model:Reconcile()
-  N.Refresh()
+end)(ADDON,GF)
+
+-- Native Forever pool positions are possible spawns. Keep all alternatives at
+-- an exact coordinate; the compatibility map stores only a representative ID.
+;(function(_,ns)
+local F,E=ns.FarmingPlanner,ns.Forever
+if not F then return end
+local function coordinate(x,y)
+ return math.floor(x*100+.5)*1000000+math.floor(y*100+.5)*100
+end
+function F.LoadNativeFishingPools()
+ local native,reference=ns.ForeverFishingPoolNodes,ns.ForeverFishingPoolReferences
+ if not native and not reference then return false end
+ if F.nativeFishingData~=native or F.fishingReferenceData~=reference then
+  F.nativeFishingData,F.fishingReferenceData=native,reference
+  F.nativeFishingPoints,F.fishingReferencePoints,F.fishingPoolPoints={},{},{}
+  F.fishingPoolSites,F.fishingPoolSiteIndex,F.nativeFishingBound={},{},{}
+  for id,pool in pairs(native and native.poolTypes or {})do
+   F.meta[id]={kind='Fishing',name=pool.name,item=pool.itemID,skill=0,skillKnown=false,
+    objectID=id,nodeTypeID=pool.nodeTypeID,source=native.source,sourceUrl=native.sourceUrl,evidence=native.evidence}
+   F.names[id]=pool.name
+  end
+  for id,pool in pairs(reference and reference.nodeTypes or {})do
+   if not F.meta[id]then F.meta[id]={kind='Fishing',name=pool.name,item=pool.itemID,skill=0,skillKnown=false}end
+   F.names[id]=F.names[id] or pool.name
+  end
+  local function add(data,isNative)
+   if not data then return end
+   local types=isNative and data.poolTypes or data.nodeTypes
+   local target=isNative and F.nativeFishingPoints or F.fishingReferencePoints
+   for map,points in pairs(data.maps or {})do
+    local raw=target[map] or {};target[map]=raw
+    local combined=F.fishingPoolPoints[map] or {};F.fishingPoolPoints[map]=combined
+    local sites=F.fishingPoolSites[map] or {};F.fishingPoolSites[map]=sites
+    local index=F.fishingPoolSiteIndex[map] or {};F.fishingPoolSiteIndex[map]=index
+    for _,point in ipairs(points)do
+     local pool=types and types[isNative and point.objectID or point.nodeTypeID]
+     if pool and type(point.x)=='number' and type(point.y)=='number' and point.x>=0 and point.x<=100 and point.y>=0 and point.y<=100 then
+      local coord=coordinate(point.x,point.y);local site=index[coord]
+      if not site then
+       site={mapID=map,x=point.x,y=point.y,coord=coord,names={},poolObjectIDs={},nodeTypeIDs={},alternatives={},sources={}}
+       sites[#sites+1]=site;index[coord]=site
+      end
+      local alternative={mapID=map,x=point.x,y=point.y,areaID=point.areaID,
+       objectID=isNative and point.objectID or nil,nodeTypeID=isNative and pool.nodeTypeID or point.nodeTypeID,
+       name=pool.name,itemID=pool.itemID,kind='Fishing',skill=0,skillKnown=false,native=isNative,observed=false,
+       source=data.source,revision=data.revision,sourceUrl=data.sourceUrl,evidence=data.evidence}
+      raw[#raw+1]=alternative;combined[#combined+1]=alternative;site.alternatives[#site.alternatives+1]=alternative
+     end
+    end
+   end
+  end
+  add(native,true);add(reference,false)
+  for _,sites in pairs(F.fishingPoolSites)do
+   for _,site in ipairs(sites)do
+    table.sort(site.alternatives,function(a,b)
+     if a.native~=b.native then return a.native end
+     return (a.objectID or a.nodeTypeID)<(b.objectID or b.nodeTypeID)
+    end)
+    local seen,seenNodes,seenSources,seenEvidence={},{},{},{}
+    local sources,evidence={},{}
+    for _,alternative in ipairs(site.alternatives)do
+     if alternative.objectID then site.poolObjectIDs[#site.poolObjectIDs+1]=alternative.objectID end
+     if alternative.nodeTypeID and not seenNodes[alternative.nodeTypeID]then
+      site.nodeTypeIDs[#site.nodeTypeIDs+1]=alternative.nodeTypeID;seenNodes[alternative.nodeTypeID]=true
+     end
+     if not seen[alternative.name]then site.names[#site.names+1]=alternative.name;seen[alternative.name]=true end
+     if not seenSources[alternative.source]then
+      site.sources[#site.sources+1]={source=alternative.source,revision=alternative.revision,sourceUrl=alternative.sourceUrl,evidence=alternative.evidence,native=alternative.native}
+      sources[#sources+1]=alternative.source;seenSources[alternative.source]=true
+     end
+     if not seenEvidence[alternative.evidence]then evidence[#evidence+1]=alternative.evidence;seenEvidence[alternative.evidence]=true end
+     site.itemID=site.itemID or alternative.itemID
+    end
+    local first=site.alternatives[1]
+    site.representativeID=first.objectID or first.nodeTypeID
+    site.native=first.native;site.observed=false;site.sourceUrl=first.sourceUrl
+    table.sort(site.names);site.name=table.concat(site.names,' / ')
+    site.source=table.concat(sources,' / ');site.evidence=table.concat(evidence,'; ')
+   end
+   table.sort(sites,function(a,b)return a.coord<b.coord end)
+  end
+  local runtime=ns.QuestGathering and ns.QuestGathering.Runtime
+  if runtime then runtime.nodeMap=nil;runtime.nodeAt=nil end
  end
- return value
+ F.known.Fishing=F.known.Fishing or {}
+ for map,sites in pairs(F.fishingPoolSites)do
+  local points=F.known.Fishing[map] or {};F.known.Fishing[map]=points
+  if F.nativeFishingBound[map]~=points then
+   for _,site in ipairs(sites)do if site.representativeID then points[site.coord]=site.representativeID end end
+   F.nativeFishingBound[map]=points
+  end
+ end
+ -- A sourced coordinate never establishes a verified fishing-rank threshold.
+ local routes=ns.MaterialRoutes
+ for _,data in ipairs({native or false,reference or false})do
+  if data then for _,pool in pairs(data.poolTypes or data.nodeTypes or {})do
+   local material=pool.itemID and routes and routes.byID[pool.itemID]
+   if material then material.skill,material.sortSkill,material.skillKnown=0,0,false end
+  end end
+ end
+ return true
+end
+function F.FishingPoolSites(map)
+ F.LoadNativeFishingPools()
+ return map and F.fishingPoolSites and F.fishingPoolSites[map] or not map and F.fishingPoolSites or {}
+end
+function F.FishingPoolSite(map,coord)
+ if F.nativeFishingData~=ns.ForeverFishingPoolNodes or F.fishingReferenceData~=ns.ForeverFishingPoolReferences then F.LoadNativeFishingPools()end
+ return F.fishingPoolSiteIndex and F.fishingPoolSiteIndex[map] and F.fishingPoolSiteIndex[map][coord]
+end
+function F.FishingPoolAlternatives(map,coord)
+ local site=F.FishingPoolSite(map,coord);return site and site.alternatives or {}
+end
+function F.NativeFishingPoints(map)
+ F.LoadNativeFishingPools()
+ return map and F.nativeFishingPoints and F.nativeFishingPoints[map] or not map and F.nativeFishingPoints or {}
+end
+function F.FishingReferencePoints(map)
+ F.LoadNativeFishingPools()
+ return map and F.fishingReferencePoints and F.fishingReferencePoints[map] or not map and F.fishingReferencePoints or {}
+end
+function F.FishingPoolPoints(map)
+ F.LoadNativeFishingPools()
+ return map and F.fishingPoolPoints and F.fishingPoolPoints[map] or not map and F.fishingPoolPoints or {}
+end
+local load=F.LoadKnown
+F.LoadKnown=function(...)
+ local result=load(...);F.LoadNativeFishingPools();return result
+end
+local frame=CreateFrame('Frame')
+frame:SetScript('OnEvent',function()F.LoadKnown()end)
+frame:RegisterEvent('PLAYER_LOGIN')
+end)(ADDON,GF)
+
+-- GF_RESOURCE_COVERAGE_20261120_BEGIN
+;(function(...)
+local _,ns=ADDON,GF
+local F,R,V,E=ns.FarmingPlanner,ns.MaterialRoutes,ns.MapControls99,ns.Forever
+if not F or not R then return end
+local function read(fn,...)if type(fn)=='function'then local ok,a,b=pcall(fn,...);if ok then return a,b end end end
+local function valid(v)return type(v)=='number'and v==v and v>=0 and v<=100 end
+local function key(x,y)return string.format('%.17g:%.17g',x,y)end
+local function knownSkill(t)return t.skillKnown~=false and type(t.skill)=='number'end
+local function has(mask,flag)return math.floor((mask or 0)/flag)%2>=1 end
+local function maskOr(a,b)local value,bit=0,1;while a>0 or b>0 do if a%2>=1 or b%2>=1 then value=value+bit end;a=math.floor(a/2);b=math.floor(b/2);bit=bit*2 end;return value end
+local function data()return ns.ForeverCatalog and ns.ForeverCatalog.resourceLocations end
+local function ids(values)if type(values)=='number'then return{values}elseif type(values)=='table'then return values end;return{}end
+local cache={};local owner;local knownNames={}
+F.CoverageStats={mapBuilds=0,sourceBuilds=0,sourceQueries=0,markerBuilds=0,markerPaints=0}
+local function prepare()
+ local d=data();if not d then return end
+ if owner~=d then
+  owner=d;cache={};knownNames={};F.knownAlternatives={};F.resourceRevision=(F.resourceRevision or 0)+1
+  for id,t in pairs(d.types or{})do
+   knownNames[id]={[t.name]=true}
+   if not F.meta[id]then F.meta[id]={kind=t.kind,name=t.name,item=t.itemID,skill=t.skill or 0,skillKnown=knownSkill(t),notRecipeReagent=t.notRecipeReagent==true};F.names[id]=t.name end
+  end
+  for _,object in pairs(d.objects or{})do local names=knownNames[object.nodeTypeID];if names and type(object.name)=='string'then names[object.name]=true end end
+ end
+ return d
+end
+local function fields(d)return d.fields or{nodeTypeID=1,x=2,y=3,roleMask=4,evidenceIDs=5,areaIDs=6,objectIDs=7}end
+local function typeFor(d,nodeID,objectID,name,kind)
+ if nodeID and d.types[nodeID]then return nodeID,d.types[nodeID]end
+ local object=objectID and d.objects and d.objects[objectID]
+ if object and d.types[object.nodeTypeID]then return object.nodeTypeID,d.types[object.nodeTypeID]end
+ if type(name)=='string'then for id,t in pairs(d.types)do if t.name==name and(not kind or t.kind==kind)then return id,t end end end
+end
+local function add(sites,byKey,x,y,id,t,mask,evidence,objects,observation)
+ if not valid(x)or not valid(y)or not t or not t.kind then return end
+ local at=key(x,y);local site=byKey[at]
+ if not site then site={x=x,y=y,key=at,alternatives={},byType={}};byKey[at]=site;sites[#sites+1]=site end
+ local token=id or('catch:'..tostring(t.itemID)..':'..t.kind)
+ local alt=site.byType[token]
+ if not alt then
+  alt={nodeTypeID=id,name=t.name,kind=t.kind,itemID=t.itemID,skill=t.skill,skillKnown=knownSkill(t),
+   notRecipeReagent=t.notRecipeReagent==true,roleMask=0,evidenceIDs={},objectIDs={},observations={}}
+  site.byType[token]=alt;site.alternatives[#site.alternatives+1]=alt
+ end
+ alt.roleMask=maskOr(alt.roleMask,mask or 0)
+ for _,value in ipairs(ids(evidence))do alt.evidenceIDs[value]=true end
+ for _,value in ipairs(ids(objects))do alt.objectIDs[value]=true end
+ if observation then alt.observations[#alt.observations+1]=observation end
+end
+local function personal()
+ local G=ns.GatheringObserver
+ local rows,version=read(G and G.PersonalObservations)
+ local memory=G and G.data
+ return type(rows)=='table'and rows or{},tostring(version or 0)..':'..tostring(memory)..':'..tostring(memory and memory.nextNode or 0)
+end
+function F.ResourceSites(mapID)
+ local d=prepare();if not d then return nil end
+ local live,version=personal();local entry=cache[mapID]
+ if entry and entry.version==version then return entry.sites end
+ local f=fields(d);local sites,byKey={},{}
+ for _,row in ipairs(d.maps and d.maps[mapID]or{})do
+  local id=row[f.nodeTypeID];local t=d.types[id]
+  add(sites,byKey,row[f.x],row[f.y],id,t,row[f.roleMask],row[f.evidenceIDs],row[f.objectIDs])
+ end
+ for _,row in ipairs(d.observations and d.observations[mapID]or{})do
+  local id=row[f.nodeTypeID];add(sites,byKey,row[f.x],row[f.y],id,d.types[id],row[f.roleMask],row[f.evidenceIDs],row[f.objectIDs],{coordinateRole='player-approach',exactNodePosition=false})
+ end
+ local cf=d.catchFields or{itemID=1,mapID=2,x=3,y=4,evidenceID=5,observationID=6,observedUnix=7,quantity=8}
+ for _,row in ipairs(d.fishingCatches or{})do if row[cf.mapID]==mapID then
+  local item=row[cf.itemID]
+  add(sites,byKey,row[cf.x],row[cf.y],nil,{kind='Fishing',name=E.ItemName(item),itemID=item,skillKnown=false},4,{row[cf.evidenceID]},nil,
+   {coordinateRole='player-approach',exactNodePosition=false,observationID=row[cf.observationID],observedUnix=row[cf.observedUnix],evidence='native-fishing-loot'})
+ end end
+ for _,row in ipairs(live)do if row.mapID==mapID and valid(row.x)and valid(row.y)then
+  local id,t=typeFor(d,row.nodeTypeID,row.objectID,row.name,row.kind)
+  if not t and row.kind=='Fishing'and type(row.itemID)=='number'then
+   t={kind='Fishing',name=row.name or(E and E.ItemName(row.itemID))or'Fishing approach',itemID=row.itemID,skillKnown=false}
+  end
+  if t then
+   -- A plain catch never inherits a pool relationship from a nearby marker.
+   if row.evidence=='native-fishing-loot'and not row.nodeTypeID and not row.objectID then id=nil;t={kind='Fishing',name=row.name or E.ItemName(row.itemID),itemID=row.itemID,skillKnown=false}end
+   local role=row.evidence=='hovered-fishing-pool'and 16 or 4
+   add(sites,byKey,row.x,row.y,id,t,role,nil,row.objectID and{row.objectID}or nil,row)
+  end
+ end end
+ -- Existing named node memory is an approach observation, never a newly
+ -- confirmed harvest or an exact node center. Keep it independently of the
+ -- rotating activity ring and use only a matched, known node template.
+ local G=ns.GatheringObserver
+ for _,node in pairs(G and G.data and G.data.nodes or{})do
+  local p=node.position
+  if p and p.mapID==mapID and not node.instanced and valid(p.x)and valid(p.y)
+   and((node.observedClicks or 0)>0 or(node.sourceMatchedHarvests or 0)>0 or(node.harvests or 0)>0)then
+   local id,t=typeFor(d,node.sourceNodeID,node.objectID,node.name,node.profession)
+   local old=F.meta[node.sourceNodeID]
+   local named=t and type(node.name)=='string'and(knownNames[id]and knownNames[id][node.name]or old and node.name==old.name)
+   if named and node.profession==t.kind then
+    add(sites,byKey,p.x,p.y,id,t,2,nil,node.objectID and{node.objectID}or nil,
+     {coordinateRole='player-approach',exactNodePosition=false,evidence='named-node-memory',observedByPlayer=true})
+   end
+  end
+ end
+ table.sort(sites,function(a,b)return a.key<b.key end)
+ for _,site in ipairs(sites)do table.sort(site.alternatives,function(a,b)return tostring(a.nodeTypeID or a.itemID)<tostring(b.nodeTypeID or b.itemID)end)end
+ local points,byItem={},{}
+ for _,site in ipairs(sites)do for _,alt in ipairs(site.alternatives)do
+  local point={x=site.x,y=site.y,mapID=mapID,siteKey=site.key,alternative=alt};points[#points+1]=point
+  if alt.itemID then byItem[alt.itemID]=byItem[alt.itemID]or{};byItem[alt.itemID][#byItem[alt.itemID]+1]=point end
+ end end
+ cache[mapID]={sites=sites,byKey=byKey,version=version,points=points,byItem=byItem};F.knownAlternatives[mapID]=byKey
+ -- Compatibility remains scalar. All current coverage consumers use the
+ -- alternatives above; no invented coordinates encode additional node types.
+ for _,site in ipairs(sites)do for _,alt in ipairs(site.alternatives)do if alt.nodeTypeID then
+  F.known[alt.kind]=F.known[alt.kind]or{};F.known[alt.kind][mapID]=F.known[alt.kind][mapID]or{}
+  local coord=math.floor(site.x*100+.5)*1000000+math.floor(site.y*100+.5)*100
+  local old=F.known[alt.kind][mapID][coord]
+  if not old or alt.nodeTypeID<old then F.known[alt.kind][mapID][coord]=alt.nodeTypeID end
+ end end end
+ F.CoverageStats.mapBuilds=F.CoverageStats.mapBuilds+1
+ return sites
+end
+function F.ResourcePoints(mapID,wanted)
+ local sites=F.ResourceSites(mapID);if not sites then return nil end
+ F.CoverageStats.sourceQueries=F.CoverageStats.sourceQueries+1
+ local entry=cache[mapID];if not wanted then return entry.points end
+ local keys={};for id in pairs(wanted)do keys[#keys+1]=id end;table.sort(keys);local signature=table.concat(keys,',')
+ if entry.queryKey==signature then return entry.queryPoints end
+ local list={};for _,id in ipairs(keys)do for _,point in ipairs(entry.byItem[id]or{})do list[#list+1]=point end end
+ entry.queryKey,entry.queryPoints=signature,list
+ return list
+end
+function F.ResourceAlternatives(mapID,x,y)
+ F.ResourceSites(mapID);local entry=cache[mapID];local site=entry and entry.byKey[key(x,y)];return site and site.alternatives or{}
+end
+function F.CoverageVersion()local d=prepare();local _,version=personal();return d,version end
+local load=F.LoadKnown
+F.LoadKnown=function(...)local result=load(...);prepare();return result end
+local function routing(alt)
+ if alt.notRecipeReagent then return false end
+ if alt.kind=='Fishing'then return true end -- no invented per-fish rank
+ return alt.skillKnown==true and type(alt.skill)=='number'
+end
+local function sourceFrom(point)
+ local a=point.alternative;local possible=has(a.roleMask,1)or has(a.roleMask,8)
+ return{x=point.x,y=point.y,mapID=point.mapID,nodeID=a.nodeTypeID,name=a.name,kind=a.kind=='Mining'and'mine'or a.kind=='Herbalism'and'herb'or'fish',
+  provenance='Typed gathering coverage',coordinateRole=possible and'possible-spawn'or'player-approach',exactNodePosition=false,
+  roleMask=a.roleMask,evidenceIDs=a.evidenceIDs,objectIDs=a.objectIDs,skill=a.skill,skillKnown=a.skillKnown,
+  sourceKind=a.kind,routeEligible=routing(a),nativeGatherVerified=not possible and has(a.roleMask,4)or nil}
+end
+local function rejectOld(s,d)
+ local coarse=d.supersedesCoarseSources and d.supersedesCoarseSources[s.provenance]
+ if coarse and coarse[s.kind]then return true end
+ for _,rule in pairs(d.inactiveSourceRules or{})do
+  if s.provenance==rule.provenance and rule.kinds and rule.kinds[s.kind]and s.NativeGatherVerified~=true and s.nativeGatherVerified~=true then return true end
+ end
+ return s.provenance=='Bundled gathering map'or s.provenance=='Vein yield at a mapped node'or s.provenance=='Personal gathering observation'
+end
+local baseIndex=R.BuildSourceIndex;local indexCache,indexOwner,indexVersion,indexMemory
+local function normalizedSource(source)
+ local s={};for k,v in pairs(source)do s[k]=v end
+ local activity=s.importedActivityEvidence
+ local approach=s.playerApproach==true or s.coordinateRole=='player-approach'or s.coordinateRole=='observed-player-at-loot'
+  or s.positionRole=='player-approach'or type(activity)=='table'and activity.positionRole=='player-approach'
+  or s.coordinateEvidence=='imported player approach at gather-loot'or s.coordinateEvidence=='Everloot player'
+ if approach then s.coordinateRole='player-approach';s.playerApproach=true;s.exactNodePosition=false end
+ return s
+end
+local function coarseSecondary(s)
+ return s.secondaryYield==true and(s.kind=='mine'or s.kind=='herb')and type(s.nodeID)=='number'
+  and type(s.provenance)=='string'and string.find(s.provenance,'GatherMate2 node + ',1,true)==1
+end
+function R.BuildSourceIndex()
+ local d,version=F.CoverageVersion();if not d then return baseIndex()end
+ local G=ns.GatheringObserver;local memory=G and G.data and G.data.nextNode
+ if indexCache and indexOwner==d and indexVersion==version and indexMemory==memory then return indexCache end
+ -- Keep independent catalogue/drop/route facts, while avoiding the historical
+ -- map copies which would count the same sites a second time.
+ local known,loader=F.known,F.LoadKnown;F.known={};F.LoadKnown=function()return true end
+ local ok,index=pcall(baseIndex);F.known,F.LoadKnown=known,loader
+ if not ok then error(index)end
+ local dedupe={}
+ local function insert(map,item,s)
+  local m=R.byID[item];if not m or not R.IsFarmOffering(item)then return end
+  s=normalizedSource(s)
+  local zone=index[map]
+  if not zone then local info=read(C_Map and C_Map.GetMapInfo,map);local z=ns.ForeverCatalog.zones[map];if info and info.mapType and info.mapType~=3 then return end
+   local name=z and z.name or info and info.name;if not name then return end;zone={mapID=map,name=name,items={}};index[map]=zone
+  end
+  zone.items[item]=zone.items[item]or{}
+  local id,t=typeFor(d,s.nodeID,s.objectID,s.name,s.sourceKind)
+  local identity=map..':'..item..':'..tostring(id or s.npcID or s.kind)..':'..tostring(s.coordinateRole or'possible-spawn')..':'..(valid(s.x)and valid(s.y)and key(s.x,s.y)or tostring(#zone.items[item]+1))
+  local previous=dedupe[identity]
+  if previous then
+   if s.secondaryYield then previous.secondaryYield=true;previous.secondaryYieldProvenance=s.secondaryYieldProvenance end
+   return
+  end;dedupe[identity]=s
+  zone.items[item][#zone.items[item]+1]=s
+ end
+ local retained,secondary={},{ }
+ for map,zone in pairs(index)do for item,list in pairs(zone.items)do
+  for _,s in ipairs(list)do
+   if coarseSecondary(s)then
+    local token=s.kind..':'..s.nodeID;secondary[token]=secondary[token]or{};secondary[token][item]=s.provenance
+   elseif not rejectOld(s,d)then retained[#retained+1]={map,item,normalizedSource(s)}end
+  end
+  zone.items[item]={}
+ end end
+ for _,row in ipairs(retained)do insert(row[1],row[2],row[3])end
+ local function yields(map,item,s)
+  for yield,provenance in pairs(secondary[s.kind..':'..tostring(s.nodeID)]or{})do
+   local copy={};for k,v in pairs(s)do copy[k]=v end;copy.secondaryYield=true;copy.secondaryYieldProvenance=provenance;copy.provenance='Typed secondary yield';copy.density=nil;insert(map,yield,copy)
+  end
+  if not R.CoverageVeinYields or s.kind~='mine'then return end
+  for _,yield in ipairs(R.CoverageVeinYields(item,s.nodeID))do
+   local copy={};for k,v in pairs(s)do copy[k]=v end;copy.byproduct=true;copy.provenance='Typed vein yield';insert(map,yield,copy)
+   local zone=index[map];if zone then zone.veinYields=zone.veinYields or{};zone.veinYields[item]=zone.veinYields[item]or{};zone.veinYields[item][yield]=true end
+  end
+ end
+ for _,row in ipairs(retained)do if row[3].kind=='mine'or row[3].kind=='herb'then yields(row[1],row[2],row[3])end end
+ for map in pairs(d.maps or{})do
+  for _,point in ipairs(F.ResourcePoints(map)or{})do
+   local a=point.alternative
+   if a.itemID and R.byID[a.itemID]and R.IsFarmOffering(a.itemID)then local s=sourceFrom(point);insert(map,a.itemID,s);yields(map,a.itemID,s)end
+  end
+ end
+ -- Live observations may describe a map absent from the static coverage set.
+ local live=personal();local maps={}
+ for _,row in ipairs(live)do if row.mapID and not(d.maps and d.maps[row.mapID])then maps[row.mapID]=true end end
+ for map in pairs(d.observations or{})do if not(d.maps and d.maps[map])then maps[map]=true end end
+ for _,node in pairs(G and G.data and G.data.nodes or{})do local p=node.position;if p and p.mapID and not(d.maps and d.maps[p.mapID])then maps[p.mapID]=true end end
+ local cf=d.catchFields or{mapID=2}
+ for _,row in ipairs(d.fishingCatches or{})do local map=row[cf.mapID];if map and not(d.maps and d.maps[map])then maps[map]=true end end
+ for map in pairs(maps)do for _,point in ipairs(F.ResourcePoints(map)or{})do local a=point.alternative;if a.itemID then local s=sourceFrom(point);insert(map,a.itemID,s);yields(map,a.itemID,s)end end end
+ indexCache,indexOwner,indexVersion,indexMemory=index,d,version,memory;F.CoverageStats.sourceBuilds=F.CoverageStats.sourceBuilds+1
+ return index
+end
+-- Shared alternatives also reach nearby crafting sources; a scalar compatibility
+-- representative must never make Tin disappear behind Copper or Silver.
+local Q=ns.QuestGathering and ns.QuestGathering.Runtime
+if Q and Q.ZoneNodes then local previous=Q.ZoneNodes
+ Q.ZoneNodes=function(pos)
+  if not pos or not prepare()then return previous(pos)end
+  local d,version=F.CoverageVersion();local signature=tostring(d)..':'..version
+  if Q.coverageMap==pos.mapID and Q.coverageSignature==signature then return Q.coverageNodes end
+  local nodes={}
+  for _,point in ipairs(F.ResourcePoints(pos.mapID)or{})do local a=point.alternative
+   if a.itemID and not a.notRecipeReagent and routing(a)then nodes[#nodes+1]={item=a.itemID,kind=a.kind,skill=a.skill or 0,skillKnown=a.skillKnown,
+    location={mapID=pos.mapID,x=point.x,y=point.y,name=a.name,coordinateRole=has(a.roleMask,1)and'possible-spawn'or'player-approach'}}end
+  end
+  Q.coverageMap,Q.coverageSignature,Q.coverageNodes=pos.mapID,signature,nodes;return nodes
+ end
 end
 end)(ADDON,GF)
+-- GF_RESOURCE_COVERAGE_20261120_END
+
+-- GF_RESOURCE_MAP_VIEWS_20261120_BEGIN
+;(function(...)
+local _,ns=ADDON,GF
+local F,R,V,E,N=ns.FarmingPlanner,ns.MaterialRoutes,ns.MapControls99,ns.Forever,ns.NormalUI
+if not(F and R and V)then return end
+local function read(fn,...)if type(fn)=='function'then local ok,a,b=pcall(fn,...);if ok then return a,b end end end
+local function valid(v)return type(v)=='number'and v==v and v>=0 and v<=100 end
+local function has(mask,flag)return math.floor((mask or 0)/flag)%2>=1 end
+local function xy(x,y)return string.format('%.17g:%.17g',x,y)end
+local function selection()
+ local ids,list={},{}
+ for id in pairs(ns.NavigationCompass and ns.NavigationCompass.selected or{})do ids[id]=true;list[#list+1]=id end
+ table.sort(list);return ids,table.concat(list,',')
+end
+local function ranks()
+ local list,stamp={},{}
+ for _,kind in ipairs({'Mining','Herbalism','Fishing'})do
+  local skill=read(F.Skill,kind);list[kind]=skill;stamp[#stamp+1]=kind..':'..tostring(skill or 0)
+ end
+ return list,table.concat(stamp,';')
+end
+local function worldRows(map,skills)
+ local rows={}
+ for _,site in ipairs(F.ResourceSites(map)or{})do for _,a in ipairs(site.alternatives)do
+  local rank=skills[a.kind]
+  if rank and(not a.skillKnown or(a.skill or 0)<=rank)then
+   rows[#rows+1]={x=site.x,y=site.y,item=a.itemID,name=a.name,kind=a.kind,nodeTypeID=a.nodeTypeID,
+    typeKey=a.kind..':'..tostring(a.nodeTypeID or a.itemID),siteKey=site.key,possible=has(a.roleMask,1)or has(a.roleMask,8),
+    approach=has(a.roleMask,2)or has(a.roleMask,4)or has(a.roleMask,16),skillKnown=a.skillKnown}
+  end
+ end end
+ return rows
+end
+local function clusters(rows,width,height,wanted,cell)
+ local buckets,order,locations,types={}, {}, {}, {}
+ for _,row in ipairs(rows)do if valid(row.x)and valid(row.y)then
+  local point=row.siteKey or xy(row.x,row.y);locations[point]=true;types[row.nodeTypeID or row.typeKey]=true
+  local at=math.floor(row.x*width/100/cell)..':'..math.floor(row.y*height/100/cell)
+  local bucket=buckets[at]
+  if not bucket then bucket={members={},typeSites={},typeNames={},possible=false,approach=false,sourceCount=0};buckets[at]=bucket;order[#order+1]=at end
+  bucket.members[point]=true;bucket.typeSites[row.typeKey]=bucket.typeSites[row.typeKey]or{};bucket.typeSites[row.typeKey][point]=true;bucket.typeNames[row.typeKey]=row.name or row.kind
+  bucket.possible=bucket.possible or row.possible;bucket.approach=bucket.approach or row.approach;bucket.sourceCount=bucket.sourceCount+1
+  local priority=wanted[row.item]and 0 or 1
+  if not bucket.representative or priority<bucket.priority then bucket.representative=row;bucket.priority=priority end
+ end end
+ table.sort(order);local list={}
+ for _,at in ipairs(order)do local b=buckets[at];local count,nt=0,0
+  for _ in pairs(b.members)do count=count+1 end
+  b.typeCounts={};for token,sites in pairs(b.typeSites)do local n=0;for _ in pairs(sites)do n=n+1 end;b.typeCounts[#b.typeCounts+1]={name=b.typeNames[token],count=n};nt=nt+1 end
+  table.sort(b.typeCounts,function(a,c)return a.name<c.name end)
+  b.locationCount=count;b.typeCount=nt;b.x=b.representative.x;b.y=b.representative.y;b.item=b.representative.item;b.kind=b.representative.kind
+  list[#list+1]=b
+ end
+ local count=0;for _ in pairs(locations)do count=count+1 end
+ F.CoverageStats.markerBuilds=F.CoverageStats.markerBuilds+1
+ return list,count,types
+end
+F.ResourceDisplayClusters=clusters
+local function hover(self)
+ local node=self.node;if not node or not GameTooltip then return end
+ GameTooltip:SetOwner(self,'ANCHOR_RIGHT')
+ GameTooltip:AddLine(node.typeCount==1 and node.typeCounts[1].name or'Gathering locations',1,.82,.3)
+ GameTooltip:AddLine(node.locationCount..(node.locationCount==1 and' recorded location'or' recorded locations'),.9,.85,.7,true)
+ for _,row in ipairs(node.typeCounts)do GameTooltip:AddLine(row.name..(row.count>1 and(' - '..row.count)or''),.9,.85,.7,true)end
+ if node.possible then GameTooltip:AddLine('Possible spawn locations; active presence is unknown.',.7,.8,.75,true)end
+ if node.approach then GameTooltip:AddLine('Player approach position; exact node center is unknown.',.7,.8,.75,true)end
+ GameTooltip:Show()
+end
+local function buildPin(parent,layer)
+ local pin=CreateFrame('Button',nil,parent);pin.coveragePin=true;pin:SetSize(13,13)
+ pin.icon=parent:CreateTexture(nil,layer or'ARTWORK');pin.ring=parent:CreateTexture(nil,layer or'ARTWORK')
+ pin.ring:SetTexture('Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight')
+ pin.countLabel=parent:CreateFontString(nil,layer or'OVERLAY');pin.countLabel:SetFont('Interface\\AddOns\\GrindingForever\\Media\\Naowh.ttf',11,'OUTLINE');pin.countLabel:SetTextColor(1,.9,.6)
+ pin:SetScript('OnEnter',hover);pin:SetScript('OnLeave',function()if GameTooltip then GameTooltip:Hide()end end)
+ return pin
+end
+local function hidePin(pin)pin:Hide();if pin.icon then pin.icon:Hide()end;if pin.ring then pin.ring:Hide()end;if pin.countLabel then pin.countLabel:Hide()end end
+local function hidePool(pool)for _,pin in ipairs(pool or{})do hidePin(pin)end end
+local function paint(pin,node,parent,width,height,level)
+ pin:SetParent(parent);pin:SetFrameLevel(level);pin.node=node;pin:ClearAllPoints();pin:SetPoint('CENTER',parent,'TOPLEFT',node.x*width/100,-node.y*height/100)
+ local icon=read(C_Item and C_Item.GetItemIconByID or GetItemIcon,node.item)
+ pin.icon:SetTexture(icon or(node.kind=='Fishing'and'Interface\\Icons\\Trade_Fishing'or node.kind=='Herbalism'and'Interface\\Icons\\Trade_Herbalism'or'Interface\\Icons\\Trade_Mining'))
+ for _,texture in ipairs({pin.icon,pin.ring})do texture:SetParent(parent);texture:ClearAllPoints();texture:SetPoint('CENTER',parent,'TOPLEFT',node.x*width/100,-node.y*height/100);texture:SetSize(13,13)end
+ pin.countLabel:SetParent(parent)
+ pin.icon:SetShown(node.possible);pin.ring:SetShown(not node.possible)
+ pin.countLabel:ClearAllPoints();pin.countLabel:SetPoint('CENTER',parent,'TOPLEFT',node.x*width/100+5,-node.y*height/100-5)
+ pin.countLabel:SetText(node.locationCount>1 and tostring(node.locationCount)or node.typeCount>1 and'+'or'');pin.countLabel:SetShown(node.locationCount>1 or node.typeCount>1)
+ pin:Show();F.CoverageStats.markerPaints=F.CoverageStats.markerPaints+1
+end
+local previousWorld,previousBatch=V.UpdateWorld,V.RenderBatch
+function V.UpdateWorld(elapsed)
+ local d,revision=F.CoverageVersion();if not d then return previousWorld(elapsed)end
+ V.coverageElapsed=(V.coverageElapsed or 0)+(elapsed or 0);if V.coverageElapsed<.5 then return end;V.coverageElapsed=0
+ local frame=WorldMapFrame;local enabled=V.Mode()=='World Map'or V.Mode()=='Both'
+ local visible=frame and frame:IsShown();local map=visible and read(frame.GetMapID,frame)
+ local canvas=visible and(read(frame.GetCanvas,frame)or(frame.ScrollContainer and(read(frame.ScrollContainer.GetScrollChild,frame.ScrollContainer)or frame.ScrollContainer.Child))or WorldMapDetailFrame)
+ local quests=visible and V.ResourceQuestPoints and V.ResourceQuestPoints()or{}
+ V.DrawRoute(canvas,map);V.DrawQuestPoints(canvas,map,quests)
+ if not enabled or not canvas or not map then V.pending=nil;V.coverageToken=nil;hidePool(V.pins);return end
+ local width,height=canvas:GetWidth(),canvas:GetHeight();if width<=0 or height<=0 then return end
+ local skills,skillKey=ranks();local wanted,selectedKey=selection()
+ local scale=read(canvas.GetEffectiveScale,canvas)or 1
+ local token=tostring(d)..':'..revision..':'..map..':'..width..':'..height..':'..scale..':'..skillKey..':'..selectedKey
+ if V.coverageToken==token then return end;V.coverageToken=token
+ local rows=worldRows(map,skills)
+ local points,locationCount,types=clusters(rows,width,height,wanted,math.max(4,14/scale))
+ V.pending={coverage=true,canvas=canvas,points=points,width=width,height=height,count=#points,cursor=1,
+  sourceCount=#rows,locationCount=locationCount,representedTypes=types}
+ V.coverageReport={sourceCount=#rows,locationCount=locationCount,markerCount=#points,representedTypes=types,mapID=map}
+end
+function V.RenderBatch()
+ local batch=V.pending;if not batch or not batch.coverage then return previousBatch()end
+ if V.Mode()~='World Map'and V.Mode()~='Both'then V.pending=nil;hidePool(V.pins);return end
+ for i=batch.cursor,math.min(batch.count,batch.cursor+19)do
+  local pin=V.pins[i]
+  if pin and not pin.coveragePin then pin:Hide();pin=nil end
+  if not pin then pin=buildPin(batch.canvas);V.pins[i]=pin end
+  paint(pin,batch.points[i],batch.canvas,batch.width,batch.height,batch.canvas:GetFrameLevel()+8)
+ end
+ batch.cursor=batch.cursor+20
+ if batch.cursor>batch.count then for i=batch.count+1,#V.pins do hidePin(V.pins[i])end;V.pending=nil end
+end
+local function sourceRows(B,map)
+ local rows,seen={},{};local zone=B.index and B.index[map]
+ for _,m in ipairs(B.selected or{})do for _,s in ipairs(zone and zone.items[m.id]or{})do
+  if valid(s.x)and valid(s.y)and s.provenance~='Bundled route'then
+   local node=s.nodeID or s.npcID or m.id;local point=xy(s.x,s.y);local token=m.id..':'..node..':'..point
+   local activity=s.importedActivityEvidence
+   local approach=s.playerApproach==true or s.coordinateRole=='player-approach'or s.coordinateRole=='observed-player-at-loot'
+    or s.coordinateEvidence=='Everloot player'or s.coordinateEvidence=='imported player approach at gather-loot'
+    or type(activity)=='table'and activity.positionRole=='player-approach'
+   local possible
+   if type(s.roleMask)=='number'then possible=has(s.roleMask,1)or has(s.roleMask,8);approach=approach or has(s.roleMask,2)or has(s.roleMask,4)or has(s.roleMask,16)
+   else possible=not approach end
+   local row=seen[token]
+   if row then row.possible=row.possible or possible;row.approach=row.approach or approach
+   else
+    row={x=s.x,y=s.y,item=m.id,name=m.name,kind=s.sourceKind or m.kind,nodeTypeID=s.nodeID,
+     typeKey=tostring(m.id),siteKey=point,possible=possible,approach=approach};seen[token]=row;rows[#rows+1]=row
+   end
+  end
+ end end
+ return rows
+end
+local function queueSources(B)
+ for _,card in ipairs(B.routeDetails or{})do
+  if B.routePopup:IsShown()and B.focusedRoute and card:IsShown()and card.choice==B.focusedRoute.choice and card.plot:IsShown()then
+   local width,height=card.plot:GetWidth(),card.plot:GetHeight();local wanted={};local names={}
+   for _,m in ipairs(B.selected or{})do wanted[m.id]=true;names[#names+1]=m.id end;table.sort(names)
+   local token=tostring(B.index)..':'..card.choice.mapID..':'..width..':'..height..':'..table.concat(names,',')
+   if card.sourceToken~=token then
+    card.sourceToken=token;hidePool(card.sourcePins)
+    local rows=sourceRows(B,card.choice.mapID);local points,locations,types=clusters(rows,width,height,wanted,10)
+    card.sourcePending={points=points,count=#points,cursor=1,width=width,height=height,sourceCount=#rows,locationCount=locations,representedTypes=types}
+    card.sourcePins=card.sourcePins or{}
+   end
+  else card.sourcePending=nil;card.sourceToken=nil;hidePool(card.sourcePins)end
+ end
+end
+local installed
+local function attach()
+ local B=ns.FarmingBrowser;if not B or installed==B then return end;installed=B
+ local draw=B.DrawRoutes
+ B.DrawRoutes=function(...)local value=draw(...);queueSources(B);return value end
+ B.routePopup:HookScript('OnHide',function()for _,card in ipairs(B.routeDetails)do card.sourcePending=nil;card.sourceToken=nil;hidePool(card.sourcePins)end end)
+end
+local open=R.Open
+R.Open=function(...)local value=open(...);attach();return value end
+local worker=CreateFrame('Frame');F.coverageWorker=worker
+worker:SetScript('OnUpdate',function()
+ local B=ns.FarmingBrowser
+ if not B or not B.routePopup:IsShown()or not B.focusedRoute then return end
+ for _,card in ipairs(B.routeDetails or{})do local batch=card.sourcePending
+  if batch and card:IsShown()then
+   for i=batch.cursor,math.min(batch.count,batch.cursor+19)do local pin=card.sourcePins[i]
+    if not pin then pin=buildPin(card.plot,'BORDER');card.sourcePins[i]=pin end
+    paint(pin,batch.points[i],card.plot,batch.width,batch.height,card.plot:GetFrameLevel()+1)
+   end
+   batch.cursor=batch.cursor+20;if batch.cursor>batch.count then for i=batch.count+1,#card.sourcePins do hidePin(card.sourcePins[i])end;card.sourceReport=batch;card.sourcePending=nil end
+  end
+ end
+end)
+attach()
+end)(ADDON,GF)
+-- GF_RESOURCE_MAP_VIEWS_20261120_END

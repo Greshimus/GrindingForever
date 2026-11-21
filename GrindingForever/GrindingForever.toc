@@ -1,15 +1,18 @@
 ## Interface: 16001
 ## Title: Grinding Forever
 ## Notes: Quest steps, dungeon maps, and profession guidance for WoW: Forever.
-## Version: Forever-52
+## Version: Forever-54
 ## SavedVariablesPerCharacter: GrindingForeverLiveCharacterDB
 ## X-GF-Client: FOREVER
 QuestData.lua
 QuestLocationEvidence.lua
 DungeonReference.lua
+DungeonQuestWingFacts.lua
 DungeonData.lua
 ProfessionKnowledge.lua
 ForeverCatalog.lua
+FishingPoolNodeData.lua
+FishingPoolReferenceData.lua
 Main.lua
 GatheringMemory.lua
 DungeonLandmarks.lua
@@ -28,3 +31,4 @@ QuestProcedures.lua
 GroupedSteps.lua
 ProfessionOnboardingTrainers.lua
 ProfessionOnboarding.lua
+DungeonWorldMap.lua
