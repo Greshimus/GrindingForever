@@ -1,5 +1,6 @@
 local _, ns = ...
 local E, facts = ns.Forever, ns.RecipeSourceFacts
+local A=assert(ns.Availability,"GF availability policy must load before RecipeCatalog")
 local Catalog = { professions = facts.professions, revision = 0, sourceRevision = 0 }
 ns.RecipeCatalog = Catalog
 
@@ -208,6 +209,7 @@ function Catalog.UnpinWorldMap(loc)
 end
 
 function Catalog.PinSource(recipe, loc)
+    if not A.IsRecipeAvailable(recipe) then return false,false end
     if not exact(loc) then return false, false end
     local compass, workflow = ns.NavigationCompass, ns.WindowWorkflow
     local tracked = compass and compass.Enabled() or false
@@ -489,6 +491,7 @@ end
 
 local thistleQuests={Alliance=2359,Horde=2478}
 function Catalog.PurchasePolicyAllows(recipe,state)
+    if not A.IsRecipeAvailable(recipe) then return false end
     if type(recipe)~="table" or not thistleTea(recipe) then return true end
     state=state or E.state or E.Snapshot()
     if state.class~="ROGUE" then return false end
@@ -567,6 +570,7 @@ local function observedIngredients(reagents)
 end
 
 function Catalog.Ingredients(recipe)
+    if not A.IsRecipeAvailable(recipe) then return {} end
     recipe=type(recipe)=="table" and recipe or {}
     local recorded=observedIngredients(recipe.reagents)
     local source=recorded and "observed" or "exported"
@@ -652,6 +656,7 @@ local function findQueryMatch(index,query,first)
     return false
 end
 function Catalog.MatchesItemQuery(recipe,query)
+    if not A.IsRecipeAvailable(recipe) then return false end
     if type(recipe)~="table" or not E.Public(query) or type(query)~="string" then return false end
     query=query:match("^%s*(.-)%s*$"):lower()
     if query=="" then return false end
@@ -682,6 +687,7 @@ function Catalog.MatchesItemQuery(recipe,query)
 end
 
 function Catalog.RequirementLines(recipe,loc,state)
+    if not A.IsRecipeAvailable(recipe) then return {} end
     recipe=type(recipe)=="table" and recipe or {}
     local original=E.recipes[positiveInteger(recipe.spellID or recipe.id)]
     if type(original)=="table" and original~=recipe then
@@ -832,6 +838,7 @@ function Catalog.Browse(checkpoint)
         local oldAlchemyPotion = recipe.spellID == 2337 or recipe.spellID == 3447
         if not oldAlchemyPotion or recipe.observed then merge(recipe) end
     end
+    local published={}
     for _, recipe in ipairs(rows) do
         recipe.productID = recipe.productID or clientProductIDs[recipe.spellID]
         if not hasText(recipe.name) then
@@ -840,9 +847,10 @@ function Catalog.Browse(checkpoint)
         end
         recipe.key = recipe.spellID or recipe.learnableItemID or recipe.name
         recipe.sourceIndexes = nil
+        if A.IsRecipeAvailable(recipe) then published[#published+1]=recipe end
         if checkpoint then checkpoint() end
     end
-    return rows
+    return published
 end
 
 function Catalog.PurchaseRecipes()
@@ -879,10 +887,14 @@ local function vendorRecipeName(name)
     return recipeItemPrefixes[prefix] and title or name
 end
 
+local function factAvailable(fact)
+    return A.IsRecipeAvailable({spellID=fact[2],learnableItemID=fact[5],productID=fact[6],ingredients=(facts.ingredients or {})[fact[2]]})
+end
+
 local function vendorTooltipLines(id)
     local rows, byItem, bySpell = {}, {}, {}
     local function add(itemID, spellID, name, profession, skill)
-        if not hasText(name) then return end
+        if not A.IsRecipeAvailable({learnableItemID=itemID,spellID=spellID}) or not hasText(name) then return end
         local label = vendorRecipeName(name)
         local hasSkill = hasText(profession) and type(skill) == "number" and skill > 0
         if hasSkill then label = label .. (" (%s %d)"):format(profession, skill) end
@@ -897,7 +909,7 @@ local function vendorTooltipLines(id)
         if spellID then bySpell[spellID] = row end
     end
     local function addFact(fact, fallback)
-        if not E.SeasonalAvailable({spellID = fact[2], learnableItemID = fact[5]}) then return end
+        if not factAvailable(fact) or not E.SeasonalAvailable({spellID = fact[2], learnableItemID = fact[5]}) then return end
         local name = fact[3] or E.SpellName(fact[2])
         local skill = fact[4] and fact[4] > 0 and fact[4] or fallback
         add(fact[5], fact[2], name, facts.professions[fact[1]], skill)
@@ -907,7 +919,7 @@ local function vendorTooltipLines(id)
         addFact(facts.recipes[index])
     end
     for _, recipe in pairs(observedByVendor[id] or {}) do
-        if E.SeasonalAvailable(recipe) then
+        if A.IsRecipeAvailable(recipe) and E.SeasonalAvailable(recipe) then
             local itemID = recipe.learnableItemID
             local fact
             for _, index in ipairs(facts.byItem[itemID] or {}) do
@@ -932,6 +944,7 @@ local function vendorTooltipLines(id)
 end
 
 local function recipeItemSourceLines(id)
+    if not A.IsItemAvailable(id) then return {} end
     local indexes, observed = facts.byItem[id], observedByItem[id]
     if not indexes and not observed then return {} end
     local faction = E.state and E.state.faction or E.Call(UnitFactionGroup, "player")
@@ -961,7 +974,7 @@ local function recipeItemSourceLines(id)
     end
     for _, index in ipairs(indexes or {}) do
         local fact = facts.recipes[index]
-        if E.SeasonalAvailable({spellID = fact[2], learnableItemID = fact[5]}) then
+        if factAvailable(fact) and E.SeasonalAvailable({spellID = fact[2], learnableItemID = fact[5]}) then
             for _, source in ipairs(fact[7]) do
                 local kind, sourceID = source[1], source[2]
                 local entity = facts.entities[kind] and facts.entities[kind][sourceID]
@@ -984,7 +997,7 @@ local function recipeItemSourceLines(id)
             end
         end
     end
-    if observed and E.SeasonalAvailable(observed) then
+    if observed and A.IsRecipeAvailable(observed) and E.SeasonalAvailable(observed) then
         for _, loc in ipairs(observed.locations) do
             if loc.source == "Vendor" and loc.npcID and loc.name and nearby(loc, loc.npcID) then
                 addSource("Vendor:" .. loc.npcID, "Sold by " .. loc.name, loc.zone)

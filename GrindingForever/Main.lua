@@ -11,6 +11,60 @@ local function call(fn,...)if type(fn)=='function'then local ok,a,b,c,d,e,f,g,h,
 E.Call=call
 local function public(v)return not issecretvalue or call(issecretvalue,v)==false end
 E.Public=public
+-- Reversible owner availability policy, independent of retained source facts.
+-- This hold means current availability is unconfirmed; it is not an absence claim.
+local A={revision=1,policy='owner-temporary-holy-salts-hold-20261121',
+ reason='Temporarily hidden at owner request; current availability unconfirmed.'}
+ns.Availability=A
+local heldItems={[239016]=true,[276468]=true,[238637]=true,[238638]=true,[238639]=true,
+ [238645]=true,[238646]=true,[238647]=true,[250394]=true,[250395]=true,[250396]=true}
+local heldSpells={[1225758]=true,[1225759]=true,[1225760]=true}
+local heldIngredients={[239016]=true,[276468]=true}
+local spellFields={'spellID','spellId','recipeID','recipeId'}
+local itemFields={'learnableItemID','recipeItemID','itemID','itemId','productID','productItemID','productItemId','craftedItemId','product','productLink','materialID'}
+local function contentID(value,kind)
+ if not public(value)then return end
+ if type(value)=='number'then return value end
+ if type(value)=='string'then
+  return tonumber(value)or tonumber(value:match((kind=='spell'and'spell:'or'item:')..'(%d+)'))
+ end
+end
+function A.IsItemAvailable(id)return not heldItems[contentID(id,'item')]end
+function A.IsSpellAvailable(id)return not heldSpells[contentID(id,'spell')]end
+local function ingredientAvailable(ingredients)
+ if type(ingredients)~='table'then return true end
+ for key,value in pairs(ingredients)do
+  if heldIngredients[contentID(key,'item')]and(value==true or type(value)=='number'and value>0)then return false end
+  if type(value)=='table'then
+   local id=contentID(value.itemID or value.itemId or value.id or value.item or value[1],'item')
+   local count=value.count or value.quantity or value[2]
+   if heldIngredients[id]and(count==nil or count==true or type(count)=='number'and count>0)then return false end
+  end
+ end
+ return true
+end
+local function directRecipeAvailable(row)
+ if type(row)~='table'then return true end
+ for _,field in ipairs(spellFields)do if not A.IsSpellAvailable(row[field])then return false end end
+ local id=row.id
+ if type(id)=='string'and public(id)then
+  local spellID=id:match('^recipe:(%d+)')or id:match('^spell:(%d+)')
+  if spellID and not A.IsSpellAvailable(spellID)then return false end
+ elseif type(id)=='number'and(row.profession or row.reagents or row.ingredients or row.product or row.known~=nil)and not A.IsSpellAvailable(id)then return false end
+ for _,field in ipairs(itemFields)do
+  if not A.IsItemAvailable(row[field])then return false end
+ end
+ return ingredientAvailable(row.reagents)and ingredientAvailable(row.ingredients)
+end
+function A.IsRecipeAvailable(row)
+ return directRecipeAvailable(row)and(type(row)~='table'or directRecipeAvailable(row.recipe))
+end
+function E.IsContentAvailable(kind,value)
+ if kind=='item'then return A.IsItemAvailable(value)end
+ if kind=='spell'then return A.IsSpellAvailable(value)end
+ if kind=='recipe'then return A.IsRecipeAvailable(value)end
+ return true
+end
 local function num(v,a,b)if public(v)and type(v)=='number'and v==v and v>=a and v<=b then return v end end
 local itemLabels={}
 local function usableItemLabel(value)
@@ -386,6 +440,7 @@ function E.SeasonalAvailable(row)
  return false
 end
 function E.Eligible(row,state,levelsDescribeNPC)
+ if not E.IsContentAvailable('recipe',row)then return false end
  if not E.SeasonalAvailable(row)then return false end
  state=state or E.state or E.Snapshot()
  if row.faction and row.faction~='Both'and row.faction~='Neutral'and row.faction~=state.faction then return false end
@@ -745,6 +800,7 @@ function E.RecipeVendorDistance(position,location,distances)
 end
 
 function E.RecipeOpportunity(r,state,vendorDistances)
+ if not A.IsRecipeAvailable(r)then return end
  state=state or E.state or E.Snapshot()
  local catalog=ns.RecipeCatalog
  if catalog and catalog.PurchasePolicyAllows and catalog.PurchasePolicyAllows(r,state)~=true then return end
@@ -832,13 +888,14 @@ function E.KnownRecipeRows(zone,search)
 end
 function E.FlagRecipe(r,enabled)
  if not r or not(r.spellID or r.learnableItemID)then return false end
+ if enabled and not A.IsRecipeAvailable(r)then return false end
  local sources={};for _,loc in ipairs(r.locations or{})do if loc.source=='Drop'or loc.source=='Treasure'then sources[#sources+1]=loc end end
  if #sources==0 then return false end
  E.farmFlags[r.spellID or r.learnableItemID]=enabled and true or nil;if E.db then E.db.farmFlags=E.farmFlags end;return true
 end
 function E.BossLoot(boss)
- local out,seen={},{};for _,v in ipairs(boss.loot or{})do if(type(v[4])=='number'and v[4]>=3)or tostring(v[3]):lower():find('quest',1,true)or v.startsQuest then out[#out+1]=v;seen[v[1]]=true end end
- for _,dungeon in pairs(E.dungeons)do for _,q in ipairs(dungeon.quests or{})do local item=q.startItem;if boss.name and item and not seen[item[1]]and type(item[4])=='string'and item[4]:find('Dropped by: '..boss.name,1,true)then out[#out+1]={item[1],item[2],'Starts quest: '..q.name,item[3],startsQuest=q.id};seen[item[1]]=true end end end
+ local out,seen={},{};for _,v in ipairs(boss.loot or{})do if A.IsItemAvailable(v[1])and((type(v[4])=='number'and v[4]>=3)or tostring(v[3]):lower():find('quest',1,true)or v.startsQuest)then out[#out+1]=v;seen[v[1]]=true end end
+ for _,dungeon in pairs(E.dungeons)do for _,q in ipairs(dungeon.quests or{})do local item=q.startItem;if boss.name and item and A.IsItemAvailable(item[1])and not seen[item[1]]and type(item[4])=='string'and item[4]:find('Dropped by: '..boss.name,1,true)then out[#out+1]={item[1],item[2],'Starts quest: '..q.name,item[3],startsQuest=q.id};seen[item[1]]=true end end end
  return out
 end
 function E.ObserveCamp(auras)
@@ -968,6 +1025,7 @@ local cookingUses={
 }
 
 function E.CookingRecipeNames(itemID)
+ if not A.IsItemAvailable(itemID)then return{}end
  local names,seen={},{}
  local function add(name)
   if not E.Public(name) or type(name)~="string" or name=="" then return false end
@@ -977,16 +1035,18 @@ function E.CookingRecipeNames(itemID)
  end
  local indexed=cookingUses[itemID]
  for _,spellID in ipairs(indexed or {}) do
+  if A.IsSpellAvailable(spellID)and A.IsRecipeAvailable(E.recipes[spellID])then
   if not add(E.Call(C_Spell and C_Spell.GetSpellName,spellID)) and not add(E.Call(GetSpellInfo,spellID)) then
    local recipe=E.recipes[spellID]
    add(recipe and recipe.name)
+  end
   end
  end
  local professions=E.reagents[itemID]
  if indexed or professions and professions.Cooking then
   for _,recipe in pairs(E.recipes) do
    local count=recipe.profession=="Cooking" and recipe.reagents and recipe.reagents[itemID]
-   if type(count)=="number" and count>0 then add(recipe.name) end
+   if A.IsRecipeAvailable(recipe)and type(count)=="number" and count>0 then add(recipe.name) end
   end
  end
  local runtime=ns.QuestGathering and ns.QuestGathering.Runtime
@@ -994,13 +1054,14 @@ function E.CookingRecipeNames(itemID)
      or E.db and E.db.craftingBooks and E.db.craftingBooks.Cooking
  for _,recipe in ipairs(book and book.rows or {}) do
   local count=recipe.reagents and recipe.reagents[itemID]
-  if type(count)=="number" and count>0 then add(recipe.name) end
+  if A.IsRecipeAvailable(recipe)and type(count)=="number" and count>0 then add(recipe.name) end
  end
  table.sort(names)
  return names
 end
 
 function E.AddCookingRecipeTooltip(tip,itemID,names)
+ if not A.IsItemAvailable(itemID)then return end
  names=names or E.CookingRecipeNames(itemID)
  if #names==0 then return end
  tip:AddLine("Cooking recipes",1,.84,.52)
@@ -1011,6 +1072,7 @@ function E.AddCookingRecipeTooltip(tip,itemID,names)
 end
 
 function E.UsageLines(itemID,isQuestItem,hasCookingRecipes)
+ if not A.IsItemAvailable(itemID)then return{}end
  local out={}
  if not isQuestItem then local quests={};for _,name in pairs(E.itemQuests[itemID]or{})do quests[#quests+1]=name end;table.sort(quests);if #quests>0 then out[#out+1]='Used for '..table.concat(quests,', ')end end
  return out
@@ -1019,7 +1081,7 @@ local skinningMaterials={ [2934]=true,[2318]=true,[2319]=true,[4234]=true,[4304]
 function E.DropLines(npcID)
  local out,seen={},{}
  local function add(itemID)
-  if seen[itemID] then return end
+  if not A.IsItemAvailable(itemID)or seen[itemID] then return end
   seen[itemID]=true
   if not E.crafted[itemID]and not E.gatherables[itemID]and(E.reagents[itemID]or E.itemQuests[itemID]or skinningMaterials[itemID])
    and(E.itemQuests[itemID]or not E.IsVendorReagent or not E.IsVendorReagent(itemID))then out[#out+1]=item(itemID)end
@@ -1083,7 +1145,7 @@ function P.Refresh()
  for _,r in ipairs(E.CatchupSteps and E.CatchupSteps(s,source)or{})do rows[#rows+1]=r end
  for _,r in ipairs(E.CraftingCatchup and E.CraftingCatchup(s,source)or{})do rows[#rows+1]=r end
  for _,r in ipairs(E.farmSteps or{})do rows[#rows+1]=r end
- for id in pairs(E.farmFlags)do local r=E.recipes[id];if r and E.Known(r)~=true then local locations={};for _,v in ipairs(r.locations or{})do if v.source=='Drop'or v.source=='Treasure'then locations[#locations+1]=v end end;local loc=E.Nearest(locations,s);local dungeon=not loc and r.locations[1]and E.dungeons[r.locations[1].dungeon];if dungeon then loc=dungeon.entrance end;rows[#rows+1]={id='farmrecipe:'..id,kind='farmRecipe',category='Crafting',title='Find '..r.name,body='Farm '..(r.learnableName or r.name)..' from '..(r.locations[1]and r.locations[1].name or'its recorded source')..'. Drops are not guaranteed.',destination=loc,priority=90}end end
+ for id in pairs(E.farmFlags)do local r=E.recipes[id];if r and A.IsRecipeAvailable(r)and E.Known(r)~=true then local locations={};for _,v in ipairs(r.locations or{})do if v.source=='Drop'or v.source=='Treasure'then locations[#locations+1]=v end end;local loc=E.Nearest(locations,s);local dungeon=not loc and r.locations[1]and E.dungeons[r.locations[1].dungeon];if dungeon then loc=dungeon.entrance end;rows[#rows+1]={id='farmrecipe:'..id,kind='farmRecipe',category='Crafting',title='Find '..r.name,body='Farm '..(r.learnableName or r.name)..' from '..(r.locations[1]and r.locations[1].name or'its recorded source')..'. Drops are not guaranteed.',destination=loc,priority=90}end end
  if #rows==0 then rows[1]={id='awaiting-route',kind='information',category='Questing',title='No quest steps available',body='Check your quest log or use Fresh Steps in another questing area.'}end
  P.steps=E.Order(rows,s)
  if #P.steps==0 and E.db and E.db.journey=='Completionist'then
@@ -1473,7 +1535,7 @@ function E.CatchupSteps(state,route)
  local rows={};local futureZones={};for i=1,math.min(12,#route)do if route[i].zone then futureZones[route[i].zone]=true end end
  for profession,skill in pairs(state.skills)do
   local endangered={}
-  for _,r in pairs(E.recipes)do if r.profession==profession and E.Known(r)==true and(not r.greySkill or skill.rank<r.greySkill)then
+  for _,r in pairs(E.recipes)do if E.IsContentAvailable('recipe',r)and r.profession==profession and E.Known(r)==true and(not r.greySkill or skill.rank<r.greySkill)then
    for material in pairs(r.reagents or{})do local sites=E.materialSites and E.materialSites[material]or{};local localSource=false
     for _,site in ipairs(sites)do local d=E.Distance(state.position,site);if d and d<1800 then localSource=true end end
     -- Risk is asserted only when the imported route explicitly identifies a tier transition.
@@ -1486,7 +1548,10 @@ function E.CatchupSteps(state,route)
 end
 function E.FarmSelected()
  local i=call(GetTradeSkillSelectionIndex);local materials={}
- if i and call(GetTradeSkillIsLinked)~=true then for k=1,call(GetTradeSkillNumReagents,i)or 0 do local id=E.ItemID(call(GetTradeSkillReagentItemLink,i,k));local _,_,need=call(GetTradeSkillReagentInfo,i,k);local have=id and call(GetItemCount,id)or 0;if id and need and have and need>have then materials[#materials+1]={item=id,need=need-have}end end end
+ local link=i and call(GetTradeSkillRecipeLink,i)
+ local spellID=type(link)=='string'and tonumber(link:match('enchant:(%d+)')or link:match('spell:(%d+)'))
+ if not ns.Availability.IsSpellAvailable(spellID)then return false,ns.Availability.reason end
+ if i and call(GetTradeSkillIsLinked)~=true then for k=1,call(GetTradeSkillNumReagents,i)or 0 do local id=E.ItemID(call(GetTradeSkillReagentItemLink,i,k));local _,_,need=call(GetTradeSkillReagentInfo,i,k);local have=id and call(GetItemCount,id)or 0;if id and not ns.Availability.IsItemAvailable(id)then return false,ns.Availability.reason end;if id and need and have and need>have then materials[#materials+1]={item=id,need=need-have}end end end
  local rows={}
  for _,m in ipairs(materials)do local site=E.Nearest(E.materialSites and E.materialSites[m.item]or{});if site then rows[#rows+1]={id='material:'..m.item,kind='farm',category='Gathering',title='Collect '..m.need..' '..E.ItemName(m.item),body='Visit a personally observed source area. This position was recorded while collecting loot and is not an exact spawn point.',destination=site,materialID=m.item,requiredCount=m.need,priority=155}end end
  if #rows==0 then return false,'No verified Forever source is available for the missing materials yet.'end
@@ -1548,7 +1613,7 @@ function E.CraftingCatchup(state,route)
   local goal=goals[profession];if E.db and E.db.pace=='Relaxed'and not goal then goal=math.min(skill.cap or skill.rank,skill.rank+5)end
   if goal and skill.rank<goal then
    for _,choice in ipairs(F.levelingChoices[profession]or{})do if skill.rank>=choice[1]and skill.rank<choice[2]then
-    local recipe;for _,r in pairs(E.recipes)do if r.profession==profession and r.name==choice[3]and E.Known(r)==true then recipe=r;break end end
+    local recipe;for _,r in pairs(E.recipes)do if E.IsContentAvailable('recipe',r)and r.profession==profession and r.name==choice[3]and E.Known(r)==true then recipe=r;break end end
     if recipe and next(recipe.reagents or{})then local enough=true;local parts={}
      for material,quantity in pairs(recipe.reagents)do local have=call(GetItemCount,material)or 0;if have<quantity then enough=false end;parts[#parts+1]=quantity..' '..E.ItemName(material)end
      if enough then
@@ -1661,6 +1726,7 @@ function E.RefreshCatalog()
 end
 local eligible=E.Eligible
 function E.Eligible(row,state,levelsDescribeNPC)
+ if not E.IsContentAvailable('recipe',row)then return false end
  state=state or E.state
  if row.kind=='collection'and row.recipe and E.Known(row.recipe)==true then return false end
  if row.kind=='collection'and row.itemID then
@@ -6554,11 +6620,7 @@ function W.Ensure()
 end
 local tick=N.Tick
 
--- Shift-click links target the focused recipe search, without stealing chat links.
-if type(hooksecurefunc)=='function'then hooksecurefunc('ChatEdit_InsertLink',function(link)
- local box=N.root and N.root.recipeSearch;if not box or not box:HasFocus()then return end
- local name=type(link)=='string'and(link:match('%[(.-)%]')or GetItemInfo(link));if name then box:SetText(name);N.SetSearchQuery(name)end
-end)end
+-- Focused GF item-search insertion is registered by the shared approved UI bridge.
 end)(...)
 
 -- GF_SERVICE_CAMPS4_BEGIN
@@ -6709,6 +6771,7 @@ local function refreshRouteButton()
  if N.root then N.Refresh()end
 end
 function F.Plan(kind,item)
+ if not ns.Availability.IsItemAvailable(item)then return nil,ns.Availability.reason end
  local p=E.CurrentPosition();if not p then return nil,'Outdoor position unavailable.'end
  F.LoadKnown()
  local candidates={};local rank=kind=='Cloth'and 1 or F.Skill(kind);if not rank then return nil,'Learn '..kind..' first.'end
@@ -6732,6 +6795,7 @@ function F.Plan(kind,item)
  local out={};for i=1,math.min(12,#candidates)do local v=candidates[i];out[#out+1]={mapID=v.mapID,x=v.x,y=v.y,name=v.name or E.ItemName(item),objectID=v.objectID,source=v.source,sourceUrl=v.sourceUrl,evidence=v.evidence}end;return out,nil,p
 end
 function F.Start(kind,item,target,targetSkill)
+ if not ns.Availability.IsItemAvailable(item)then return false,ns.Availability.reason end
  local nodes,why=F.Plan(kind,item,12);if not nodes then return false,why end
  F.route={nodes=nodes,steps={},cursor=1,item=item,target=target,skill=kind,targetSkill=targetSkill}
  for i,v in ipairs(nodes)do F.route.steps[i]={id='gf-route5:'..i,kind='farm',category='Gathering',title='Farm '..E.ItemName(item)..' - '..i..' / '..#nodes,body='Follow the farming route. Gather manually; Skip bypasses this waypoint.'..(v.evidence and '\n'..v.evidence..'.' or ''),destination={mapID=v.mapID,x=v.x,y=v.y,name=v.name,objectID=v.objectID,source=v.source,evidence=v.evidence},priority=10000}end
@@ -9341,6 +9405,7 @@ local function buildResource(parent)
  button.wash=button:CreateTexture(nil,"BACKGROUND");button.wash:SetAllPoints();button.wash:SetColorTexture(.03,.43,.38,.20)
  button.label=text(button,14);button.label:SetJustifyH("CENTER");button.label:SetJustifyV("TOP");button.label:SetWordWrap(true)
  button:SetScript("OnClick",function(self)
+  if self.informational then ns.HandleItemChatClick(self.material and(self.material.itemLink or self.material.id));return end
   if self.material and self.material.isFarmFamily then if self.openYields then self.openYields(self)end;return end
   if not ns.HandleItemChatClick(self.material and(self.material.itemLink or self.material.id))then R.ToggleMaterial(self.material)end
  end)
@@ -9356,8 +9421,8 @@ end
 
 local function fillResource(tile,m,height,unit,selected,choices,compatible,familyItems)
  tile.material=m
- local checked=not m.isFarmFamily and K.selected[m.id]==true
- local faded=not m.isFarmFamily and #selected>0 and next(compatible)~=nil and not checked and not compatible[m.id]
+ local checked=not tile.informational and not m.isFarmFamily and K.selected[m.id]==true
+ local faded=not tile.informational and not m.isFarmFamily and #selected>0 and next(compatible)~=nil and not checked and not compatible[m.id]
  local levelNote=R.FarmLevelNote(m,familyItems)
  tile.note=faded and "No catalogued overlap with this selection."or nil
  if levelNote~=""then tile.note=tile.note and(tile.note.."\n"..levelNote)or levelNote end
@@ -9484,7 +9549,7 @@ function R.Open()
    cached={key=key,groups={},yields={},zone=zone,category=category,itemIDs={}}
    local names={}
    for _,m in ipairs(R.materials)do
-    if R.IsFarmOffering(m)and not R.IsFarmChild(m)then
+    if R.IsFarmOffering(m)and(not R.IsCatalogueOffering or R.IsCatalogueOffering(m))and not R.IsFarmChild(m)then
      local include=not category or m.categories[category]
      if not include then local values=R.Byproducts(m,nil,category);cached.yields[m.id]=values;include=#values>0 end
      if include then names[#names+1]=m end
@@ -9518,7 +9583,7 @@ function R.Open()
       local label=section.label or section.name
       label=label:gsub(' —.*$','')
       if section.progressionUnknown then label=group.name=='Fish'and'Other fish'or'Scales and chitin' end
-      local record={name=section.name,label=label,materials=values,itemIDs={},progressionUnknown=section.progressionUnknown}
+      local record={name=section.name,label=label,materials=values,itemIDs={},progressionUnknown=section.progressionUnknown,showHeader=section.showHeader==true}
       local ids={}
       for _,m in ipairs(values)do
        if not m.isFarmFamily then ids[m.id]=true end
@@ -9566,7 +9631,10 @@ function R.Open()
    for i,m in ipairs(list)do
     local tile=yieldTiles[i]
     if not tile then tile=buildResource(yieldPanel);tile.isByproduct=true;tile.label:SetTextColor(.98,.90,.73);yieldTiles[i]=tile end
+    tile.informational=R.IsInformationalYield and R.IsInformationalYield(anchor.material,m)or false
     fillResource(tile,m,tileHeight,unit,B.selected,B.choices,B.compatible)
+    local help=R.InformationalYieldNote and R.InformationalYieldNote(anchor.material,m)
+    if help and help~=""then tile.note=tile.note and(tile.note.."\n"..help)or help end
     farmPlace(tile,yieldPanel,gutter+((i-1)%cols)*tileWidth,28*unit+math.floor((i-1)/cols)*tileHeight,tileWidth,tileHeight);tile:Show()
    end
    for i=#list+1,#yieldTiles do yieldTiles[i]:Hide()end
@@ -9621,7 +9689,7 @@ function R.Open()
       tile=buildResource(reagents);tile.openYields=drawYields
       tile.yieldArrow=text(tile,16,'›');tile.yieldArrow:SetPoint('TOPRIGHT',tile,'TOPRIGHT',-3,-8);B.resourceTiles[tileCount]=tile
      end
-     tile.byproducts=yieldsFor(entry.material)
+     tile.informational=false;tile.byproducts=yieldsFor(entry.material)
      fillResource(tile,entry.material,entry.height,B.unit,B.selected,B.choices,B.compatible,tile.byproducts)
      tile.yieldArrow:SetShown(#tile.byproducts>0)
      farmPlace(tile,reagents,entry.x,entry.y,entry.width,entry.height);tile:Show()
@@ -10025,7 +10093,7 @@ function R.Open()
     local function flush()if #pending>0 then tiles(pending,x,w);pending={}end end
     local nested=#group.sections>1
     for _,section in ipairs(group.sections)do
-     if not nested or section.familyOnly then for _,m in ipairs(section.materials)do pending[#pending+1]=m end
+     if(not nested and not section.showHeader)or section.familyOnly then for _,m in ipairs(section.materials)do pending[#pending+1]=m end
      else
       flush();local key='section:'..group.name..':'..section.name
       section.open=opened(key,B.category~=nil)
@@ -10771,7 +10839,7 @@ function Q.Plan(state)
  local plans, needs, materials={},{},{}
  local conversions={}
  for _,r in ipairs(state.recipes or {})do
-  if r.known and r.conversion and r.product and r.output and r.output>0 then
+  if ns.Availability.IsRecipeAvailable(r)and r.known and r.conversion and r.product and r.output and r.output>0 then
    conversions[r.product]=conversions[r.product]or{}; table.insert(conversions[r.product],r)
   end
  end
@@ -10808,7 +10876,7 @@ function Q.Plan(state)
  for _,profession in ipairs(keys(state.skills))do
   local skill=state.skills[profession]; local best
   for _,r in ipairs(state.recipes or {})do
-   if type(skill.rank)=='number'and type(skill.cap)=='number'and r.profession==profession and r.known and r.bookRank==skill.rank and next(r.reagents or {}) then
+   if ns.Availability.IsRecipeAvailable(r)and type(skill.rank)=='number'and type(skill.cap)=='number'and r.profession==profession and r.known and r.bookRank==skill.rank and next(r.reagents or {}) then
     local count
     if r.orange then
      local guaranteed=r.orangeUntil and r.orangeUntil-skill.rank or 1
@@ -11131,7 +11199,7 @@ local function recipes()
  for profession,skill in pairs(skills())do
   local book=R.books[profession] or (E.db and E.db.craftingBooks and E.db.craftingBooks[profession])
   if book then
-   for _,base in ipairs(book.rows)do
+   for _,base in ipairs(book.rows)do if ns.Availability.IsRecipeAvailable(base)then
     local r=copy(base)
     if book.rank~=skill.rank then r.bookRank=skill.rank;r.orange=false;r.orangeUntil=nil end
     local cached=ns.Forever and E.recipes and E.recipes[r.id]
@@ -11150,7 +11218,7 @@ local function recipes()
      end
     end
     out[#out+1]=r
-   end
+   end end
   end
  end
  local inputs={};for _,r in ipairs(out)do for id in pairs(r.reagents)do inputs[id]=true end end
@@ -13416,3 +13484,291 @@ end)(ADDON,GF)
 -- GF_GUIDE_REFRESH_SCOPE_20261120_END
 
 
+
+-- GF_FR_APPROVED_CLEANUP_20261121_BEGIN
+;(function(...)
+local _,ns=ADDON,GF
+local R,K=ns.MaterialRoutes,ns.NavigationCompass
+if not(R and K and R.CatalogueOrganization)then return end
+local P={["groups"]={{["name"]="Ore Veins",["itemIDs"]={2770,2771,2775,2772,2776,3858,7911,11370,10620,248815},["sourceItemIDs"]={2770,2835,774,249391,1210,818,2771,2836,1529,1705,1206,2775,2772,2838,7909,3864,2776,249425,3858,7912,9262,7910,7911,249426,11370,11754,11382,10620,12365,12363,12800,12361,12364,12799,248815,248819,248820},["sections"]={{["name"]="Ore Veins",["label"]="Ore Veins",["itemIDs"]={2770,2771,2775,2772,2776,3858,7911,11370,10620,248815},["showHeader"]=false}}},{["name"]="Herbs",["itemIDs"]={2447,765,2449,249399,785,2452,2450,3820,2453,3355,3369,3356,3357,249424,3818,3821,3358,3819,4625,8831,8153,8836,249274,8838,8839,8845,8846,13464,13463,13465,13466,13467,13468,248822,248821,248823},["sourceItemIDs"]={2447,765,2449,249399,785,2452,2450,3820,2453,3355,3369,3356,3357,249424,3818,3821,3358,3819,4625,8831,8153,8836,249274,8838,8839,8845,8846,13464,13463,13465,13466,13467,13468,248822,248821,248823},["sections"]={{["name"]="Herbs",["label"]="Herbs",["itemIDs"]={2447,765,2449,249399,785,2452,2450,3820,2453,3355,3369,3356,3357,249424,3818,3821,3358,3819,4625,8831,8153,8836,249274,8838,8839,8845,8846,13464,13463,13465,13466,13467,13468,248822,248821,248823},["showHeader"]=false}}},{["name"]="Leather",["itemIDs"]={2934,2318,2319,4234,4304,8170,5082,249427,249428,4461,248824,248825,15417,8150,5784,5785,7072,8167,249429,12607,20498,20500,20501},["sourceItemIDs"]={2934,2318,783,2319,4232,4234,4235,4304,8169,8170,8171,5082,249427,249428,4461,7428,8368,15423,15419,248824,248825,15422,15417,6470,8150,6471,5784,5785,7286,7287,7072,8167,249429,15408,12607,20498,20500,20501,8165,15416,15415,15412,15414,7392,8154},["sections"]={{["name"]="Ordinary leather, hides, and scales",["label"]="Ordinary leather, hides, and scales",["itemIDs"]={2934,2318,2319,4234,4304,8170,5082,249427,249428,4461,248824,248825,15417,8150,5784,5785,7072,8167,249429,12607,20498,20500,20501},["showHeader"]=true}}},{["name"]="Fish",["itemIDs"]={6291,6289,6522,6358,6308,6317,21071,251524,6362,4603,13754,13759,13756,13760,13755,13888,13893,13890,13889,6359,21153,8365,6361,13758,6303,8959,13422},["sourceItemIDs"]={6291,6289,6522,6358,6308,6317,21071,251524,6362,4603,13754,13759,13756,13760,13755,13888,13893,13890,13889,6359,21153,8365,6361,13758,6303,8959,13422},["sections"]={{["name"]="Fish",["label"]="Fish",["itemIDs"]={6291,6289,6522,6358,6308,6317,21071,251524,6362,4603,13754,13759,13756,13760,13755,13888,13893,13890,13889,6359,21153,8365,6361,13758,6303,8959,13422},["showHeader"]=false}}},{["name"]="Cloth",["itemIDs"]={2589,2592,4306,4338,14047,14256,3182,4337,10285,14227,12735},["sourceItemIDs"]={2589,2592,4306,4338,14047,14256,3182,4337,10285,14227,12735},["sections"]={{["name"]="Cloth",["label"]="Cloth",["itemIDs"]={2589,2592,4306,4338,14047,14256,3182,4337,10285,14227,12735},["showHeader"]=false}}},{["name"]="Raw Ingredients",["itemIDs"]={769,5051,2672,5503,2886,5466,6889,5465,5469,5504,12223,5467,2675,2674,2924,3172,2677,2673,1081,729,3173,723,730,731,5468,5470,3731,1468,2251,1015,5471,1080,12037,12203,3730,3667,3685,3712,12184,12202,3404,12207,12204,4655,12205,12208,12206,20424,21024,7974},["sourceItemIDs"]={769,5051,2672,5503,2886,5466,6889,5465,5469,5504,12223,5467,2675,2674,2924,3172,2677,2673,1081,729,3173,723,730,731,5468,5470,3731,1468,2251,1015,5471,1080,12037,12203,3730,3667,3685,3712,12184,12202,3404,12207,12204,4655,12205,12208,12206,20424,21024,7974},["sections"]={{["name"]="Raw Ingredients",["label"]="Raw Ingredients",["itemIDs"]={769,5051,2672,5503,2886,5466,6889,5465,5469,5504,12223,5467,2675,2674,2924,3172,2677,2673,1081,729,3173,723,730,731,5468,5470,3731,1468,2251,1015,5471,1080,12037,12203,3730,3667,3685,3712,12184,12202,3404,12207,12204,4655,12205,12208,12206,20424,21024,7974},["showHeader"]=false}}},{["name"]="Curatives",["itemIDs"]={3174,1475,1288,255645,19441},["sourceItemIDs"]={3174,1475,1288,255645,19441},["sections"]={{["name"]="Curatives",["label"]="Curatives",["itemIDs"]={3174,1475,1288,255645,19441},["showHeader"]=false}}},{["name"]="Elemental Drops",["itemIDs"]={7069,7070,7068,7067,7081,7075,7077,7079,7076,12808,12803,7078,7080,7082},["sourceItemIDs"]={7069,7070,7068,7067,7081,7075,7077,7079,7076,12808,12803,7078,7080,7082},["sections"]={{["name"]="Elemental Drops",["label"]="Elemental Drops",["itemIDs"]={7069,7070,7068,7067,7081,7075,7077,7079,7076,12808,12803,7078,7080,7082},["showHeader"]=false}}},{["name"]="Specialty Reagents",["itemIDs"]={5498,7971,5500,4611,13926,17056,5116,8168,15420,814,255007,7191,215430,5635,5637,8146,5373,4096,10286,12938,4402,7972,18512,8151,8152,12804,12662,12809,273127,12753,273131,273129,273125,273128,18240,13180,11188,11184,11185,11186},["sourceItemIDs"]={5498,7971,5500,4611,13926,17056,5116,8168,15420,814,255007,7191,215430,5635,5637,8146,5373,4096,10286,12938,4402,7972,18512,8151,8152,12804,12662,12809,273127,12753,273131,273129,273125,273128,18240,13180,11188,11184,11185,11186},["sections"]={{["name"]="Specialty Reagents",["label"]="Specialty Reagents",["itemIDs"]={5498,7971,5500,4611,13926,17056,5116,8168,15420,814,255007,7191,215430,5635,5637,8146,5373,4096,10286,12938,4402,7972,18512,8151,8152,12804,12662,12809,273127,12753,273131,273129,273125,273128,18240,13180,11188,11184,11185,11186},["showHeader"]=false}}}},["items"]={[2770]={["name"]="Copper Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=1},[2835]={["name"]="Rough Stone",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=2},[774]={["name"]="Malachite",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=3},[249391]={["name"]="Pyrite",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=4},[1210]={["name"]="Shadowgem",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=5},[818]={["name"]="Tigerseye",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=6},[2771]={["name"]="Tin Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=7},[2836]={["name"]="Coarse Stone",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=8},[1529]={["name"]="Jade",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=9},[1705]={["name"]="Lesser Moonstone",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=10},[1206]={["name"]="Moss Agate",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=11},[2775]={["name"]="Silver Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=12},[2772]={["name"]="Iron Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=13},[2838]={["name"]="Heavy Stone",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=14},[7909]={["name"]="Aquamarine",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=15},[3864]={["name"]="Citrine",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=16},[2776]={["name"]="Gold Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=17},[249425]={["name"]="Bauxite",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=18},[3858]={["name"]="Mithril Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=19},[7912]={["name"]="Solid Stone",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=20},[9262]={["name"]="Black Vitriol",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=21},[7910]={["name"]="Star Ruby",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=22},[7911]={["name"]="Truesilver Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=23},[249426]={["name"]="Pitchblende",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=24},[11370]={["name"]="Dark Iron Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=25},[11754]={["name"]="Black Diamond",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=26},[11382]={["name"]="Blood of the Mountain",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=27},[10620]={["name"]="Thorium Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=28},[12365]={["name"]="Dense Stone",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=29},[12363]={["name"]="Arcane Crystal",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=30},[12800]={["name"]="Azerothian Diamond",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=31},[12361]={["name"]="Blue Sapphire",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=32},[12364]={["name"]="Huge Emerald",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=33},[12799]={["name"]="Large Opal",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=34},[248815]={["name"]="Heavy Thorium Ore",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=35},[248819]={["name"]="Fel Crystal",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=36},[248820]={["name"]="Torbernite",["group"]="Ore Veins",["section"]="Ore Veins",["displayOrder"]=37},[2447]={["name"]="Peacebloom",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=1},[765]={["name"]="Silverleaf",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=2},[2449]={["name"]="Earthroot",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=3},[249399]={["name"]="Frilled Lichen",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=4},[785]={["name"]="Mageroyal",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=5},[2452]={["name"]="Swiftthistle",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=6},[2450]={["name"]="Briarthorn",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=7},[3820]={["name"]="Stranglekelp",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=8},[2453]={["name"]="Bruiseweed",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=9},[3355]={["name"]="Wild Steelbloom",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=10},[3369]={["name"]="Grave Moss",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=11},[3356]={["name"]="Kingsblood",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=12},[3357]={["name"]="Liferoot",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=13},[249424]={["name"]="Rosecap",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=14},[3818]={["name"]="Fadeleaf",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=15},[3821]={["name"]="Goldthorn",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=16},[3358]={["name"]="Khadgar's Whisker",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=17},[3819]={["name"]="Wintersbite",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=18},[4625]={["name"]="Firebloom",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=19},[8831]={["name"]="Purple Lotus",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=20},[8153]={["name"]="Wildvine",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=21},[8836]={["name"]="Arthas' Tears",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=22},[249274]={["name"]="Stranglevine",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=23},[8838]={["name"]="Sungrass",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=24},[8839]={["name"]="Blindweed",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=25},[8845]={["name"]="Ghost Mushroom",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=26},[8846]={["name"]="Gromsblood",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=27},[13464]={["name"]="Golden Sansam",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=28},[13463]={["name"]="Dreamfoil",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=29},[13465]={["name"]="Mountain Silversage",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=30},[13466]={["name"]="Plaguebloom",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=31},[13467]={["name"]="Icecap",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=32},[13468]={["name"]="Black Lotus",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=33},[248822]={["name"]="Death Lotus",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=34},[248821]={["name"]="Demonsage",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=35},[248823]={["name"]="Marefoil",["group"]="Herbs",["section"]="Herbs",["displayOrder"]=36},[2934]={["name"]="Ruined Leather Scraps",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=1},[2318]={["name"]="Light Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=2},[783]={["name"]="Light Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=3},[2319]={["name"]="Medium Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=4},[4232]={["name"]="Medium Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=5},[4234]={["name"]="Heavy Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=6},[4235]={["name"]="Heavy Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=7},[4304]={["name"]="Thick Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=8},[8169]={["name"]="Thick Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=9},[8170]={["name"]="Rugged Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=10},[8171]={["name"]="Rugged Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=11},[5082]={["name"]="Thin Kodo Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=12},[249427]={["name"]="Pristine Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=13},[249428]={["name"]="Pristine Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=14},[4461]={["name"]="Raptor Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=15},[7428]={["name"]="Shadowcat Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=16},[8368]={["name"]="Thick Wolfhide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=17},[15423]={["name"]="Chimera Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=18},[15419]={["name"]="Warbear Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=19},[248824]={["name"]="Fel Hide",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=20},[248825]={["name"]="Fel Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=21},[15422]={["name"]="Frostsaber Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=22},[15417]={["name"]="Devilsaur Leather",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=23},[6470]={["name"]="Deviate Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=24},[8150]={["name"]="Deeprock Salt",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=25},[6471]={["name"]="Perfect Deviate Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=26},[5784]={["name"]="Slimy Murloc Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=27},[5785]={["name"]="Thick Murloc Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=28},[7286]={["name"]="Black Whelp Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=29},[7287]={["name"]="Red Whelp Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=30},[7072]={["name"]="Naga Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=31},[8167]={["name"]="Turtle Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=32},[249429]={["name"]="Pristine Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=33},[15408]={["name"]="Heavy Scorpid Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=34},[12607]={["name"]="Brilliant Chromatic Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=35},[20498]={["name"]="Silithid Chitin",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=36},[20500]={["name"]="Light Silithid Carapace",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=37},[20501]={["name"]="Heavy Silithid Carapace",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=38},[8165]={["name"]="Worn Dragonscale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=39},[15416]={["name"]="Black Dragonscale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=40},[15415]={["name"]="Blue Dragonscale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=41},[15412]={["name"]="Green Dragonscale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=42},[15414]={["name"]="Red Dragonscale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=43},[7392]={["name"]="Green Whelp Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=44},[8154]={["name"]="Scorpid Scale",["group"]="Leather",["section"]="Ordinary leather, hides, and scales",["displayOrder"]=45},[6291]={["name"]="Raw Brilliant Smallfish",["group"]="Fish",["section"]="Fish",["displayOrder"]=1},[6289]={["name"]="Raw Longjaw Mud Snapper",["group"]="Fish",["section"]="Fish",["displayOrder"]=2},[6522]={["name"]="Deviate Fish",["group"]="Fish",["section"]="Fish",["displayOrder"]=3},[6358]={["name"]="Oily Blackmouth",["group"]="Fish",["section"]="Fish",["displayOrder"]=4},[6308]={["name"]="Raw Bristle Whisker Catfish",["group"]="Fish",["section"]="Fish",["displayOrder"]=5},[6317]={["name"]="Raw Loch Frenzy",["group"]="Fish",["section"]="Fish",["displayOrder"]=6},[21071]={["name"]="Raw Sagefish",["group"]="Fish",["section"]="Fish",["displayOrder"]=7},[251524]={["name"]="Whimsyfin",["group"]="Fish",["section"]="Fish",["displayOrder"]=8},[6362]={["name"]="Raw Rockscale Cod",["group"]="Fish",["section"]="Fish",["displayOrder"]=9},[4603]={["name"]="Raw Spotted Yellowtail",["group"]="Fish",["section"]="Fish",["displayOrder"]=10},[13754]={["name"]="Raw Glossy Mightfish",["group"]="Fish",["section"]="Fish",["displayOrder"]=11},[13759]={["name"]="Raw Nightfin Snapper",["group"]="Fish",["section"]="Fish",["displayOrder"]=12},[13756]={["name"]="Raw Summer Bass",["group"]="Fish",["section"]="Fish",["displayOrder"]=13},[13760]={["name"]="Raw Sunscale Salmon",["group"]="Fish",["section"]="Fish",["displayOrder"]=14},[13755]={["name"]="Raw Winter Squid",["group"]="Fish",["section"]="Fish",["displayOrder"]=15},[13888]={["name"]="Darkclaw Lobster",["group"]="Fish",["section"]="Fish",["displayOrder"]=16},[13893]={["name"]="Large Raw Mightfish",["group"]="Fish",["section"]="Fish",["displayOrder"]=17},[13890]={["name"]="Raw Plated Armorfish",["group"]="Fish",["section"]="Fish",["displayOrder"]=18},[13889]={["name"]="Raw Whitescale Salmon",["group"]="Fish",["section"]="Fish",["displayOrder"]=19},[6359]={["name"]="Firefin Snapper",["group"]="Fish",["section"]="Fish",["displayOrder"]=20},[21153]={["name"]="Raw Greater Sagefish",["group"]="Fish",["section"]="Fish",["displayOrder"]=21},[8365]={["name"]="Raw Mithril Head Trout",["group"]="Fish",["section"]="Fish",["displayOrder"]=22},[6361]={["name"]="Raw Rainbow Fin Albacore",["group"]="Fish",["section"]="Fish",["displayOrder"]=23},[13758]={["name"]="Raw Redgill",["group"]="Fish",["section"]="Fish",["displayOrder"]=24},[6303]={["name"]="Raw Slitherskin Mackerel",["group"]="Fish",["section"]="Fish",["displayOrder"]=25},[8959]={["name"]="Raw Spinefin Halibut",["group"]="Fish",["section"]="Fish",["displayOrder"]=26},[13422]={["name"]="Stonescale Eel",["group"]="Fish",["section"]="Fish",["displayOrder"]=27},[2589]={["name"]="Linen Cloth",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=1},[2592]={["name"]="Wool Cloth",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=2},[4306]={["name"]="Silk Cloth",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=3},[4338]={["name"]="Mageweave Cloth",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=4},[14047]={["name"]="Runecloth",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=5},[14256]={["name"]="Felcloth",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=6},[3182]={["name"]="Spider's Silk",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=7},[4337]={["name"]="Thick Spider's Silk",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=8},[10285]={["name"]="Shadow Silk",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=9},[14227]={["name"]="Ironweb Spider Silk",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=10},[12735]={["name"]="Frayed Abomination Stitching",["group"]="Cloth",["section"]="Cloth",["displayOrder"]=11},[769]={["name"]="Chunk of Boar Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=1},[5051]={["name"]="Dig Rat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=2},[2672]={["name"]="Stringy Wolf Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=3},[5503]={["name"]="Clam Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=4},[2886]={["name"]="Crag Boar Rib",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=5},[5466]={["name"]="Scorpid Stinger",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=6},[6889]={["name"]="Small Egg",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=7},[5465]={["name"]="Small Spider Leg",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=8},[5469]={["name"]="Strider Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=9},[5504]={["name"]="Tangy Clam Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=10},[12223]={["name"]="Meaty Bat Wing",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=11},[5467]={["name"]="Kodo Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=12},[2675]={["name"]="Crawler Claw",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=13},[2674]={["name"]="Crawler Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=14},[2924]={["name"]="Crocolisk Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=15},[3172]={["name"]="Boar Intestines",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=16},[2677]={["name"]="Boar Ribs",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=17},[2673]={["name"]="Coyote Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=18},[1081]={["name"]="Crisp Spider Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=19},[729]={["name"]="Stringy Vulture Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=20},[3173]={["name"]="Bear Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=21},[723]={["name"]="Goretusk Liver",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=22},[730]={["name"]="Murloc Eye",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=23},[731]={["name"]="Goretusk Snout",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=24},[5468]={["name"]="Soft Frenzy Flesh",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=25},[5470]={["name"]="Thunder Lizard Tail",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=26},[3731]={["name"]="Lion Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=27},[1468]={["name"]="Murloc Fin",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=28},[2251]={["name"]="Gooey Spider Leg",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=29},[1015]={["name"]="Lean Wolf Flank",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=30},[5471]={["name"]="Stag Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=31},[1080]={["name"]="Tough Condor Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=32},[12037]={["name"]="Mystery Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=33},[12203]={["name"]="Red Wolf Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=34},[3730]={["name"]="Big Bear Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=35},[3667]={["name"]="Tender Crocolisk Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=36},[3685]={["name"]="Raptor Egg",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=37},[3712]={["name"]="Turtle Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=38},[12184]={["name"]="Raptor Flesh",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=39},[12202]={["name"]="Tiger Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=40},[3404]={["name"]="Buzzard Wing",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=41},[12207]={["name"]="Giant Egg",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=42},[12204]={["name"]="Heavy Kodo Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=43},[4655]={["name"]="Giant Clam Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=44},[12205]={["name"]="White Spider Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=45},[12208]={["name"]="Tender Wolf Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=46},[12206]={["name"]="Tender Crab Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=47},[20424]={["name"]="Sandworm Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=48},[21024]={["name"]="Chimaerok Tenderloin",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=49},[7974]={["name"]="Zesty Clam Meat",["group"]="Raw Ingredients",["section"]="Raw Ingredients",["displayOrder"]=50},[3174]={["name"]="Spider Ichor",["group"]="Curatives",["section"]="Curatives",["displayOrder"]=1},[1475]={["name"]="Small Venom Sac",["group"]="Curatives",["section"]="Curatives",["displayOrder"]=2},[1288]={["name"]="Large Venom Sac",["group"]="Curatives",["section"]="Curatives",["displayOrder"]=3},[255645]={["name"]="Swollen Venom Sac",["group"]="Curatives",["section"]="Curatives",["displayOrder"]=4},[19441]={["name"]="Huge Venom Sac",["group"]="Curatives",["section"]="Curatives",["displayOrder"]=5},[7069]={["name"]="Elemental Air",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=1},[7070]={["name"]="Elemental Water",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=2},[7068]={["name"]="Elemental Fire",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=3},[7067]={["name"]="Elemental Earth",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=4},[7081]={["name"]="Breath of Wind",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=5},[7075]={["name"]="Core of Earth",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=6},[7077]={["name"]="Heart of Fire",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=7},[7079]={["name"]="Globe of Water",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=8},[7076]={["name"]="Essence of Earth",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=9},[12808]={["name"]="Essence of Undeath",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=10},[12803]={["name"]="Living Essence",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=11},[7078]={["name"]="Essence of Fire",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=12},[7080]={["name"]="Essence of Water",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=13},[7082]={["name"]="Essence of Air",["group"]="Elemental Drops",["section"]="Elemental Drops",["displayOrder"]=14},[5498]={["name"]="Small Lustrous Pearl",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=1},[7971]={["name"]="Black Pearl",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=2},[5500]={["name"]="Iridescent Pearl",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=3},[4611]={["name"]="Blue Pearl",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=4},[13926]={["name"]="Golden Pearl",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=5},[17056]={["name"]="Light Feather",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=6},[5116]={["name"]="Long Tail Feather",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=7},[8168]={["name"]="Jet Black Feather",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=8},[15420]={["name"]="Ironfeather",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=9},[814]={["name"]="Flask of Oil",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=10},[255007]={["name"]="Golem Isospring",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=11},[7191]={["name"]="Fused Wiring",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=12},[215430]={["name"]="Gnomeregan Fallout",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=13},[5635]={["name"]="Sharp Claw",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=14},[5637]={["name"]="Large Fang",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=15},[8146]={["name"]="Wicked Claw",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=16},[5373]={["name"]="Lucky Charm",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=17},[4096]={["name"]="Coarse Gorilla Hair",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=18},[10286]={["name"]="Heart of the Wild",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=19},[12938]={["name"]="Blood of Heroes",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=20},[4402]={["name"]="Small Flame Sac",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=21},[7972]={["name"]="Ichor of Undeath",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=22},[18512]={["name"]="Larval Acid",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=23},[8151]={["name"]="Flask of Mojo",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=24},[8152]={["name"]="Flask of Big Mojo",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=25},[12804]={["name"]="Powerful Mojo",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=26},[12662]={["name"]="Demonic Rune",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=27},[12809]={["name"]="Guardian Stone",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=28},[273127]={["name"]="Golem Heart",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=29},[12753]={["name"]="Skin of Shadow",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=30},[273131]={["name"]="Bottled Screams",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=31},[273129]={["name"]="Essence of Anarchy",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=32},[273125]={["name"]="Lich's Index Finger",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=33},[273128]={["name"]="Maker's Spark",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=34},[18240]={["name"]="Ogre Tannin",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=35},[13180]={["name"]="Stratholme Holy Water",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=36},[11188]={["name"]="Yellow Power Crystal",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=37},[11184]={["name"]="Blue Power Crystal",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=38},[11185]={["name"]="Green Power Crystal",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=39},[11186]={["name"]="Red Power Crystal",["group"]="Specialty Reagents",["section"]="Specialty Reagents",["displayOrder"]=40},[4605]={["name"]="Red-speckled Mushroom",["group"]="Specialty Reagents",["section"]="Produce - raw cooking ingredients",["displayOrder"]=17},[18255]={["name"]="Runn Tum Tuber",["group"]="Specialty Reagents",["section"]="Produce - raw cooking ingredients",["displayOrder"]=18},[17202]={["name"]="Snowball",["group"]="Specialty Reagents",["section"]="Other named natural ingredients",["displayOrder"]=26},[239016]={["name"]="Holy Salts",["group"]="Specialty Reagents",["section"]="Other named natural ingredients",["displayOrder"]=29},[20520]={["name"]="Dark Rune",["group"]="Specialty Reagents",["section"]="Runes and stones",["displayOrder"]=47}},["oreInfo"]={774,818,1206,1210,1529,1705,2835,2836,2838,3864,7909,7910,7912,9262,11382,11754,12361,12363,12364,12365,12799,12800,248819,248820,249391,249425,249426},["skinInfo"]={783,4232,4235,6470,6471,7286,7287,7392,7428,8154,8165,8169,8171,8368,15408,15412,15414,15415,15416,15419,15422,15423},["skinRules"]={[2318]={["itemIDs"]={783,6470,6471,7286,7287},["children"]={[783]={},[6470]={["NPCIDs"]={3630,3631,3632,3633,3634,3636,3637,3641,5048,5056,5755,5756,5912,8886},["Examples"]={"Deviate Coiler","Deviate Stinglash","Deviate Creeper","Deviate Slayer"},["classicReference"]=true},[6471]={["NPCIDs"]={3630,3631,3632,3633,3634,3636,3637,3641,5048,5056,5755,5756,5912,8886},["Examples"]={"Deviate Coiler","Deviate Stinglash","Deviate Creeper","Deviate Slayer"},["classicReference"]=true},[7286]={["NPCIDs"]={441,14272},["Examples"]={"Black Dragon Whelp","Snarlflare"},["classicReference"]=true},[7287]={["NPCIDs"]={1042,1043,1069},["Examples"]={"Red Whelp","Lost Whelp","Crimson Whelp"},["classicReference"]=true}}},[2319]={["itemIDs"]={4232,6470,6471,7287,7392},["children"]={[4232]={},[6470]={["NPCIDs"]={3630,3631,3632,3633,3634,3636,3637,3641,5048,5056,5755,5756,5912,8886},["Examples"]={"Deviate Coiler","Deviate Stinglash","Deviate Creeper","Deviate Slayer"},["classicReference"]=true},[6471]={["NPCIDs"]={3630,3631,3632,3633,3634,3636,3637,3641,5048,5056,5755,5756,5912,8886},["Examples"]={"Deviate Coiler","Deviate Stinglash","Deviate Creeper","Deviate Slayer"},["classicReference"]=true},[7287]={["NPCIDs"]={1042,1043,1044,1069},["Examples"]={"Red Whelp","Lost Whelp","Flamesnorting Whelp","Crimson Whelp"},["classicReference"]=true},[7392]={["NPCIDs"]={740,741},["Examples"]={"Adolescent Whelp","Dreaming Whelp"},["classicReference"]=true}}},[4234]={["itemIDs"]={4235,7428,8368,7287,8165,15412,7392,8154},["children"]={[4235]={},[7428]={["NPCIDs"]={684,768,1713},["Examples"]={"Shadowmaw Panther","Shadow Panther","Elder Shadowmaw Panther"},["classicReference"]=true},[8368]={["NPCIDs"]={2730,2923,2924,5286,5287,8211},["Examples"]={"Rabid Crag Coyote","Mangy Silvermane","Silvermane Wolf","Longtooth Runner"},["classicReference"]=true},[7287]={["NPCIDs"]={1044},["Examples"]={"Flamesnorting Whelp"},["classicReference"]=true},[8165]={["NPCIDs"]={742,743,744,745,746,2447,2725,2726,4323,4324,4328,4329,4331,4334,4339,5278},["Examples"]={"Green Wyrmkin","Wyrmkin Dreamwalker","Green Scalebane","Scalebane Captain"},["classicReference"]=true},[15412]={["NPCIDs"]={742,743,744,745,746},["Examples"]={"Green Wyrmkin","Wyrmkin Dreamwalker","Green Scalebane","Scalebane Captain"},["classicReference"]=true},[7392]={["NPCIDs"]={740,741},["Examples"]={"Adolescent Whelp","Dreaming Whelp"},["classicReference"]=true},[8154]={["NPCIDs"]={5422,5423,7405},["Examples"]={"Scorpid Hunter","Scorpid Tail Lasher","Deadly Cleft Scorpid"},["classicReference"]=true}}},[4304]={["itemIDs"]={8169,7428,8368,15423,15419,15422,15408,8165,15416,15415,15412,15414,8154},["children"]={[8169]={},[7428]={["NPCIDs"]={684,768,1713},["Examples"]={"Shadowmaw Panther","Shadow Panther","Elder Shadowmaw Panther"},["classicReference"]=true},[8368]={["NPCIDs"]={1817,2680,2681,2730,2923,2924,2925,2926,5286,5287,5288,5984,5985,7055,8211,8718,8921,8922,9042,9416,9690,9694,9696,9697,10221,12418,13036},["Examples"]={"Diseased Wolf","Vilebranch Wolf Pup","Vilebranch Raiding Wolf","Rabid Crag Coyote"},["classicReference"]=true},[15423]={["NPCIDs"]={7447,7448,7449,8763,8764,10807},["Examples"]={"Fledgling Chillwind","Chillwind Chimaera","Chillwind Ravager","Mistwing Rogue"},["classicReference"]=true},[15419]={["NPCIDs"]={1815,1816,7443,7444,7445,7446,8957,10806},["Examples"]={"Diseased Black Bear","Diseased Grizzly","Shardtooth Mauler","Shardtooth Bear"},["classicReference"]=true},[15422]={["NPCIDs"]={7430,7431,7432,7433,7434},["Examples"]={"Frostsaber Cub","Frostsaber","Frostsaber Stalker","Frostsaber Huntress"},["classicReference"]=true},[15408]={["NPCIDs"]={8301,9691,9695,9698,11735,11736,11737,15196},["Examples"]={"Clack the Reaver","Venomtip Scorpid","Deathlash Scorpid","Firetail Scorpid"},["classicReference"]=true},[8165]={["NPCIDs"]={193,742,743,744,745,746,1045,1046,1047,1048,1049,1050,2447,2725,2726,4323,4324,4328,4329,4331,4334,4339,5276,5277,5278,5280,5283,5319,5320,5709,6129,6130,6131,7040,7041,7042,7043,7044,7045,7046,7047,7048,7049,7435,7436,7437,8196,8197,8198,8319,8497,8976,9096,9568,10083,10202,10264,10363,10366,10371,10372,10447,10659,10660,10661,10662,10663,10664,10678,10814,12129,12474,12477,12479,14398,14445},["Examples"]={"Blue Dragonspawn","Green Wyrmkin","Wyrmkin Dreamwalker","Green Scalebane"},["classicReference"]=true},[15416]={["NPCIDs"]={7040,7041,7042,7043,7044,7045,7046,7047,7048,7049,8976,9096,9568,10083,10264,10363,10366,10371,10372,10442,10447,10814},["Examples"]={"Black Dragonspawn","Black Wyrmkin","Flamescale Dragonspawn","Flamescale Wyrmkin"},["classicReference"]=true},[15415]={["NPCIDs"]={193,6129,6130,6131,7435,7436,7437,10202,10442,10447,10659,10660,10661,10662,10663,10664,10814},["Examples"]={"Blue Dragonspawn","Draconic Magelord","Blue Scalebane","Draconic Mageweaver"},["classicReference"]=true},[15412]={["NPCIDs"]={742,743,744,745,746,5277,5280,5283,5319,5320,5709,8319,8497,10442,10447,10814,12474,12476,12477,12479,14445},["Examples"]={"Green Wyrmkin","Wyrmkin Dreamwalker","Green Scalebane","Scalebane Captain"},["classicReference"]=true},[15414]={["NPCIDs"]={1045,1046,1047,1048,1049,1050,10442,10447,10814},["Examples"]={"Red Dragonspawn","Red Wyrmkin","Red Scalebane","Scalebane Lieutenant"},["classicReference"]=true},[8154]={["NPCIDs"]={5422,5423,5424,5988,7405,8301,9691,9695},["Examples"]={"Scorpid Hunter","Scorpid Tail Lasher","Scorpid Dunestalker","Scorpok Stinger"},["classicReference"]=true}}},[8170]={["itemIDs"]={8171,8368,15423,15419,15422,15408,8165,15416,15415,15412,15414,8154},["children"]={[8171]={},[8368]={["NPCIDs"]={1817,2680,2681,2925,2926,5288,5984,5985,7055,8718,8921,8922,9042,9416,9690,9694,9696,9697,10221,12418,13036},["Examples"]={"Diseased Wolf","Vilebranch Wolf Pup","Vilebranch Raiding Wolf","Silvermane Howler"},["classicReference"]=true},[15423]={["NPCIDs"]={7447,7448,7449,8763,8764,10807},["Examples"]={"Fledgling Chillwind","Chillwind Chimaera","Chillwind Ravager","Mistwing Rogue"},["classicReference"]=true},[15419]={["NPCIDs"]={1815,1816,7443,7444,7445,7446,8957,10806},["Examples"]={"Diseased Black Bear","Diseased Grizzly","Shardtooth Mauler","Shardtooth Bear"},["classicReference"]=true},[15422]={["NPCIDs"]={7430,7431,7432,7433,7434},["Examples"]={"Frostsaber Cub","Frostsaber","Frostsaber Stalker","Frostsaber Huntress"},["classicReference"]=true},[15408]={["NPCIDs"]={8301,9691,9695,9698,11735,11736,11737,15196},["Examples"]={"Clack the Reaver","Venomtip Scorpid","Deathlash Scorpid","Firetail Scorpid"},["classicReference"]=true},[8165]={["NPCIDs"]={193,1045,1046,1047,1048,1049,1050,1749,5276,5277,5280,5283,5312,5314,5319,5320,5709,6129,6130,6131,7040,7041,7042,7043,7044,7045,7046,7047,7048,7049,7435,7436,7437,7997,8196,8197,8198,8319,8479,8497,8662,8964,8976,9096,9568,10083,10162,10196,10202,10264,10296,10363,10366,10371,10372,10447,10659,10660,10661,10662,10663,10664,10667,10678,10740,10814,10929,12017,12129,12422,12435,12474,12475,12477,12479,12496,12498,12899,13020,13976,14022,14023,14024,14025,14388,14398,14445,15185,15192,15378,15379,15380},["Examples"]={"Blue Dragonspawn","Red Dragonspawn","Red Wyrmkin","Red Scalebane"},["classicReference"]=true},[15416]={["NPCIDs"]={7040,7041,7042,7043,7044,7045,7046,7047,7048,7049,8976,9096,9568,10083,10264,10363,10366,10371,10372,10442,10447,10814,12460,12461,12463,12464,12465,12467,12468},["Examples"]={"Black Dragonspawn","Black Wyrmkin","Flamescale Dragonspawn","Flamescale Wyrmkin"},["classicReference"]=true},[15415]={["NPCIDs"]={193,6129,6130,6131,7435,7436,7437,10196,10202,10442,10447,10659,10660,10661,10662,10663,10664,10814},["Examples"]={"Blue Dragonspawn","Draconic Magelord","Blue Scalebane","Draconic Mageweaver"},["classicReference"]=true},[15412]={["NPCIDs"]={1749,5277,5280,5283,5312,5314,5319,5320,5709,7997,8319,8479,8497,8662,8964,10162,10296,10442,10447,10667,10740,10814,10929,12017,12422,12435,12474,12475,12476,12477,12479,12496,12498,13020,13976,14022,14023,14024,14025,14388,14445,15185,15192,15378,15379,15380},["Examples"]={"Lady Katrana Prestor","Nightmare Scalebane","Nightmare Wyrmkin","Nightmare Wanderer"},["classicReference"]=true},[15414]={["NPCIDs"]={1045,1046,1047,1048,1049,1050,10442,10447,10814,12899},["Examples"]={"Red Dragonspawn","Red Wyrmkin","Red Scalebane","Scalebane Lieutenant"},["classicReference"]=true},[8154]={["NPCIDs"]={5424,5988,8301,9691,9695},["Examples"]={"Scorpid Dunestalker","Scorpok Stinger","Clack the Reaver","Venomtip Scorpid"},["classicReference"]=true}}}},["primaryGroups"]={"Ore Veins","Herbs","Leather","Fish"},["additionalGroups"]={"Cloth","Raw Ingredients","Curatives","Elemental Drops","Specialty Reagents"}}
+local excluded={[4605]=true,[18255]=true,[20520]=true,[17202]=true}
+local informational={};for _,id in ipairs(P.oreInfo)do informational[id]=true end;for _,id in ipairs(P.skinInfo)do informational[id]=true end
+local groupInfo,groupRank={},{}
+for i,group in ipairs(P.groups)do groupInfo[group.name]=group;groupRank[group.name]=i end
+local function idOf(value)return type(value)=='table'and value.id or value end
+local function available(id)
+ local A=ns.Availability
+ if A and type(A.IsItemAvailable)=='function'then return A.IsItemAvailable(id)~=false end
+ return id~=239016 -- same approved FR hold while isolated from the shared policy candidate
+end
+function R.IsCatalogueOffering(value)
+ local id=idOf(value)
+ return type(id)=='number'and P.items[id]~=nil and not excluded[id]and available(id)
+end
+function R.IsSelectableMaterial(value)
+ local id=idOf(value)
+ return R.IsFarmOffering(id)and R.IsCatalogueOffering(id)and not informational[id]
+end
+R.IsPickerOffering=R.IsSelectableMaterial
+R.InformationalYieldIDs=informational
+R.InformationalSkinRules=P.skinRules
+R.CataloguePresentation=P
+R.PickerItemInfo=function(id)return P.items[id]end
+R.CatalogueGroup=function(name)return groupInfo[name]end
+R.CatalogueSection=function(m)
+ local id=m and(m.isFarmFamily and m.itemIDs and m.itemIDs[1]or m.id)
+ local display=id and P.items[id];return display and display.section
+end
+local oldGroup=R.MaterialGroup
+R.MaterialGroup=function(m)
+ if m and m.isFarmFamily then
+  local first=P.items[m.itemIDs and m.itemIDs[1]];return first and first.group or m.group
+ end
+ local display=m and P.items[m.id];return display and display.group or oldGroup(m)
+end
+local function displayOrder(m)
+ if m.isFarmFamily then
+  local best=1e9;for _,id in ipairs(m.itemIDs or{})do local info=P.items[id];if info then best=math.min(best,info.displayOrder)end end;return best
+ end
+ local info=P.items[m.id];return info and info.displayOrder or 1e9
+end
+R.CompareMaterials=function(a,b)
+ local ga,gb=groupRank[R.MaterialGroup(a)]or 99,groupRank[R.MaterialGroup(b)]or 99
+ if ga~=gb then return ga<gb end
+ local oa,ob=displayOrder(a),displayOrder(b);if oa~=ob then return oa<ob end
+ if a.name~=b.name then return a.name<b.name end;return(a.id or 0)<(b.id or 0)
+end
+local familyOrder={}
+for _,key in ipairs(R.FarmFamilyOrder)do if key~='dragonScales'then familyOrder[#familyOrder+1]=key end end
+R.FarmFamilyOrder=familyOrder
+table.sort(R.FarmFamilyOrder,function(a,b)return R.CompareMaterials(R.FarmFamilies[a],R.FarmFamilies[b])end)
+for _,key in ipairs(R.FarmFamilyOrder)do local family=R.FarmFamilies[key];family.group=R.MaterialGroup(family)end
+local oldChild=R.IsFarmChild
+R.IsFarmChild=function(m)return m and(informational[m.id]or not R.IsCatalogueOffering(m)or oldChild(m))end
+local oldFamilyItems=R.FarmFamilyItems
+R.FarmFamilyItems=function(family,zone,category)
+ local values=oldFamilyItems(family,zone,category);local list={}
+ for _,m in ipairs(values)do if R.IsSelectableMaterial(m)then list[#list+1]=m end end;return list
+end
+local oldByproducts=R.Byproducts
+R.Byproducts=function(m,zone,category)
+ local rule=P.skinRules[m.id]
+ if not rule then return oldByproducts(m,zone,category)end
+ local list={}
+ for _,id in ipairs(rule.itemIDs)do local item=R.byID[id]
+  if item and R.IsFarmOffering(id)and available(id)and(not zone or zone.items[id])
+   and(not category or m.categories[category]or item.categories[category])then list[#list+1]=item end
+ end
+ return list
+end
+function R.IsInformationalYield(parent,child)
+ return child and informational[child.id]==true
+end
+local oldTitle=R.ByproductTitle
+R.ByproductTitle=function(m)
+ if P.skinRules[m.id]then return'Possible skinning yields'end
+ if m.kind=='Mining'and not m.isFarmFamily then return'Possible vein yields'end
+ return oldTitle(m)
+end
+function R.InformationalYieldNote(parent,child)
+ if not R.IsInformationalYield(parent,child)then return end
+ local rule=P.skinRules[parent.id];local detail=rule and rule.children[child.id]
+ if detail and detail.classicReference then
+  local examples=detail.Examples or{}
+  return'Specific creatures only; not every '..parent.name..' source.'
+   ..(#examples>0 and('\nKnown examples: '..table.concat(examples,', ')..'.')or'')
+   .."\nClassic reference; Forever's exact skinning roll is unconfirmed."
+ end
+ return rule and'Possible skinning yield. Select the leather tier to plan a route.'
+  or'Possible vein yield. Select the ore to plan a route.'
+end
+local oldToggle=R.ToggleMaterial
+R.ToggleMaterial=function(m)
+ if not m then return false end
+ if not K.selected[m.id]and not R.IsSelectableMaterial(m)then return false end
+ return oldToggle(m)
+end
+local oldValidate=R.ValidateStartMaterials
+R.ValidateStartMaterials=function(materials,...)
+ for _,m in ipairs(materials)do
+  if excluded[m.id]then return false,'This material is no longer offered in Farming Routes. Remove it from the selection.'end
+  if not available(m.id)then return false,'This material is temporarily unavailable. Remove it from the selection.'end
+ end
+ return oldValidate(materials,...)
+end
+local oldLevelNote=R.FarmLevelNote
+R.FarmLevelNote=function(m,values)
+ local note=oldLevelNote(m,values)
+ if not m.isFarmFamily and K.selected[m.id]and informational[m.id]then
+  local text='Previous exact target. Click its selected icon to remove it.';return note~=''and(note..'\n'..text)or text
+ end
+ return note
+end
+end)(ADDON,GF)
+-- GF_FR_APPROVED_CLEANUP_20261121_END
+
+-- GF_UI_APPROVED_CLEANUP_20261121_BEGIN
+;(function(_,ns)
+local E,N,W=ns.Forever,ns.NormalUI,ns.WindowWorkflow
+local call=E.Call
+local function visible(frame)
+ if not frame then return false end
+ if type(frame.IsVisible)=='function'then return call(frame.IsVisible,frame)==true end
+ local at=frame;local guard=0
+ while at and guard<64 do
+  if type(at.IsShown)=='function'and call(at.IsShown,at)~=true then return false end
+  at=call(at.GetParent,at);guard=guard+1
+ end
+ return guard<64
+end
+
+-- One insertion bridge for existing GF search fields. Native callers depend on
+-- a true result to stop their bag stack-split fallback after a consumed link.
+local searches=setmetatable({},{__mode='k'});local pendingSearch
+function ns.RegisterItemSearchBox(box)
+ if box then searches[box]=true end
+ return box
+end
+local function focusedSearch()
+ if N.root and N.root.recipeSearch then searches[N.root.recipeSearch]=true end
+ local keyboard=call(GetCurrentKeyBoardFocus)
+ for box in pairs(searches)do
+  if visible(box)and call(box.HasFocus,box)==true and(not keyboard or keyboard==box)then return box end
+ end
+end
+local function itemName(id,link)
+ local name=E.ItemLabel(id)
+ if type(name)~='string'or name==''or name:match('^Item%s*#?%d+$')then
+  name=type(link)=='string'and link:match('|h%[(.-)%]|h')or nil
+ end
+ if type(name)~='string'then return end
+ name=name:gsub('|c%x%x%x%x%x%x%x%x',''):gsub('|r',''):match('^%s*(.-)%s*$')
+ if name==''or name:find('[%z\1-\31\127|]')or name:match('^Item%s*#?%d+$')then return end
+ return name
+end
+local function fillSearch(box,name)
+ if not box or focusedSearch()~=box then return false end
+ if call(box.GetText,box)~=name then box:SetText(name)end
+ return true
+end
+local function insertSearch(link)
+ if call(IsModifiedClick,'CHATLINK')~=true then return false end
+ local box=focusedSearch();if not box then return false end
+ local id=E.ItemID(link);if not id then return false end
+ pendingSearch=nil
+ local name=itemName(id,link)
+ if name then return fillSearch(box,name)end
+ local draft=call(box.GetText,box)
+ if type(draft)~='string'then return false end
+ pendingSearch={id=id,box=box,draft=draft,time=E.Time()}
+ call(C_Item and C_Item.RequestLoadItemDataByID,id)
+ -- GetItemInfo also queues item loading on clients without a request API.
+ return true
+end
+local originalGlobal=ChatEdit_InsertLink
+local originalUtil=ChatFrameUtil and ChatFrameUtil.InsertLink
+if type(originalGlobal)=='function'then
+ ChatEdit_InsertLink=function(link,...)
+  if insertSearch(link)then return true end
+  return originalGlobal(link,...)
+ end
+end
+if ChatFrameUtil and type(originalUtil)=='function'then
+ ChatFrameUtil.InsertLink=function(link,...)
+  if insertSearch(link)then return true end
+  return originalUtil(link,...)
+ end
+end
+local names=CreateFrame('Frame')
+names:SetScript('OnEvent',function(_,_,id)
+ local request=pendingSearch
+ if not request or not E.Public(id)or id~=request.id then return end
+ pendingSearch=nil
+ if E.Time()-request.time>5 or focusedSearch()~=request.box or call(request.box.GetText,request.box)~=request.draft then return end
+ local name=itemName(id);if name then fillSearch(request.box,name)end
+end)
+names:RegisterEvent('GET_ITEM_INFO_RECEIVED')
+call(names.RegisterEvent,names,'ITEM_DATA_LOAD_RESULT')
+
+-- GF tooltips share a foreground policy, scoped to GF ownership. Registered
+-- roots/known overlays are checked only when a tooltip is shown or reassigned.
+local roots=setmetatable({},{__mode='k'})
+local states=setmetatable({},{__mode='k'})
+local watched=setmetatable({},{__mode='k'})
+local adjusting=false
+local function register(frame)if frame then roots[frame]=true end;return frame end
+ns.RegisterGFTooltipFrame=register
+local function knownFrames()
+ register(N.frame);register(N.root);register(N.settingsFrame);register(N.searchMenu)
+ for _,entry in ipairs(N.dropdownMenus or{})do register(entry[1])end
+ local B=ns.FarmingBrowser
+ if B then register(B.frame);register(B.routePopup);register(B.yieldPanel);register(B.menuHost)end
+ local L=ns.RecipeLibrary
+ if L then register(L.frame);register(L.menu);register(L.submenu)end
+ local J=ns.DungeonJournal;if J then register(J.frame)end
+ local V=ns.MapControls99;if V then register(V.menu)end
+ local D=ns.Review100;if D then register(D.menu)end
+ local M=ns.DungeonWorldMap and ns.DungeonWorldMap.State
+ if M then register(M.viewport)end
+end
+local function isOwner(owner)
+ knownFrames()
+ local at,guard=owner,0
+ while at and guard<64 do
+  if roots[at]or at.gfFarmRole or at.gfRecipeRole or at.coveragePin then return true end
+  at=call(at.GetParent,at);guard=guard+1
+ end
+ return false
+end
+local function restore(tip)
+ local state=states[tip];if not state or adjusting then return end
+ states[tip]=nil;adjusting=true
+ if call(tip.GetFrameStrata,tip)==state.appliedStrata and state.strata then call(tip.SetFrameStrata,tip,state.strata)end
+ if call(tip.GetFrameLevel,tip)==state.appliedLevel and state.level then call(tip.SetFrameLevel,tip,state.level)end
+ adjusting=false
+end
+local function watch(tip)
+ if watched[tip]then return end;watched[tip]=true
+ if type(tip.HookScript)=='function'then call(tip.HookScript,tip,'OnHide',function(self)restore(self)end)end
+end
+local function raise(tip,owner)
+ if not tip or adjusting then return false end
+ owner=owner or call(tip.GetOwner,tip)
+ if not owner or not isOwner(owner)then restore(tip);return false end
+ local state=states[tip]
+ if state and state.owner~=owner then restore(tip);state=nil end
+ if not state then state={owner=owner,strata=call(tip.GetFrameStrata,tip),level=call(tip.GetFrameLevel,tip)};states[tip]=state end
+ local level=call(owner.GetFrameLevel,owner)or 0
+ local at,guard=owner,0
+ while at and guard<64 do level=math.max(level,call(at.GetFrameLevel,at)or 0);at=call(at.GetParent,at);guard=guard+1 end
+ for frame in pairs(roots)do if frame~=tip and visible(frame)then level=math.max(level,call(frame.GetFrameLevel,frame)or 0)end end
+ state.appliedStrata,state.appliedLevel='TOOLTIP',level+32
+ adjusting=true;call(tip.SetFrameStrata,tip,state.appliedStrata);call(tip.SetFrameLevel,tip,state.appliedLevel)
+ -- Record the client's actual accepted values, including a native level clamp.
+ state.appliedStrata=call(tip.GetFrameStrata,tip)or state.appliedStrata
+ state.appliedLevel=call(tip.GetFrameLevel,tip)or state.appliedLevel
+ adjusting=false
+ watch(tip);return true
+end
+ns.GFTooltipForeground={Raise=raise,Restore=restore,IsOwner=isOwner}
+local applyLayer=N.ApplyWindowLayer
+N.ApplyWindowLayer=function(frame,...)register(frame);return applyLayer(frame,...)end
+local chrome=N.PanelChrome
+N.PanelChrome=function(frame,...)register(frame);return chrome(frame,...)end
+if GameTooltip then
+ watch(GameTooltip)
+ if type(hooksecurefunc)=='function'and type(GameTooltip.SetOwner)=='function'then
+  call(hooksecurefunc,GameTooltip,'SetOwner',function(tip,owner)if not adjusting then raise(tip,owner)end end)
+ end
+ if type(GameTooltip.HookScript)=='function'then
+  call(GameTooltip.HookScript,GameTooltip,'OnShow',function(tip)raise(tip)end)
+ end
+end
+local workflowTooltip=W.Tooltip
+if workflowTooltip then
+ W.Tooltip=function(owner,...)local value=workflowTooltip(owner,...);if W.tooltip then raise(W.tooltip,owner)end;return value end
+end
+local infoTooltip=N.ShowInfoTooltip
+N.ShowInfoTooltip=function(owner,...)local value=infoTooltip(owner,...);local tip=N.root and N.root.infoTooltip;if tip then raise(tip,owner)end;return value end
+end)(ADDON,GF)
+-- GF_UI_APPROVED_CLEANUP_20261121_END

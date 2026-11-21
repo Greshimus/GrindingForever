@@ -47,8 +47,8 @@
       "SHA256": "CCB7375B8A7417384C765A2F0CFDE292EE555B0125015093FD3EEA4D99B2BCA2"
     },
     "FieldPreview.lua": {
-      "Bytes": 107919,
-      "SHA256": "53731311EC0CBFF3076A61AFD4C6995577BF21C20F6F17E81B2561691765432E"
+      "Bytes": 107144,
+      "SHA256": "FB783F93124660CE040399A2B1E867F4779FB1432E42F141C1D17F3590629885"
     },
     "FishingPool-NOTICE.txt": {
       "Bytes": 22370,
@@ -83,8 +83,8 @@
       "SHA256": "3655586F85AFCB78B569367003221EA364D04575CC483F7E32BC970BBB6088E0"
     },
     "Main.lua": {
-      "Bytes": 1109326,
-      "SHA256": "34686C80E09AD613AA330545CC9C6E3852C4C0DB636379876800098C2F6104A7"
+      "Bytes": 1170487,
+      "SHA256": "6A689B1DA9E7375107B2D53E36E93BB4C5F241CEC505518F3D3ABCC82C07B48B"
     },
     "Media/BannerEnamelButton.tga": {
       "Bytes": 8388626,
@@ -1087,8 +1087,8 @@
       "SHA256": "CC4AB05587FFB67F05C9203FC6519E7E0C30194BAC0433F8BBAC0BA58FDD3AD2"
     },
     "RecipeCatalog.lua": {
-      "Bytes": 47464,
-      "SHA256": "D1EA1A3536699E9B0BD06BC460F3E2CED2AB9B1C8D2389219F7AE8775CAE6A79"
+      "Bytes": 48381,
+      "SHA256": "CB60C6902902715BB63FBD2A85DF0BE1DF2CC6521DE5A89C0D27EEB7F9ED618D"
     },
     "RecipeSourceFacts.lua": {
       "Bytes": 1471247,
@@ -1128,6 +1128,8 @@
     "FarmingOrganization": "Gathering first",
     "FarmableRecipeMaterials": 270,
     "FarmingSourcePreparation": "Batched with versioned caches",
-    "GuideRefreshCaching": true
+    "GuideRefreshCaching": true,
+    "ApprovedCatalogueCleanup": true,
+    "TemporaryHolySaltsAvailabilityHold": true
   }
 }

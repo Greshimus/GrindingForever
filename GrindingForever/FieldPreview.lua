@@ -227,8 +227,6 @@ local function showRecipes()
     local placeholder=N.MakeText(search,13,"Search recipes or items",true)
     placeholder:SetPoint("LEFT",search,"LEFT",7,0);placeholder:SetAlpha(.8)
     local searchClear=N.WoodButton(panel,"×",26,function() search:SetText(""); if refresh then refresh() end end)
-    local browseButton=N.WoodButton(panel,"Browse",88)
-    local browseArrow=N.ButtonArrow(browseButton,"down","RIGHT")
     local filterFrame=CreateFrame("Frame",nil,panel)
     local filterCream=filterFrame:CreateTexture(nil,"BACKGROUND")
     filterCream:SetAllPoints();filterCream:SetColorTexture(.98,.90,.73,.88)
@@ -258,13 +256,14 @@ local function showRecipes()
     N.BronzeRectangle(detail,1)
     detail.nodes={};detail:Hide()
     local measure=N.MakeText(content,14,"",true);measure:Hide()
-    local api={frame=panel,search=search,browseButton=browseButton,filterFrame=filterFrame,
+    local api={frame=panel,search=search,filterFrame=filterFrame,
         professionButton=professionButton,locationButton=locationButton,howButton=howButton,
         activeFilters=activeFilters,clearFilters=clearFilters,viewport=viewport,content=content,
         headers=headers,categoryBodies=categoryBodies,categorySpans=categorySpans,
         detail=detail,state=state,groups=groups,entries=entries,
         status=status,feedback=feedback,planButton=planButton}
     ns.RecipeLibrary=api
+    if ns.RegisterItemSearchBox then ns.RegisterItemSearchBox(search) end
 
     -- Shared catalogue/location helpers are kept local to this window.
     local function mapContinent(mapID)
@@ -1482,9 +1481,6 @@ local function showRecipes()
         openMenu(self,values)
     end)
     api.menu,api.submenu=menu,submenu
-    browseButton:SetScript("OnClick",function()
-        closeMenus();state.browseOpen=not state.browseOpen;state.browseActivated=true;refresh()
-    end)
     clearFilters:SetScript("OnClick",function()
         if queryText()~="" then return end
         state.profession,state.zone,state.continent=nil,nil,nil
@@ -1583,16 +1579,9 @@ local function showRecipes()
         search:SetTextInsets(px(7),px(7),0,0)
         search:ClearAllPoints();search:SetPoint("TOPLEFT",panel,"TOPLEFT",left,-px(62));search:SetSize(usable-px(31),px(29))
         searchClear:ClearAllPoints();searchClear:SetPoint("TOPLEFT",search,"TOPRIGHT",px(5),0);searchClear:SetSize(px(26),px(29))
-        browseButton:ClearAllPoints();browseButton:SetPoint("TOPLEFT",search,"BOTTOMLEFT",0,-px(8));browseButton:SetSize(usable,px(25))
-        fitLabel(browseButton,"Browse catalogue",px(14),px(30))
-        browseButton.label:ClearAllPoints()
-        browseButton.label:SetPoint("LEFT",browseButton,"LEFT",px(7),0)
-        browseButton.label:SetPoint("RIGHT",browseButton,"RIGHT",-px(23),0)
-        browseButton.label:SetJustifyH("LEFT")
-        browseArrow:ClearAllPoints();browseArrow:SetPoint("RIGHT",browseButton,"RIGHT",-px(10),0)
-        browseArrow:SetSize(px(11),px(11))
-        browseArrow:SetRotation(state.browseOpen and math.pi/2 or -math.pi/2)
-        local y=px(124)
+        -- The filter/count card is always present; no separate Browse toggle.
+        state.browseOpen=true
+        local y=px(99)
         filterFrame:ClearAllPoints();filterFrame:SetPoint("TOPLEFT",panel,"TOPLEFT",left,-y);filterFrame:SetWidth(usable)
         filterFrame:SetHeight(state.browseOpen and px(124) or 0);filterFrame:SetShown(state.browseOpen)
         local controls={professionButton,locationButton,howButton}
