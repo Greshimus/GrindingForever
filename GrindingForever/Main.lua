@@ -7601,7 +7601,7 @@ function R.LoadCatalog()
   local m=R.byID[node.item]
   if m and node.skill then m.sortSkill=math.min(m.sortSkill or node.skill,node.skill) end
  end
- for id,entry in pairs(catalog) do
+ for id,entry in pairs(catalog) do if R.SourcePreparationStep then R.SourcePreparationStep()end;
   local m=R.byID[id]
   local kind=entry.sources and entry.sources[1] and sourceKinds[entry.sources[1].kind]
   if not m then
@@ -7613,7 +7613,7 @@ function R.LoadCatalog()
   m.sourceKinds=m.sourceKinds or {}
   local referenceFishOnly=entry.sources and #entry.sources>0
   local referenceNotes,seenNotes={},{}
-  for _,source in ipairs(entry.sources or {}) do
+  for _,source in ipairs(entry.sources or {}) do if R.SourcePreparationStep then R.SourcePreparationStep()end;
    m.sourceKinds[source.kind or "unknown"]=true
    if source.kind~="fish"or source.referenceOnly~=true or source.routeEligible~=false then referenceFishOnly=false end
    for _,condition in ipairs(source.referenceConditions or{})do
@@ -7645,7 +7645,8 @@ local function coordinate(v)
 end
 
 local function addSource(index,mapNames,m,map,name,source)
- if type(map)~="number" then return end
+ if R.SourcePreparationStep then R.SourcePreparationStep()end;
+ if type(map)~="number"or mapNames.onlyMaps and not mapNames.onlyMaps[map]then return end
  local cached=mapNames[map]
  if cached==nil then
   local info=read(C_Map and C_Map.GetMapInfo,map)
@@ -7675,10 +7676,11 @@ local function addSource(index,mapNames,m,map,name,source)
  if not entries then entries={};zone.items[m.id]=entries end
  entries[#entries+1]=source
 end
-function R.BuildSourceIndex()
+function R.BuildSourceIndex(skipKnown,onlyMaps)
+ if R.SourcePreparationStats then R.SourcePreparationStats.phase="base"end
  R.LoadCatalog()
- F.LoadKnown()
- local index,mapNames={},{}
+ if not skipKnown then F.LoadKnown()end
+ local index,mapNames={},{onlyMaps=onlyMaps}
  local catalog=ns.ForeverCatalog and ns.ForeverCatalog.reagents or {}
  for id,entry in pairs(catalog) do
   for _,source in ipairs(entry.sources or {}) do
@@ -7731,7 +7733,7 @@ function R.BuildSourceIndex()
  for _,ref in ipairs(R.references) do
   local map=mapFor(ref.zone)
   if map and ref.mode~="backtrack" then
-   for _,m in ipairs(R.materials) do
+   for _,m in ipairs(R.materials) do if R.SourcePreparationStep then R.SourcePreparationStep()end;
     if R.Eligible(ref,m,math.max(m.skill or 1,ref.minSkill or 1),100,ref.faction) then
      for _,point in ipairs(ref.points) do
       addSource(index,mapNames,m,map,ref.zone,{x=point[1],y=point[2],minLevel=ref.minLevel,
@@ -7741,7 +7743,7 @@ function R.BuildSourceIndex()
    end
   end
  end
- for _,maps in pairs(F.known) do
+ for _,maps in pairs(skipKnown and{}or F.known) do
   for map,points in pairs(maps) do
    for coord,id in pairs(points) do
     local meta=F.meta[id]
@@ -7825,11 +7827,12 @@ end
 
 local function pickStops(zone,materials,p,level,faction)
  local sources,seedList={},{}
+ local seedKeys={}
  local areas=deadEnds[zone.name] or {}
  for _,m in ipairs(materials) do
   local candidates={}
   local seen={}
-  for _,source in ipairs(zone.items[m.id]) do
+  for _,source in ipairs(zone.items[m.id]) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
    if (not source.faction or source.faction==faction) and coordinate(source.x) and coordinate(source.y)
      and source.routeEligible~=false then
     local key=math.floor(source.x*2)..":"..math.floor(source.y*2)
@@ -7848,25 +7851,27 @@ local function pickStops(zone,materials,p,level,faction)
   sources[m.id]=candidates
   -- Use well-spaced anchors to evaluate several distinct clusters in the same zone.
   local anchors={}
-  for _,point in ipairs(candidates) do
+  for _,point in ipairs(candidates) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
    local near=false
    for _,other in ipairs(anchors) do
     if pairDistance(point,other)<8 then near=true;break end
    end
    if not near then
     anchors[#anchors+1]=point
-    seedList[#seedList+1]=point
+    local byY=seedKeys[point[1]]
+    if not byY then byY={};seedKeys[point[1]]=byY end
+    if not byY[point[2]]then byY[point[2]]=true;seedList[#seedList+1]=point end
     if #anchors>=18 then break end
    end
   end
  end
  local best
- for _,seed in ipairs(seedList) do
+ for _,seed in ipairs(seedList) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
   local points,totalYield,measured={},0,false
   for _,m in ipairs(materials) do
    local candidates=sources[m.id]
    local ranked,density={},0
-   for _,point in ipairs(candidates) do
+   for _,point in ipairs(candidates) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
     local gap=pairDistance(seed,point)
     if gap<=12 then density=density+1 end
     ranked[#ranked+1]={point=point,utility=point.quality/(1+gap/4)}
@@ -7876,11 +7881,11 @@ local function pickStops(zone,materials,p,level,faction)
     if a.point[1]~=b.point[1] then return a.point[1]<b.point[1] end
     return a.point[2]<b.point[2]
    end)
-   local first=ranked[1].point
+   if R.RoutePreparationStep then R.RoutePreparationStep()end;local first=ranked[1].point
    points[#points+1]=first
    totalYield=totalYield+first.quality*(1+math.min(density,12)/12)
    measured=measured or first.measured
-   for _,v in ipairs(ranked) do
+   for _,v in ipairs(ranked) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
     if v.point~=first and pairDistance(v.point,first)>=2 and pairDistance(v.point,seed)<=9 then
      points[#points+1]=v.point
      if #points>=24 then break end
@@ -8000,7 +8005,7 @@ function R.HybridChoice(zone,materials,p,level,faction)
  local radius=metric.native and 100 or 2
  local areas=deadEnds[zone.name] or {}
  local best
- for refIndex,ref in ipairs(R.references) do
+ for refIndex,ref in ipairs(R.references) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
   local usable=ref.zone==zone.name and mapFor(ref.zone)==zone.mapID and type(ref.points)=="table" and #ref.points>0
   local qualified=false
   if usable then
@@ -8025,26 +8030,38 @@ function R.HybridChoice(zone,materials,p,level,faction)
   end
   if usable then
    local groups,groupKeys,coverage,requiredSkills={}, {}, {}, {}
+   local projections={}
    local totalYield,measured=0,false
    for _,m in ipairs(materials) do
     requiredSkills[m.kind]=math.max(requiredSkills[m.kind] or 0,m.skill or 1)
     local declared=hybridEligible(ref,m,level,faction) and hybridDeclared(ref,m)
     local nearest,density
-    for _,source in ipairs(zone.items[m.id] or {}) do
+    for _,source in ipairs(zone.items[m.id] or {}) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
      if source.provenance~="Bundled route" and source.isInferredAssociation~=true
       and (not source.faction or source.faction==faction) and source.routeEligible~=false
       and coordinate(source.x) and coordinate(source.y) then
       local point={source.x,source.y}
-      if outsideDeadEnds(point,point,areas) then
-       for i=1,segmentCount do
-        local gap,fraction,anchor=hybridProjection(metric,point,base[i],base[i%#base+1])
-        if gap<=radius and outsideDeadEnds(anchor,point,areas) then
-         local quality,isMeasured=sourceQuality(source,level)
-         if not nearest or gap<nearest.gap or (gap==nearest.gap and (quality>nearest.quality
-          or quality==nearest.quality and (point[1]<nearest.point[1] or point[1]==nearest.point[1] and point[2]<nearest.point[2]))) then
-          nearest={point=point,gap=gap,t=fraction,anchor=anchor,segment=i,source=source,quality=quality,measured=isMeasured}
+      local byY=projections[source.x]
+      if not byY then byY={};projections[source.x]=byY end
+      local projection=byY[source.y]
+      if projection==nil then
+       projection=false
+       if outsideDeadEnds(point,point,areas)then
+        for i=1,segmentCount do if R.RoutePreparationStep then R.RoutePreparationStep()end;
+         local gap,fraction,anchor=hybridProjection(metric,point,base[i],base[i%#base+1])
+         if gap<=radius and outsideDeadEnds(anchor,point,areas)and(not projection or gap<projection.gap)then
+          projection={gap=gap,t=fraction,anchor=anchor,segment=i}
          end
         end
+       end
+       byY[source.y]=projection
+      end
+      if projection then
+       local gap=projection.gap
+       local quality,isMeasured=sourceQuality(source,level)
+       if not nearest or gap<nearest.gap or(gap==nearest.gap and(quality>nearest.quality
+        or quality==nearest.quality and(point[1]<nearest.point[1]or point[1]==nearest.point[1]and point[2]<nearest.point[2])))then
+        nearest={point=point,gap=gap,t=projection.t,anchor={projection.anchor[1],projection.anchor[2]},segment=projection.segment,source=source,quality=quality,measured=isMeasured}
        end
       end
      end
@@ -8066,7 +8083,7 @@ function R.HybridChoice(zone,materials,p,level,faction)
     else usable=false;break end
     local point=nearest and nearest.point or base[1]
     density=0
-    for _,source in ipairs(zone.items[m.id] or {}) do
+    for _,source in ipairs(zone.items[m.id] or {}) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
      if source.routeEligible~=false and coordinate(source.x) and coordinate(source.y)
       and (not source.faction or source.faction==faction) and pairDistance(point,{source.x,source.y})<=12 then density=density+1 end
     end
@@ -8169,10 +8186,10 @@ function R.MatchZones(index,materials,p,level,faction)
  level=level or read(UnitLevel,"player") or 1
  faction=faction or read(UnitFactionGroup,"player")
  local choices,overlap={},{}
- for _,zone in pairs(index) do
+ for _,zone in pairs(index) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
   local available={}
    for id,entries in pairs(zone.items) do if R.IsFarmOffering(id)then
-   for _,source in ipairs(entries) do
+   for _,source in ipairs(entries) do if R.RoutePreparationStep then R.RoutePreparationStep()end;
     if not source.faction or source.faction==faction then available[id]=true;break end
    end end
   end
@@ -9214,7 +9231,7 @@ end
 local function fillResource(tile,m,height,unit,selected,choices,compatible,familyItems)
  tile.material=m
  local checked=not m.isFarmFamily and K.selected[m.id]==true
- local faded=not m.isFarmFamily and #selected>0 and #choices>0 and not checked and not compatible[m.id]
+ local faded=not m.isFarmFamily and #selected>0 and next(compatible)~=nil and not checked and not compatible[m.id]
  local levelNote=R.FarmLevelNote(m,familyItems)
  tile.note=faded and "No catalogued overlap with this selection."or nil
  if levelNote~=""then tile.note=tile.note and(tile.note.."\n"..levelNote)or levelNote end
@@ -9608,9 +9625,35 @@ function R.Open()
    farmPlace(empty,results,8*unit,8*unit,width-16*unit,80*unit)
    syncMatches();B.DrawRoutes();B.layingOutRoutes=nil
   end
+  local function cancelRoutePreparation()
+   local job=B.routeJob
+   if job then
+    job.cancelled=true
+    if job.timer and type(job.timer.Cancel)=='function'then job.timer:Cancel()end
+    if job.worker then job.worker:SetScript('OnUpdate',nil);job.worker:Hide()end
+   end
+   B.routeJob=nil;B.routing=false
+  end
+  B.CancelRoutePreparation=cancelRoutePreparation
+  local function sourceReady()
+   local ready=R.SourceIndexReady or R.GetPreparedSourceIndex
+   return type(ready)=='function'and ready()or nil
+  end
+  local function availability(index,faction)
+   if B.availabilityIndex==index and B.availabilityFaction==faction then return B.availability end
+   local zones={}
+   for map,zone in pairs(index or{})do
+    local available={}
+    for id,list in pairs(zone.items)do if R.IsFarmOffering(id)then
+     for _,source in ipairs(list)do if not source.faction or source.faction==faction then available[id]=true;break end end
+    end end
+    zones[map]=available
+   end
+   B.availabilityIndex,B.availabilityFaction,B.availability=index,faction,zones
+   return zones
+  end
   local function refreshSelection()
-   B.routeDescriptions={}
-   B.selected={}
+   cancelRoutePreparation();B.routeDescriptions={};B.selected={}
    local removed=false
    for id in pairs(K.selected)do
     local m=R.byID[id]
@@ -9618,8 +9661,82 @@ function R.Open()
    end
    if removed then K.confirmed=nil end
    table.sort(B.selected,function(a,b)return a.name<b.name end)
-   B.choices,B.compatible=R.MatchZones(B.index,B.selected)
+   B.choices,B.compatible={},{}
+   if B.index and #B.selected>0 then
+    local faction=read(UnitFactionGroup,'player')
+    for _,available in pairs(availability(B.index,faction))do
+     local matches=true
+     for _,m in ipairs(B.selected)do if not available[m.id]then matches=false;break end end
+     if matches then for id in pairs(available)do B.compatible[id]=true end end
+    end
+   end
    B.error=nil
+  end
+  local function cancelSourcePreparation()
+   B.sourceToken=(B.sourceToken or 0)+1
+   if B.sourceHandle and type(R.CancelSourcePreparation)=='function'then R.CancelSourcePreparation(B.sourceHandle)end
+   B.sourceHandle=nil
+  end
+  B.CancelSourcePreparation=cancelSourcePreparation
+  local function refreshCatalogue()
+   cancelRoutePreparation();cancelSourcePreparation()
+   if B.catalogueOwner~=ns.ForeverCatalog then
+    R.LoadCatalog();B.catalogueOwner=ns.ForeverCatalog;B.models={};B.model=nil
+   end
+   local ready=sourceReady()
+   B.sourceError=nil;B.index=ready;B.loading=ready==nil
+   refreshSelection();R.selectionChanged=false
+   if ready then return end
+   if type(R.PrepareSourceIndex)~='function'then
+    B.loading=false;B.sourceError='Route preparation is unavailable. Close and reopen Farming Routes.';return
+   end
+   local token=B.sourceToken
+   B.sourceHandle=R.PrepareSourceIndex(function(index,why)
+    if token~=B.sourceToken or not(B.opening or f:IsShown())then return end
+    B.sourceHandle=nil;B.loading=false
+    if not index then B.sourceError='Route data could not be prepared. Close and reopen Farming Routes to retry.';R.Fill();return end
+    B.index=index;B.sourceError=nil;refreshSelection();R.Fill()
+   end)
+  end
+  local function scheduleRoute(job,callback)
+   local function run()job.timer=nil;if not job.cancelled then callback()end end
+   if C_Timer and type(C_Timer.NewTimer)=='function'then job.timer=C_Timer.NewTimer(0,run)
+   elseif C_Timer and type(C_Timer.After)=='function'then C_Timer.After(0,run)
+   else
+    local worker=B.RoutePreparationFrame or CreateFrame('Frame');B.RoutePreparationFrame=worker;job.worker=worker
+    worker:SetScript('OnUpdate',function(self)self:SetScript('OnUpdate',nil);self:Hide();run()end);worker:Show()
+   end
+  end
+  local routeStats={workLimit=8192,timeBudgetMS=4,steps=0,maxStepWork=0,maxStepMS=0}
+  B.RoutePreparationStats=routeStats
+  local function routeClock()
+   if type(debugprofilestop)=='function'then return debugprofilestop()end
+   if type(GetTimePreciseSec)=='function'then return GetTimePreciseSec()*1000 end
+   if os and type(os.clock)=='function'then return os.clock()*1000 end
+   return GetTime()*1000
+  end
+  R.RoutePreparationStep=function()
+   local job=B.routeJob
+   if not job or job.cancelled or coroutine.running()~=job.thread then return end
+   job.stepWork=(job.stepWork or 0)+1
+   if job.stepWork>=routeStats.workLimit or job.stepWork%32==0 and routeClock()-job.stepStart>=routeStats.timeBudgetMS then coroutine.yield()end
+  end
+  local function routeKey(materials,p,level,faction)
+   local ids,kinds,seen={},{},{}
+   for _,m in ipairs(materials)do ids[#ids+1]=m.id;if m.kind~='Cloth'and not seen[m.kind]then kinds[#kinds+1]=m.kind;seen[m.kind]=true end end
+   table.sort(ids);table.sort(kinds)
+   local requirements={}
+   for _,kind in ipairs(kinds)do
+    local rank,cap=F.Skill(kind);requirements[#requirements+1]=kind..':'..tostring(rank)..':'..tostring(cap)
+    local tool=kind=='Mining'and 2901 or kind=='Skinning'and 7005
+    if tool then requirements[#requirements+1]=tostring(tool)..':'..tostring(read(C_Item and C_Item.GetItemCount or GetItemCount,tool,false)or 0)end
+   end
+   return table.concat(ids,',')..':'..tostring(p.mapID)..':'..tostring(p.x)..':'..tostring(p.y)..':'..tostring(level)..':'..tostring(faction)..':'..table.concat(requirements,';')
+  end
+  local function presentRoutes(choices,recommendations)
+   B.choices=choices;B.recommendations=recommendations;B.routing=false;B.routeJob=nil
+   if not B.popupSized then popup:SetSize(f:GetWidth(),f:GetHeight());B.popupSized=true end
+   matches:SetVerticalScroll(0);f:Hide();popup:Show();B.LayoutRoutes()
   end
   local function changeContext()
    B.CloseYields();menuHost:Hide();B.error=nil
@@ -9663,19 +9780,54 @@ function R.Open()
   B.routeClose=N.WoodButton(popup,"Close",100,B.CloseRoutes)
   B.routeEdit.gfFarmRole="editRouteSelection";B.routeClose.gfFarmRole="closeRouteOptions"
   function B.FindRoutes()
-   if #B.selected==0 then B.error="Choose at least one material.";R.Fill();return false end
+   if #B.selected==0 then B.error='Choose at least one material.';R.Fill();return false end
+   if B.routing then return false end
+   if B.loading or not B.index then return false end
+   if sourceReady()~=B.index then refreshCatalogue();R.Fill();return false end
    B.CloseYields();menuHost:Hide();K.confirmed=nil;B.routeError=nil;B.focusedRoute=nil
    B.routeSelectionNames={};for _,m in ipairs(B.selected)do B.routeSelectionNames[#B.routeSelectionNames+1]=m.name end
    local p=read(ns.Retail.Client.PlayerPosition)
-   if read(IsInInstance)then B.recommendations={};B.routeError="Use an outdoor farming route."
-   elseif not p or p.status~="available"or type(p.mapID)~="number"then B.recommendations={};B.routeError="Outdoor position unavailable."
-   else
-    local level=read(UnitLevel,"player")or 1;local faction=read(UnitFactionGroup,"player")
-    B.choices,B.compatible=R.MatchZones(B.index,B.selected,p,level,faction)
-    B.recommendations=R.RecommendRouteChoices(B.choices,B.selected,p,level,faction)
+   if read(IsInInstance)then B.routeError='Use an outdoor farming route.';presentRoutes({},{});return true end
+   if not p or p.status~='available'or type(p.mapID)~='number'then B.routeError='Outdoor position unavailable.';presentRoutes({},{});return true end
+   local level=read(UnitLevel,'player')or 1;local faction=read(UnitFactionGroup,'player')
+   local key=routeKey(B.selected,p,level,faction)
+   local cached=B.routeCache
+   if cached and cached.index==B.index and cached.references==R.references and cached.key==key then
+    presentRoutes(cached.choices,cached.recommendations);return true
    end
-   if not B.popupSized then popup:SetSize(f:GetWidth(),f:GetHeight());B.popupSized=true end
-   matches:SetVerticalScroll(0);f:Hide();popup:Show();B.LayoutRoutes();return true
+   local maps={};for map in pairs(B.index)do maps[#maps+1]=map end;table.sort(maps)
+   local job={index=B.index,materials=B.selected,key=key,position=p,level=level,faction=faction,maps=maps,cursor=1,choices={}}
+   B.routeJob=job;B.routing=true;R.Fill()
+   local function step()
+    if job.cancelled or B.routeJob~=job or not f:IsShown()or B.index~=job.index then return end
+    if sourceReady()~=job.index then cancelRoutePreparation();refreshCatalogue();R.Fill();return end
+    local map=job.maps[job.cursor]
+    if map then
+     if not job.thread then job.thread=coroutine.create(function()return R.MatchZones({[map]=job.index[map]},job.materials,job.position,job.level,job.faction)end)end
+     job.stepStart,job.stepWork=routeClock(),0
+     local ok,choices=coroutine.resume(job.thread)
+     routeStats.steps=routeStats.steps+1;routeStats.maxStepWork=math.max(routeStats.maxStepWork,job.stepWork)
+     routeStats.maxStepMS=math.max(routeStats.maxStepMS,routeClock()-job.stepStart)
+     if not ok then cancelRoutePreparation();B.error='Routes could not be prepared. Please try Find routes again.';R.Fill();return end
+     if coroutine.status(job.thread)=='dead'then
+      for _,choice in ipairs(choices)do choice.recommendation=nil;job.choices[#job.choices+1]=choice end
+      job.cursor=job.cursor+1;job.thread=nil
+     end
+     scheduleRoute(job,step);return
+    end
+    table.sort(job.choices,function(a,b)
+     if(a.cost or math.huge)~=(b.cost or math.huge)then return(a.cost or math.huge)<(b.cost or math.huge)end
+     if a.reference.zone~=b.reference.zone then return a.reference.zone<b.reference.zone end
+     return a.mapID<b.mapID
+    end)
+    local best
+    for _,choice in ipairs(job.choices)do if choice.start and(not best or choice.score>best.score)then best=choice end end
+    if best then best.recommendation='Recommended'end
+    local recommendations=R.RecommendRouteChoices(job.choices,job.materials,job.position,job.level,job.faction)
+    B.routeCache={index=job.index,references=R.references,key=job.key,choices=job.choices,recommendations=recommendations}
+    presentRoutes(job.choices,recommendations)
+   end
+   scheduleRoute(job,step);return true
   end
   B.action=N.WoodButton(f,"Find routes",200,B.FindRoutes);B.action.gfFarmRole="findRoutes"
   B.stop=N.WoodButton(active,"Stop Route",110,function()
@@ -9683,7 +9835,7 @@ function R.Open()
    K.SyncFooter();R.Fill()
   end)
   function R.Fill()
-   if not B.index or B.filling then return end
+   if not B.catalogueOwner or B.filling then return end
    B.filling=true
    if R.selectionChanged then
     if popup:IsShown()then popup:Hide()end
@@ -9702,7 +9854,7 @@ function R.Open()
    for _,id in ipairs(F.route and F.route.reference and F.route.reference.coveredItemIDs or{})do
     if not R.IsFarmOffering(id)then activeExcluded=true;break end
    end
-   local statusText=B.error or(activeExcluded and "This active target is no longer in the catalogue. Stop Route remains available."
+   local statusText=B.sourceError or B.error or(B.loading and 'Preparing route data...')or(B.routing and 'Preparing routes...')or(activeExcluded and "This active target is no longer in the catalogue. Stop Route remains available."
     or #B.selected==0 and "Choose materials, then find routes."or "Ready to compare mapped routes.")
    setFarmFont(message,13,12,unit,B.fontExpansion);message:SetWidth(width);message:SetText(statusText)
    local messageHeight=math.max(25*unit,message:GetStringHeight()+3*unit)
@@ -9774,8 +9926,9 @@ function R.Open()
    farmPlace(message,f,inset,footerTop,width,messageHeight)
    local actionTop=footerTop+messageHeight+7*unit
    farmPlace(B.action,f,inset,actionTop,width,29*unit);B.action:Show()
-   if B.action.SetEnabled then B.action:SetEnabled(#B.selected>0)end
-   B.action:EnableMouse(#B.selected>0);B.action:SetAlpha(#B.selected>0 and 1 or .55)
+   local findReady=#B.selected>0 and B.index~=nil and not B.loading and not B.routing
+   if B.action.SetEnabled then B.action:SetEnabled(findReady)end
+   B.action:EnableMouse(findReady);B.action:SetAlpha(findReady and 1 or .55)
    if F.route then
     local top=actionTop+36*unit
     farmPlace(activeHeader,f,inset,top,width,26*unit);farmPlace(active,f,inset,top+24*unit,width,43*unit)
@@ -9789,7 +9942,7 @@ function R.Open()
    syncResources();B.DrawResources();B.filling=nil
   end
   R.body=reagents;K.resourceScroll=resources;K.recommendButton=B.action;K.count=message
-  f:HookScript("OnHide",function()B.CloseYields();menuHost:Hide();hideTip();K.confirmed=nil end)
+  f:HookScript("OnHide",function()cancelRoutePreparation();cancelSourcePreparation();B.CloseYields();menuHost:Hide();hideTip();K.confirmed=nil end)
   f:HookScript("OnMouseDown",function()B.CloseYields();menuHost:Hide()end)
   popup:HookScript("OnHide",function()
    hideTip();K.confirmed=nil
@@ -9805,14 +9958,12 @@ function R.Open()
   if not registered then table.insert(UISpecialFrames,"GrindingForeverRouteOptions")end
   N.PanelChrome(f,{"Farming","Routes"},400,560,R.Fill);N.LiveLayout(f,R.Fill)
   N.PanelChrome(popup,{"Route","Options"},400,560,B.LayoutRoutes);N.LiveLayout(popup,B.LayoutRoutes)
-  R.RefreshCatalog=function()
-   B.index=R.BuildSourceIndex();B.models={};B.model=nil;refreshSelection();R.selectionChanged=false
-  end
+  R.RefreshCatalog=refreshCatalogue
 
  end
  local browser=ns.FarmingBrowser
  if browser.routePopup:IsShown()then browser.suppressRouteReturn=true;browser.routePopup:Hide();browser.suppressRouteReturn=nil end
- R.menu=K.gridMenu;R.RefreshCatalog();R.menu:Show();R.Fill()
+ R.menu=K.gridMenu;browser.opening=true;R.RefreshCatalog();R.menu:Show();browser.opening=nil;R.Fill()
 end
 
 local function clickThrough()
@@ -12301,9 +12452,10 @@ F.CoverageStats={mapBuilds=0,sourceBuilds=0,sourceQueries=0,markerBuilds=0,marke
 local function prepare()
  local d=data();if not d then return end
  if owner~=d then
-  owner=d;cache={};knownNames={};F.knownAlternatives={};F.resourceRevision=(F.resourceRevision or 0)+1
+  owner=d;cache={};knownNames={};F.resourceTypeNames={};F.knownAlternatives={};F.resourceRevision=(F.resourceRevision or 0)+1
   for id,t in pairs(d.types or{})do
    knownNames[id]={[t.name]=true}
+   if type(t.name)=="string"then local list=F.resourceTypeNames[t.name]or{};F.resourceTypeNames[t.name]=list;list[#list+1]=id end
    if not F.meta[id]then F.meta[id]={kind=t.kind,name=t.name,item=t.itemID,skill=t.skill or 0,skillKnown=knownSkill(t),notRecipeReagent=t.notRecipeReagent==true};F.names[id]=t.name end
   end
   for _,object in pairs(d.objects or{})do local names=knownNames[object.nodeTypeID];if names and type(object.name)=='string'then names[object.name]=true end end
@@ -12315,7 +12467,7 @@ local function typeFor(d,nodeID,objectID,name,kind)
  if nodeID and d.types[nodeID]then return nodeID,d.types[nodeID]end
  local object=objectID and d.objects and d.objects[objectID]
  if object and d.types[object.nodeTypeID]then return object.nodeTypeID,d.types[object.nodeTypeID]end
- if type(name)=='string'then for id,t in pairs(d.types)do if t.name==name and(not kind or t.kind==kind)then return id,t end end end
+ if type(name)=='string'then for _,id in ipairs(F.resourceTypeNames[name]or{})do local t=d.types[id];if not kind or t.kind==kind then return id,t end end end
 end
 local function add(sites,byKey,x,y,id,t,mask,evidence,objects,observation)
  if not valid(x)or not valid(y)or not t or not t.kind then return end
@@ -12333,31 +12485,101 @@ local function add(sites,byKey,x,y,id,t,mask,evidence,objects,observation)
  for _,value in ipairs(ids(objects))do alt.objectIDs[value]=true end
  if observation then alt.observations[#alt.observations+1]=observation end
 end
+-- Consumer-owned cache: transport time/sequence updates refresh the retained
+-- observation object without invalidating unchanged route geometry.
+local personalMapVersions,personalMapSignatures={},{}
+local foregroundMaps={}
+local personalEpoch,canonicalRows,canonicalByKey=0,{},{}
+local lastRawRows,lastRawVersion,receiptKeysByMap
+local memoryIdentityCache=setmetatable({},{__mode='k'})
+local function observationKey(row)
+ local fields={'kind','itemID','nodeTypeID','objectID','name','quality','evidence','mapID','x','y',
+  'coordinateRole','positionRole','exactNodePosition','observedByPlayer','skill','skillKnown','roleMask'}
+ local values={};for _,field in ipairs(fields)do local v=row[field];values[#values+1]=type(v)=='number'and string.format('%.17g',v)or tostring(v)end
+ for _,id in ipairs(row.possibleObjectIDs or{})do values[#values+1]='object:'..tostring(id)end
+ return table.concat(values,'|')
+end
 local function personal()
- local G=ns.GatheringObserver
- local rows,version=read(G and G.PersonalObservations)
- local memory=G and G.data
- return type(rows)=='table'and rows or{},tostring(version or 0)..':'..tostring(memory)..':'..tostring(memory and memory.nextNode or 0)
+ local G=ns.GatheringObserver;local rows,rawVersion=read(G and G.PersonalObservations)
+ rows=type(rows)=='table'and rows or{}
+ local byMap,nextRows,nextByKey={},{},{}
+ local function remember(map,k)
+  if type(map)~='number'then return end
+  local list=byMap[map]or{};byMap[map]=list;list[#list+1]=k
+ end
+ if rows==lastRawRows and rawVersion==lastRawVersion then
+  nextRows,nextByKey=canonicalRows,canonicalByKey
+  for map,list in pairs(receiptKeysByMap or{})do for _,k in ipairs(list)do remember(map,k)end end
+ else
+ for _,row in ipairs(rows)do
+  local k=observationKey(row);local retained=canonicalByKey[k]or{}
+  if retained~=row then
+   for field in pairs(retained)do if row[field]==nil then retained[field]=nil end end
+   for field,value in pairs(row)do retained[field]=value end
+  end
+  nextRows[#nextRows+1]=retained;nextByKey[k]=retained;remember(row.mapID,'receipt:'..k)
+ end
+ receiptKeysByMap={};for map,list in pairs(byMap)do local copy={};for i,k in ipairs(list)do copy[i]=k end;receiptKeysByMap[map]=copy end
+ lastRawRows,lastRawVersion=rows,rawVersion
+ end
+ -- Existing node-memory facts are separate from receipts. Repeated click/
+ -- harvest counters do not change their established approach role.
+ for _,node in pairs(G and G.data and G.data.nodes or{})do local p=node.position
+  if p and not node.instanced and valid(p.x)and valid(p.y)
+   and((node.observedClicks or 0)>0 or(node.sourceMatchedHarvests or 0)>0 or(node.harvests or 0)>0)then
+   local owner=prepare();local prior=memoryIdentityCache[node]
+   if prior and prior.owner==owner and prior.position==p and prior.map==p.mapID and prior.x==p.x and prior.y==p.y
+    and prior.sourceNodeID==node.sourceNodeID and prior.objectID==node.objectID and prior.name==node.name and prior.profession==node.profession then
+    if prior.key then remember(p.mapID,prior.key)end
+   else
+   local id,t=typeFor(owner,node.sourceNodeID,node.objectID,node.name,node.profession)
+   local old=F.meta[node.sourceNodeID]
+   local named=t and type(node.name)=='string'and(knownNames[id]and knownNames[id][node.name]or old and node.name==old.name)
+   if named and node.profession==t.kind then
+    local k='memory:'..table.concat({tostring(id),tostring(node.objectID),node.name,node.profession,
+      string.format('%.17g',p.x),string.format('%.17g',p.y),tostring(t.skill),tostring(knownSkill(t))},'|')
+    remember(p.mapID,k)
+    memoryIdentityCache[node]={key=k,owner=owner,position=p,map=p.mapID,x=p.x,y=p.y,sourceNodeID=node.sourceNodeID,
+      objectID=node.objectID,name=node.name,profession=node.profession}
+   end
+   end
+  end
+ end
+ local signatures,changed={},false
+ for map,list in pairs(byMap)do table.sort(list);signatures[map]=table.concat(list,'\n')end
+ for map,signature in pairs(signatures)do
+  if personalMapSignatures[map]~=signature then personalMapVersions[map]=(personalMapVersions[map]or 0)+1;changed=true end
+ end
+ for map in pairs(personalMapSignatures)do
+  if not signatures[map]then personalMapVersions[map]=(personalMapVersions[map]or 0)+1;changed=true end
+ end
+ if changed then personalEpoch=personalEpoch+1 end
+ personalMapSignatures,canonicalRows,canonicalByKey=signatures,nextRows,nextByKey
+ return canonicalRows,personalEpoch
 end
 function F.ResourceSites(mapID)
+ if R.SourcePreparationStats then R.SourcePreparationStats.phase="map sites"end
  local d=prepare();if not d then return nil end
- local live,version=personal();local entry=cache[mapID]
+ local live=personal();local version=personalMapVersions[mapID]or 0;local entry=cache[mapID]
+ local foreground=not(R.SourcePreparationActive and R.SourcePreparationActive())
+ if foreground then foregroundMaps[mapID]=true end
+ if entry and foreground then entry.foreground=true end
  if entry and entry.version==version then return entry.sites end
  local f=fields(d);local sites,byKey={},{}
- for _,row in ipairs(d.maps and d.maps[mapID]or{})do
+ for _,row in ipairs(d.maps and d.maps[mapID]or{})do if R.SourcePreparationStep then R.SourcePreparationStep()end;
   local id=row[f.nodeTypeID];local t=d.types[id]
   add(sites,byKey,row[f.x],row[f.y],id,t,row[f.roleMask],row[f.evidenceIDs],row[f.objectIDs])
  end
- for _,row in ipairs(d.observations and d.observations[mapID]or{})do
+ for _,row in ipairs(d.observations and d.observations[mapID]or{})do if R.SourcePreparationStep then R.SourcePreparationStep()end;
   local id=row[f.nodeTypeID];add(sites,byKey,row[f.x],row[f.y],id,d.types[id],row[f.roleMask],row[f.evidenceIDs],row[f.objectIDs],{coordinateRole='player-approach',exactNodePosition=false})
  end
  local cf=d.catchFields or{itemID=1,mapID=2,x=3,y=4,evidenceID=5,observationID=6,observedUnix=7,quantity=8}
- for _,row in ipairs(d.fishingCatches or{})do if row[cf.mapID]==mapID then
+ for _,row in ipairs(d.fishingCatches or{})do if R.SourcePreparationStep then R.SourcePreparationStep()end; if row[cf.mapID]==mapID then
   local item=row[cf.itemID]
   add(sites,byKey,row[cf.x],row[cf.y],nil,{kind='Fishing',name=E.ItemName(item),itemID=item,skillKnown=false},4,{row[cf.evidenceID]},nil,
    {coordinateRole='player-approach',exactNodePosition=false,observationID=row[cf.observationID],observedUnix=row[cf.observedUnix],evidence='native-fishing-loot'})
  end end
- for _,row in ipairs(live)do if row.mapID==mapID and valid(row.x)and valid(row.y)then
+ for _,row in ipairs(live)do if R.SourcePreparationStep then R.SourcePreparationStep()end; if row.mapID==mapID and valid(row.x)and valid(row.y)then
   local id,t=typeFor(d,row.nodeTypeID,row.objectID,row.name,row.kind)
   if not t and row.kind=='Fishing'and type(row.itemID)=='number'then
    t={kind='Fishing',name=row.name or(E and E.ItemName(row.itemID))or'Fishing approach',itemID=row.itemID,skillKnown=false}
@@ -12373,7 +12595,7 @@ function F.ResourceSites(mapID)
  -- confirmed harvest or an exact node center. Keep it independently of the
  -- rotating activity ring and use only a matched, known node template.
  local G=ns.GatheringObserver
- for _,node in pairs(G and G.data and G.data.nodes or{})do
+ for _,node in pairs(G and G.data and G.data.nodes or{})do if R.SourcePreparationStep then R.SourcePreparationStep()end;
   local p=node.position
   if p and p.mapID==mapID and not node.instanced and valid(p.x)and valid(p.y)
    and((node.observedClicks or 0)>0 or(node.sourceMatchedHarvests or 0)>0 or(node.harvests or 0)>0)then
@@ -12386,24 +12608,30 @@ function F.ResourceSites(mapID)
    end
   end
  end
- table.sort(sites,function(a,b)return a.key<b.key end)
- for _,site in ipairs(sites)do table.sort(site.alternatives,function(a,b)return tostring(a.nodeTypeID or a.itemID)<tostring(b.nodeTypeID or b.itemID)end)end
+ (R.SourcePreparationSort or table.sort)(sites,function(a,b)return a.key<b.key end)
+ for _,site in ipairs(sites)do if R.SourcePreparationStep then R.SourcePreparationStep()end; table.sort(site.alternatives,function(a,b)return tostring(a.nodeTypeID or a.itemID)<tostring(b.nodeTypeID or b.itemID)end)end
  local points,byItem={},{}
- for _,site in ipairs(sites)do for _,alt in ipairs(site.alternatives)do
+ for _,site in ipairs(sites)do if R.SourcePreparationStep then R.SourcePreparationStep()end; for _,alt in ipairs(site.alternatives)do if R.SourcePreparationStep then R.SourcePreparationStep()end;
   local point={x=site.x,y=site.y,mapID=mapID,siteKey=site.key,alternative=alt};points[#points+1]=point
   if alt.itemID then byItem[alt.itemID]=byItem[alt.itemID]or{};byItem[alt.itemID][#byItem[alt.itemID]+1]=point end
  end end
- cache[mapID]={sites=sites,byKey=byKey,version=version,points=points,byItem=byItem};F.knownAlternatives[mapID]=byKey
  -- Compatibility remains scalar. All current coverage consumers use the
  -- alternatives above; no invented coordinates encode additional node types.
- for _,site in ipairs(sites)do for _,alt in ipairs(site.alternatives)do if alt.nodeTypeID then
+ for _,site in ipairs(sites)do if R.SourcePreparationStep then R.SourcePreparationStep()end; for _,alt in ipairs(site.alternatives)do if R.SourcePreparationStep then R.SourcePreparationStep()end; if alt.nodeTypeID then
   F.known[alt.kind]=F.known[alt.kind]or{};F.known[alt.kind][mapID]=F.known[alt.kind][mapID]or{}
   local coord=math.floor(site.x*100+.5)*1000000+math.floor(site.y*100+.5)*100
   local old=F.known[alt.kind][mapID][coord]
   if not old or alt.nodeTypeID<old then F.known[alt.kind][mapID][coord]=alt.nodeTypeID end
  end end end
+ cache[mapID]={sites=sites,byKey=byKey,version=version,points=points,byItem=byItem,foreground=foregroundMaps[mapID]==true};F.knownAlternatives[mapID]=byKey
  F.CoverageStats.mapBuilds=F.CoverageStats.mapBuilds+1
  return sites
+end
+function F.ReleasePreparationMap(mapID)
+ local entry=cache[mapID]
+ if entry and not entry.foreground and R.SourcePreparationActive and R.SourcePreparationActive()then
+  cache[mapID]=nil;F.knownAlternatives[mapID]=nil
+ end
 end
 function F.ResourcePoints(mapID,wanted)
  local sites=F.ResourceSites(mapID);if not sites then return nil end
@@ -12441,9 +12669,9 @@ local function rejectOld(s,d)
  end
  return s.provenance=='Bundled gathering map'or s.provenance=='Vein yield at a mapped node'or s.provenance=='Personal gathering observation'
 end
-local baseIndex=R.BuildSourceIndex;local indexCache,indexOwner,indexVersion,indexMemory
-local function normalizedSource(source)
- local s={};for k,v in pairs(source)do s[k]=v end
+local baseIndex=R.BuildSourceIndex;local indexCache,indexOwner,indexVersion;local indexMapVersions={}
+local function normalizedSource(source,owned)
+ local s=owned and source or{};if not owned then for k,v in pairs(source)do s[k]=v end end
  local activity=s.importedActivityEvidence
  local approach=s.playerApproach==true or s.coordinateRole=='player-approach'or s.coordinateRole=='observed-player-at-loot'
   or s.positionRole=='player-approach'or type(activity)=='table'and activity.positionRole=='player-approach'
@@ -12457,17 +12685,26 @@ local function coarseSecondary(s)
 end
 function R.BuildSourceIndex()
  local d,version=F.CoverageVersion();if not d then return baseIndex()end
- local G=ns.GatheringObserver;local memory=G and G.data and G.data.nextNode
- if indexCache and indexOwner==d and indexVersion==version and indexMemory==memory then return indexCache end
- -- Keep independent catalogue/drop/route facts, while avoiding the historical
- -- map copies which would count the same sites a second time.
- local known,loader=F.known,F.LoadKnown;F.known={};F.LoadKnown=function()return true end
- local ok,index=pcall(baseIndex);F.known,F.LoadKnown=known,loader
- if not ok then error(index)end
- local dedupe={}
- local function insert(map,item,s)
+ local G=ns.GatheringObserver
+ if indexCache and indexOwner==d and indexVersion==version then return indexCache end
+ local partial=indexCache and indexOwner==d;local onlyMaps=partial and{}or nil
+ local buildVersions={};for map,v in pairs(personalMapVersions)do buildVersions[map]=v end
+ if partial then
+  for map,v in pairs(buildVersions)do if indexMapVersions[map]~=v then onlyMaps[map]=true end end
+  for map in pairs(indexMapVersions)do if buildVersions[map]~=indexMapVersions[map]then onlyMaps[map]=true end end
+  if not next(onlyMaps)then indexVersion=version;return indexCache end
+ end
+ -- No temporary public planner overrides can leak across an async yield.
+ -- The async worker catches errors at coroutine.resume, outside this call.
+ local index
+ if R.SourcePreparationActive and R.SourcePreparationActive()then index=baseIndex(true,onlyMaps)
+ else local ok,result=pcall(baseIndex,true,onlyMaps);if not ok then error(result)end;index=result end
+ if R.SourcePreparationStats then R.SourcePreparationStats.phase="typed"end
+ local dedupe,dedupeSlots,sharedSources={},{},{}
+ local function insert(map,item,s,owned)
+  if R.SourcePreparationStep then R.SourcePreparationStep()end;
   local m=R.byID[item];if not m or not R.IsFarmOffering(item)then return end
-  s=normalizedSource(s)
+  s=normalizedSource(s,owned)
   local zone=index[map]
   if not zone then local info=read(C_Map and C_Map.GetMapInfo,map);local z=ns.ForeverCatalog.zones[map];if info and info.mapType and info.mapType~=3 then return end
    local name=z and z.name or info and info.name;if not name then return end;zone={mapID=map,name=name,items={}};index[map]=zone
@@ -12477,37 +12714,50 @@ function R.BuildSourceIndex()
   local identity=map..':'..item..':'..tostring(id or s.npcID or s.kind)..':'..tostring(s.coordinateRole or'possible-spawn')..':'..(valid(s.x)and valid(s.y)and key(s.x,s.y)or tostring(#zone.items[item]+1))
   local previous=dedupe[identity]
   if previous then
-   if s.secondaryYield then previous.secondaryYield=true;previous.secondaryYieldProvenance=s.secondaryYieldProvenance end
+   if s.secondaryYield and(previous.secondaryYield~=true or previous.secondaryYieldProvenance~=s.secondaryYieldProvenance)then
+    if sharedSources[previous]then
+     local copy={};for k,v in pairs(previous)do copy[k]=v end
+     zone.items[item][dedupeSlots[identity]]=copy;dedupe[identity]=copy;previous=copy
+    end
+    previous.secondaryYield=true;previous.secondaryYieldProvenance=s.secondaryYieldProvenance
+   end
    return
-  end;dedupe[identity]=s
+  end;dedupe[identity]=s;dedupeSlots[identity]=#zone.items[item]+1
   zone.items[item][#zone.items[item]+1]=s
  end
  local retained,secondary={},{ }
  for map,zone in pairs(index)do for item,list in pairs(zone.items)do
-  for _,s in ipairs(list)do
+  for _,s in ipairs(list)do if R.SourcePreparationStep then R.SourcePreparationStep()end;
    if coarseSecondary(s)then
     local token=s.kind..':'..s.nodeID;secondary[token]=secondary[token]or{};secondary[token][item]=s.provenance
    elseif not rejectOld(s,d)then retained[#retained+1]={map,item,normalizedSource(s)}end
   end
   zone.items[item]={}
  end end
- for _,row in ipairs(retained)do insert(row[1],row[2],row[3])end
+ for _,row in ipairs(retained)do insert(row[1],row[2],row[3],true)end
  local function yields(map,item,s)
+  local secondaryCopies={}
   for yield,provenance in pairs(secondary[s.kind..':'..tostring(s.nodeID)]or{})do
-   local copy={};for k,v in pairs(s)do copy[k]=v end;copy.secondaryYield=true;copy.secondaryYieldProvenance=provenance;copy.provenance='Typed secondary yield';copy.density=nil;insert(map,yield,copy)
+   local copy=secondaryCopies[provenance]
+   if not copy then copy={};for k,v in pairs(s)do copy[k]=v end;copy.secondaryYield=true;copy.secondaryYieldProvenance=provenance;copy.provenance='Typed secondary yield';copy.density=nil;secondaryCopies[provenance]=copy;sharedSources[copy]=true end
+   insert(map,yield,copy,true)
   end
   if not R.CoverageVeinYields or s.kind~='mine'then return end
+  local copy
   for _,yield in ipairs(R.CoverageVeinYields(item,s.nodeID))do
-   local copy={};for k,v in pairs(s)do copy[k]=v end;copy.byproduct=true;copy.provenance='Typed vein yield';insert(map,yield,copy)
+   if not copy then copy={};for k,v in pairs(s)do copy[k]=v end;copy.byproduct=true;copy.provenance='Typed vein yield';sharedSources[copy]=true end
+   insert(map,yield,copy,true)
    local zone=index[map];if zone then zone.veinYields=zone.veinYields or{};zone.veinYields[item]=zone.veinYields[item]or{};zone.veinYields[item][yield]=true end
   end
  end
  for _,row in ipairs(retained)do if row[3].kind=='mine'or row[3].kind=='herb'then yields(row[1],row[2],row[3])end end
- for map in pairs(d.maps or{})do
-  for _,point in ipairs(F.ResourcePoints(map)or{})do
+ for map in pairs(d.maps or{})do if not onlyMaps or onlyMaps[map]then
+  for _,point in ipairs(F.ResourcePoints(map)or{})do if R.SourcePreparationStep then R.SourcePreparationStep()end;
    local a=point.alternative
-   if a.itemID and R.byID[a.itemID]and R.IsFarmOffering(a.itemID)then local s=sourceFrom(point);insert(map,a.itemID,s);yields(map,a.itemID,s)end
+   if a.itemID and R.byID[a.itemID]and R.IsFarmOffering(a.itemID)then local s=sourceFrom(point);insert(map,a.itemID,s,true);yields(map,a.itemID,s)end
   end
+  if F.ReleasePreparationMap then F.ReleasePreparationMap(map)end
+ end
  end
  -- Live observations may describe a map absent from the static coverage set.
  local live=personal();local maps={}
@@ -12516,8 +12766,12 @@ function R.BuildSourceIndex()
  for _,node in pairs(G and G.data and G.data.nodes or{})do local p=node.position;if p and p.mapID and not(d.maps and d.maps[p.mapID])then maps[p.mapID]=true end end
  local cf=d.catchFields or{mapID=2}
  for _,row in ipairs(d.fishingCatches or{})do local map=row[cf.mapID];if map and not(d.maps and d.maps[map])then maps[map]=true end end
- for map in pairs(maps)do for _,point in ipairs(F.ResourcePoints(map)or{})do local a=point.alternative;if a.itemID then local s=sourceFrom(point);insert(map,a.itemID,s);yields(map,a.itemID,s)end end end
- indexCache,indexOwner,indexVersion,indexMemory=index,d,version,memory;F.CoverageStats.sourceBuilds=F.CoverageStats.sourceBuilds+1
+ for map in pairs(maps)do if not onlyMaps or onlyMaps[map]then
+  for _,point in ipairs(F.ResourcePoints(map)or{})do if R.SourcePreparationStep then R.SourcePreparationStep()end;local a=point.alternative;if a.itemID then local s=sourceFrom(point);insert(map,a.itemID,s,true);yields(map,a.itemID,s)end end
+  if F.ReleasePreparationMap then F.ReleasePreparationMap(map)end
+ end end
+ if partial then local merged={};for map,zone in pairs(indexCache)do if not onlyMaps[map]then merged[map]=zone end end;for map,zone in pairs(index)do merged[map]=zone end;index=merged end
+ indexCache,indexOwner,indexVersion,indexMapVersions=index,d,version,buildVersions;F.CoverageStats.sourceBuilds=F.CoverageStats.sourceBuilds+1
  return index
 end
 -- Shared alternatives also reach nearby crafting sources; a scalar compatibility
@@ -12748,7 +13002,8 @@ end
 local crafting=R.IsCraftingReagent
 R.IsCraftingReagent=function(id)local info=itemInfo(id);return info and type(info.recipeUseCount)=='number'and info.recipeUseCount>0 or crafting(id)end
 local offering=R.IsFarmOffering
-R.IsFarmOffering=function(value)local id=type(value)=='table'and value.id or value;return allowed[id]==true and offering(value)end
+for id in pairs(allowed)do allowed[id]=offering(id)==true end
+R.IsFarmOffering=function(value)local id=type(value)=='table'and value.id or value;return allowed[id]==true end
 local materialGroup=R.MaterialGroup
 R.MaterialGroup=function(m)local info=m and itemInfo(m.id);return m and m.isFarmFamily and m.group or info and info.group or materialGroup(m)end
 R.CatalogueOrganization=O
@@ -12809,14 +13064,17 @@ R.Byproducts=function(m,zone,category)
  end
  table.sort(list,R.CompareMaterials);return list
 end
-local veinYields=R.CoverageVeinYields
+local veinYields=R.CoverageVeinYields;local yieldLists={}
 R.CoverageVeinYields=function(item,node)
+ local cached=yieldLists[item]and yieldLists[item][node];if cached then return cached end
  local list=veinYields(item,node);local seen={};for _,id in ipairs(list)do seen[id]=true end
  for id,entry in pairs(parentYields[item]or{})do if entry.nodes[node]and not seen[id]and R.IsFarmOffering(id)then list[#list+1]=id;seen[id]=true end end
- table.sort(list);return list
+ table.sort(list);yieldLists[item]=yieldLists[item]or{};yieldLists[item][node]=list;return list
 end
 local load=R.LoadCatalog
 R.LoadCatalog=function(...)
+ local owner=ns.ForeverCatalog and ns.ForeverCatalog.reagents
+ if R.SourceCatalogOwner==owner then return end
  local result=load(...)
  for _,id in ipairs(O.itemIDs or{})do local info=itemInfo(id);local m=R.byID[id]
   if info and m then
@@ -12839,6 +13097,7 @@ R.LoadCatalog=function(...)
    m.categories,m.sourceKinds=categories,kinds
   end
  end
+ R.SourceCatalogOwner=owner
  return result
 end
 local levelNote=R.FarmLevelNote
@@ -12851,27 +13110,28 @@ R.FarmLevelNote=function(m,values)
 end
 -- New herb byproducts reuse the exact typed parent sites. The relationship
 -- does not turn an unknown rank or a zone-only source into a route.
-local buildIndex=R.BuildSourceIndex;local augmented
+local buildIndex=R.BuildSourceIndex;local augmented;local augmentedZones=setmetatable({},{__mode="k"})
 R.BuildSourceIndex=function(...)
  local index=buildIndex(...);if index==augmented then return index end
  local locations=ns.ForeverCatalog.resourceLocations
- for _,zone in pairs(index)do
-  local rows,seen={},{}
-  for item,list in pairs(zone.items)do for _,s in ipairs(list)do
+ if R.SourcePreparationStats then R.SourcePreparationStats.phase="herb augmentation"end
+ for _,zone in pairs(index)do if not augmentedZones[zone]then
+  local rows,seen,needed={},{},{}
+  for item,list in pairs(zone.items)do for _,s in ipairs(list)do if R.SourcePreparationStep then R.SourcePreparationStep()end;
    if s.kind=='herb'and type(s.nodeID)=='number'then
     local object=locations and locations.objects and locations.objects[s.nodeID]
     local node=object and object.nodeTypeID or s.nodeID
     for id,rule in pairs(O.nodeYields and O.nodeYields[node]or{})do
      if rule.kind=='herb'and R.IsFarmOffering(id)and(rule.parentItemID==nil or rule.parentItemID==item)then
-      rows[#rows+1]={item=id,parent=item,source=s,rule=rule,node=node}
+      needed[id]=true;rows[#rows+1]={item=id,parent=item,source=s,rule=rule,node=node}
      end
     end
    end
   end end
-  for item,list in pairs(zone.items)do for _,s in ipairs(list)do
+  for item in pairs(needed)do for _,s in ipairs(zone.items[item]or{})do if R.SourcePreparationStep then R.SourcePreparationStep()end;
    if type(s.x)=='number'and type(s.y)=='number'then seen[item..':'..tostring(s.nodeID)..':'..string.format('%.17g:%.17g',s.x,s.y)..':'..tostring(s.coordinateRole)]=true end
   end end
-  for _,row in ipairs(rows)do local s=row.source
+  for _,row in ipairs(rows)do if R.SourcePreparationStep then R.SourcePreparationStep()end;local s=row.source
    if type(s.x)=='number'and type(s.y)=='number'then
     local key=row.item..':'..row.node..':'..string.format('%.17g:%.17g',s.x,s.y)..':'..tostring(s.coordinateRole)
     if not seen[key]then
@@ -12883,7 +13143,118 @@ R.BuildSourceIndex=function(...)
    end
   end
  end
+ augmentedZones[zone]=true end
  augmented=index;return index
 end
 end)(ADDON,GF)
 -- GF_GATHERING_FIRST_CATALOGUE_20261120_END
+
+-- GF_FR_SOURCE_PREPARATION_20261120_BEGIN
+;(function(...)
+local _,ns=ADDON,GF;local R,F=ns.MaterialRoutes,ns.FarmingPlanner
+if not(R and F)then return end
+local build=R.BuildSourceIndex;local job,readyIndex,readyOwner,readyVersion
+local stats={steps=0,yields=0,workUnits=0,maxStepWork=0,lastStepWork=0,maxStepMS=0,lastStepMS=0,
+ timeBudgetMS=6,workLimit=8192,completed=0,cancelled=0,restarts=0}
+R.SourcePreparationStats=stats
+local function clock()
+ if type(debugprofilestop)=='function'then return debugprofilestop()end
+ if type(GetTimePreciseSec)=='function'then return GetTimePreciseSec()*1000 end
+ if os and type(os.clock)=='function'then return os.clock()*1000 end
+ return GetTime()*1000
+end
+local worker=CreateFrame('Frame');worker:Hide();R.SourcePreparationFrame=worker
+local function activeRequests(j)
+ for handle in pairs(j.requests)do if not handle.cancelled and not handle.done then return true end end
+ return false
+end
+function R.SourcePreparationActive()return job and coroutine.running()==job.thread end
+function R.SourcePreparationStep()
+ if not R.SourcePreparationActive()then return end
+ job.stepWork=(job.stepWork or 0)+1;stats.workUnits=stats.workUnits+1
+ if job.stepWork>=stats.workLimit or job.stepWork%32==0 and clock()-job.stepStart>=stats.timeBudgetMS then
+  stats.yields=stats.yields+1;coroutine.yield()
+ end
+end
+function R.SourcePreparationSort(list,less)
+ if not R.SourcePreparationActive()then return table.sort(list,less)end
+ local n=#list;local width=1;local buffer={}
+ while width<n do
+  local start=1
+  while start<=n do
+   local left,right=start,math.min(start+width,n+1)
+   local lastLeft,lastRight=right-1,math.min(start+2*width-1,n)
+   for out=start,lastRight do
+    R.SourcePreparationStep()
+    if left<=lastLeft and(right>lastRight or not less(list[right],list[left]))then buffer[out]=list[left];left=left+1
+    else buffer[out]=list[right];right=right+1 end
+   end
+   start=start+2*width
+  end
+  for i=1,n do R.SourcePreparationStep();list[i]=buffer[i]end
+  width=width*2
+ end
+end
+local function notify(j,index,err)
+ for handle,callback in pairs(j.requests)do
+  if not handle.cancelled and not handle.done then handle.done=true;pcall(callback,index,err)end
+ end
+end
+local function fresh()
+ local owner,version=F.CoverageVersion()
+ return readyIndex and readyOwner==owner and readyVersion==version and readyIndex or nil,owner,version
+end
+function R.SourceIndexReady()local index=fresh();return index end
+R.GetPreparedSourceIndex=R.SourceIndexReady
+local function startThread(j,owner,version)
+ j.owner,j.version=owner,version
+ j.thread=coroutine.create(function()return build()end)
+ stats.pending=true;stats.error=nil
+end
+function R.SourcePreparationTick()
+ local j=job;if not j or not activeRequests(j)then worker:Hide();return end
+ j.stepStart,j.stepWork=clock(),0
+ local ok,index=coroutine.resume(j.thread)
+ local elapsed=clock()-j.stepStart
+ stats.steps=stats.steps+1;stats.lastStepMS=elapsed;stats.maxStepMS=math.max(stats.maxStepMS,elapsed)
+ stats.lastStepWork=j.stepWork;stats.maxStepWork=math.max(stats.maxStepWork,j.stepWork)
+ if elapsed==stats.maxStepMS then stats.maxStepPhase=stats.phase end
+ if not ok then
+  job=nil;worker:Hide();stats.pending=false;stats.error=tostring(index);notify(j,nil,stats.error);return
+ end
+ if coroutine.status(j.thread)~='dead'then return end
+ local owner,version=F.CoverageVersion()
+ if owner~=j.owner or version~=j.version then
+  stats.restarts=stats.restarts+1;startThread(j,owner,version);return
+ end
+ readyIndex,readyOwner,readyVersion=index,owner,version
+ job=nil;worker:Hide();stats.pending=false;stats.completed=stats.completed+1;notify(j,index)
+end
+worker:SetScript('OnUpdate',function()R.SourcePreparationTick()end)
+function R.PrepareSourceIndex(callback)
+ assert(type(callback)=='function','source preparation requires a callback')
+ R.LoadCatalog()
+ local handle={};local index,owner,version=fresh()
+ if index and not job then handle.done=true;callback(index);return handle end
+ if not job then job={requests={}};startThread(job,owner,version)end
+ job.requests[handle]=callback
+ if job.owner~=owner or job.version~=version then stats.restarts=stats.restarts+1;startThread(job,owner,version)end
+ worker:Show();return handle
+end
+function R.CancelSourcePreparation(handle)
+ if not handle or handle.done or handle.cancelled then return end
+ handle.cancelled=true;stats.cancelled=stats.cancelled+1
+ if job then job.requests[handle]=nil;if not activeRequests(job)then worker:Hide()end end
+end
+-- Existing synchronous consumers remain synchronous. If one arrives while an
+-- async job is paused, finish from valid cache state and retire that coroutine.
+R.BuildSourceIndex=function(...)
+ if R.SourcePreparationActive()then return build(...)end
+ local pending=job;job=nil;worker:Hide()
+ local index=build(...);local owner,version=F.CoverageVersion()
+ readyIndex,readyOwner,readyVersion=index,owner,version;stats.pending=false
+ if pending then stats.completed=stats.completed+1;notify(pending,index)end
+ return index
+end
+end)(ADDON,GF)
+-- GF_FR_SOURCE_PREPARATION_20261120_END

@@ -16,6 +16,7 @@ Grinding Forever combines quest guidance, a Dungeon Journal, Recipe Sources and 
 
 - Gathering first opens with Ore Veins, Herbs, Leather and Fish in collapsible wooden headers and cream cards. More materials contains Cloth Drops, Meat, Curatives and Specialty Reagents. The reviewed catalogue has 270 recipe materials, including individually selectable ore, stone, gem and other related yields in 11 flyouts.
 - Materials follow documented acquisition or encountered-level progression within their groups. Unknown progression follows known entries. Recorded sources and known gathering requirements support route choices; unknown requirements are not invented.
+- The chooser opens before full route-source preparation. Source work runs in short batches with a preparing status; Find routes becomes available when ready. Valid caches are reused, while relevant new gathering observations refresh affected locations. Route calculations begin when explicitly requested.
 - Fish and pools share one flow. Recorded pool associations can support fishing guidance; a nearby pool does not prove the source of a catch.
 - Find routes opens a separate popup with up to four distinct, supported recommendations. Each can expand to inspect its route and selected-resource locations. Starting a route rechecks the current selection, skills and known tool requirements.
 - Hybrid routes retain suitable saved circuits and add short contributing side trips. Existing generated routes remain available where a saved route cannot support the selection.
